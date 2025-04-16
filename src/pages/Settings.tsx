@@ -2,19 +2,18 @@ import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  CreditCard,
   DollarSign,
   PiggyBank,
+  CreditCard,
   User,
   FileText,
   HelpCircle,
   LogOut,
   FileDown
 } from "lucide-react";
+import FeatureToggle from "@/components/FeatureToggle";
 
 interface UserSettingsForm {
   showBudgeting: boolean;
@@ -24,15 +23,14 @@ interface UserSettingsForm {
 
 const Settings = () => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const [settings, setSettings] = useState<UserSettingsForm>({
     showBudgeting: true,
     showSavings: true,
     showLoans: true,
   });
-  
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  
+
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -49,14 +47,13 @@ const Settings = () => {
         
         setUser(session.user);
         
-        // Fetch user settings
         const { data, error } = await supabase
           .from('user_settings')
           .select('*')
           .eq('user_id', session.user.id)
           .single();
           
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+        if (error && error.code !== 'PGRST116') {
           throw error;
         }
         
@@ -81,7 +78,6 @@ const Settings = () => {
   }, [toast]);
   
   const handleToggleChange = async (setting: keyof UserSettingsForm) => {
-    // Update local state first for responsive UI
     setSettings(prev => ({
       ...prev,
       [setting]: !prev[setting]
@@ -100,7 +96,6 @@ const Settings = () => {
         return;
       }
       
-      // Check if settings entry exists
       const { data, error: checkError } = await supabase
         .from('user_settings')
         .select('id')
@@ -112,7 +107,6 @@ const Settings = () => {
       }
       
       if (data) {
-        // Update existing settings
         const { error: updateError } = await supabase
           .from('user_settings')
           .update({
@@ -123,7 +117,6 @@ const Settings = () => {
           
         if (updateError) throw updateError;
       } else {
-        // Create new settings entry
         const { error: insertError } = await supabase
           .from('user_settings')
           .insert({
@@ -142,7 +135,6 @@ const Settings = () => {
       });
     } catch (error) {
       console.error('Error updating settings:', error);
-      // Revert the state back if there's an error
       setSettings(prev => ({
         ...prev,
         [setting]: !prev[setting]
@@ -171,7 +163,6 @@ const Settings = () => {
         return;
       }
       
-      // Fetch transactions
       const { data: transactions, error: txError } = await supabase
         .from('transactions')
         .select('*')
@@ -179,7 +170,6 @@ const Settings = () => {
         
       if (txError) throw txError;
       
-      // Create CSV
       const headers = [
         'id', 'date', 'title', 'amount', 'type', 'category', 
         'wallet', 'description', 'created_at'
@@ -193,7 +183,6 @@ const Settings = () => {
         ).join(','))
       ].join('\n');
       
-      // Create a blob and download
       const blob = new Blob([csvContent], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -225,7 +214,6 @@ const Settings = () => {
         description: "Kamu telah berhasil keluar dari akun",
       });
       
-      // Redirect to login page after a brief delay
       setTimeout(() => {
         window.location.href = '/';
       }, 1000);
@@ -241,11 +229,10 @@ const Settings = () => {
   
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32">
+      <div className="container mx-auto p-4 pb-32 max-w-2xl">
         <h1 className="text-xl font-bold mb-6">Pengaturan</h1>
         
-        {/* User profile section */}
-        <section className="mb-8 bg-white p-4 rounded-lg">
+        <section className="mb-8 bg-white p-4 rounded-lg shadow-sm">
           <div className="flex items-center mb-4">
             <div className="w-12 h-12 rounded-full bg-[#6E59A5] flex items-center justify-center mr-3">
               <span className="text-white text-lg font-semibold">
@@ -257,107 +244,104 @@ const Settings = () => {
               <p className="text-sm text-gray-500">Akun Personal</p>
             </div>
           </div>
-          <button
-            onClick={() => toast({ title: "Coming Soon", description: "Fitur edit profil akan segera tersedia" })}
-            className="text-sm text-[#6E59A5] font-medium"
+          <Button 
+            variant="link" 
+            className="text-[#6E59A5] p-0 h-auto font-medium"
+            onClick={() => toast({ 
+              title: "Coming Soon", 
+              description: "Fitur edit profil akan segera tersedia" 
+            })}
           >
             Edit Profile
-          </button>
+          </Button>
         </section>
         
-        {/* Features toggle section */}
-        <section className="mb-8 bg-white p-4 rounded-lg">
-          <h2 className="font-semibold mb-4">Fitur</h2>
+        <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
+          <h2 className="font-semibold p-4 border-b border-gray-100">Fitur</h2>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                  <DollarSign className="w-4 h-4 text-blue-600" />
-                </div>
-                <Label htmlFor="budgeting">Budgeting</Label>
-              </div>
-              <Switch
-                id="budgeting"
-                checked={settings.showBudgeting}
-                onCheckedChange={() => handleToggleChange('showBudgeting')}
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center mr-3">
-                  <PiggyBank className="w-4 h-4 text-green-600" />
-                </div>
-                <Label htmlFor="savings">Tabungan</Label>
-              </div>
-              <Switch
-                id="savings"
-                checked={settings.showSavings}
-                onCheckedChange={() => handleToggleChange('showSavings')}
-                disabled={loading}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3">
-                  <CreditCard className="w-4 h-4 text-red-600" />
-                </div>
-                <Label htmlFor="loans">Hutang & Piutang</Label>
-              </div>
-              <Switch
-                id="loans"
-                checked={settings.showLoans}
-                onCheckedChange={() => handleToggleChange('showLoans')}
-                disabled={loading}
-              />
-            </div>
-          </div>
+          <FeatureToggle
+            icon={<DollarSign className="w-4 h-4 text-blue-600" />}
+            title="Budgeting"
+            checked={settings.showBudgeting}
+            onToggle={() => handleToggleChange('showBudgeting')}
+            managementLink="/budgets"
+          />
+          
+          <FeatureToggle
+            icon={<PiggyBank className="w-4 h-4 text-green-600" />}
+            title="Tabungan"
+            checked={settings.showSavings}
+            onToggle={() => handleToggleChange('showSavings')}
+            managementLink="/savings"
+          />
+          
+          <FeatureToggle
+            icon={<CreditCard className="w-4 h-4 text-red-600" />}
+            title="Hutang & Piutang"
+            checked={settings.showLoans}
+            onToggle={() => handleToggleChange('showLoans')}
+            managementLink="/loans"
+          />
         </section>
         
-        {/* Other settings */}
-        <section className="mb-8 bg-white rounded-lg">
-          <button
+        <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50"
             onClick={handleExportData}
-            className="w-full flex items-center p-4 border-b border-gray-100"
           >
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-              <FileDown className="w-4 h-4 text-gray-600" />
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                <FileDown className="w-4 h-4 text-gray-600" />
+              </div>
+              <span>Export Data</span>
             </div>
-            <span className="flex-1 text-left">Export Data</span>
-          </button>
+          </Button>
           
-          <button
-            onClick={() => toast({ title: "Coming Soon", description: "Fitur ini akan segera tersedia" })}
-            className="w-full flex items-center p-4 border-b border-gray-100"
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
+            onClick={() => toast({ 
+              title: "Coming Soon", 
+              description: "Fitur ini akan segera tersedia" 
+            })}
           >
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-              <FileText className="w-4 h-4 text-gray-600" />
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                <FileText className="w-4 h-4 text-gray-600" />
+              </div>
+              <span>Syarat dan Ketentuan</span>
             </div>
-            <span className="flex-1 text-left">Syarat dan Ketentuan</span>
-          </button>
+          </Button>
           
-          <button
-            onClick={() => toast({ title: "Coming Soon", description: "Fitur ini akan segera tersedia" })}
-            className="w-full flex items-center p-4 border-b border-gray-100"
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
+            onClick={() => toast({ 
+              title: "Coming Soon", 
+              description: "Fitur ini akan segera tersedia" 
+            })}
           >
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-              <HelpCircle className="w-4 h-4 text-gray-600" />
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                <HelpCircle className="w-4 h-4 text-gray-600" />
+              </div>
+              <span>Bantuan</span>
             </div>
-            <span className="flex-1 text-left">Bantuan</span>
-          </button>
+          </Button>
           
-          <button
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100 text-red-600"
             onClick={handleLogout}
-            className="w-full flex items-center p-4 text-red-600"
           >
-            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3">
-              <LogOut className="w-4 h-4 text-red-600" />
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3">
+                <LogOut className="w-4 h-4 text-red-600" />
+              </div>
+              <span>Keluar</span>
             </div>
-            <span className="flex-1 text-left">Keluar</span>
-          </button>
+          </Button>
         </section>
         
         <div className="text-center text-gray-500 text-sm">
