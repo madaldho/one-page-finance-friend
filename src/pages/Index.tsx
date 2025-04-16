@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,11 +9,14 @@ import SavingsCard from "@/components/SavingsCard";
 import LoansCard from "@/components/LoansCard";
 import TransactionList from "@/components/TransactionList";
 import TransactionActions from "@/components/TransactionActions";
+import WalletForm from "@/components/WalletForm";
 import { Plus, ArrowRight } from "lucide-react";
 import { Transaction, Wallet, Budget, Saving, Loan, UserSettings } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // State for data
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -20,6 +24,7 @@ const Index = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [showAddWallet, setShowAddWallet] = useState(false);
   
   // State for summary values
   const [totalIncome, setTotalIncome] = useState(0);
@@ -37,95 +42,105 @@ const Index = () => {
   
   // Fetch all data when component mounts
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          toast({
-            title: "Tidak Terautentikasi",
-            description: "Silakan login untuk melihat data",
-            variant: "destructive"
-          });
-          return;
-        }
+    if (!user) return;
+    fetchData();
+  }, [user]);
+  
+  const fetchData = async () => {
+    try {
+      if (!user) {
+        toast({
+          title: "Tidak Terautentikasi",
+          description: "Silakan login untuk melihat data",
+          variant: "destructive"
+        });
+        return;
+      }
 
-        // Fetch transactions
-        const { data: transactionsData, error: transactionsError } = await supabase
-          .from('transactions')
-          .select('*')
-          .order('date', { ascending: false });
+      // Fetch transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
 
-        if (transactionsError) throw transactionsError;
-        setTransactions(transactionsData as Transaction[]);
+      if (transactionsError) throw transactionsError;
+      setTransactions(transactionsData as Transaction[]);
 
-        // Fetch wallets
-        const { data: walletsData, error: walletsError } = await supabase
-          .from('wallets')
-          .select('*')
-          .order('name');
+      // Fetch wallets
+      const { data: walletsData, error: walletsError } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name');
 
-        if (walletsError) throw walletsError;
-        setWallets(walletsData as Wallet[]);
+      if (walletsError) throw walletsError;
+      setWallets(walletsData as Wallet[]);
 
-        // Fetch user settings if available
-        const { data: settingsData, error: settingsError } = await supabase
-          .from('user_settings')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single();
+      // Fetch user settings if available
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-        if (!settingsError && settingsData) {
-          setSettings(settingsData as UserSettings);
-        }
+      if (!settingsError && settingsData) {
+        setSettings(settingsData as UserSettings);
+      }
 
-        // Based on settings, fetch other data
-        const fetchPromises = [];
+      // Based on settings, fetch other data
+      const fetchPromises = [];
 
-        // Fetch budgets if enabled
-        if (settings.show_budgeting || !settingsData) {
-          fetchPromises.push(
-            supabase.from('budgets').select('*').then(({ data, error }) => {
+      // Fetch budgets if enabled
+      if (settings.show_budgeting || !settingsData) {
+        fetchPromises.push(
+          supabase.from('budgets')
+            .select('*')
+            .eq('user_id', user.id)
+            .then(({ data, error }) => {
               if (error) throw error;
               setBudgets(data as Budget[]);
             })
-          );
-        }
+        );
+      }
 
-        // Fetch savings if enabled
-        if (settings.show_savings || !settingsData) {
-          fetchPromises.push(
-            supabase.from('savings').select('*').then(({ data, error }) => {
+      // Fetch savings if enabled
+      if (settings.show_savings || !settingsData) {
+        fetchPromises.push(
+          supabase.from('savings')
+            .select('*')
+            .eq('user_id', user.id)
+            .then(({ data, error }) => {
               if (error) throw error;
               setSavings(data as Saving[]);
             })
-          );
-        }
+        );
+      }
 
-        // Fetch loans if enabled
-        if (settings.show_loans || !settingsData) {
-          fetchPromises.push(
-            supabase.from('loans').select('*').then(({ data, error }) => {
+      // Fetch loans if enabled
+      if (settings.show_loans || !settingsData) {
+        fetchPromises.push(
+          supabase.from('loans')
+            .select('*')
+            .eq('user_id', user.id)
+            .then(({ data, error }) => {
               if (error) throw error;
               setLoans(data as Loan[]);
             })
-          );
-        }
-
-        await Promise.all(fetchPromises);
-
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          title: "Gagal Memuat Data",
-          description: "Terjadi kesalahan saat mengambil data",
-          variant: "destructive"
-        });
+        );
       }
-    };
 
-    fetchData();
-  }, [toast, settings]);
+      await Promise.all(fetchPromises);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Gagal Memuat Data",
+        description: "Terjadi kesalahan saat mengambil data",
+        variant: "destructive"
+      });
+    }
+  };
   
   // Calculate summary values from transactions and wallets
   useEffect(() => {
@@ -151,15 +166,18 @@ const Index = () => {
   }, [transactions, wallets]);
   
   const handleAddTransaction = (transaction: Transaction) => {
-    setTransactions([transaction, ...transactions]);
+    fetchData(); // Refresh all data
   };
   
   const handleFilterTransactions = async (query: string) => {
+    if (!user) return;
+    
     if (!query) {
       // Reset to default if query is empty
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false });
 
       if (error) {
@@ -175,6 +193,7 @@ const Index = () => {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', user.id)
         .ilike('title', `%${query}%`)
         .order('date', { ascending: false });
 
@@ -197,18 +216,10 @@ const Index = () => {
   };
   
   const handleWalletClick = (wallet: Wallet) => {
-    // This will be implemented in a future update
+    // Filter transactions by wallet
     toast({
-      title: "Coming Soon",
-      description: "Fitur klik wallet akan segera tersedia",
-    });
-  };
-  
-  const handleAddWallet = () => {
-    // This will be implemented in a future update
-    toast({
-      title: "Coming Soon",
-      description: "Fitur tambah wallet akan segera tersedia",
+      title: wallet.name,
+      description: `Saldo: Rp ${wallet.balance.toLocaleString()}`,
     });
   };
   
@@ -234,10 +245,11 @@ const Index = () => {
                 key={wallet.id} 
                 wallet={wallet} 
                 onClick={() => handleWalletClick(wallet)}
+                onDelete={fetchData}
               />
             ))}
             <button 
-              onClick={handleAddWallet}
+              onClick={() => setShowAddWallet(true)}
               className="rounded-lg p-3 border border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500"
             >
               <Plus className="w-4 h-4 mb-1" />
@@ -245,6 +257,16 @@ const Index = () => {
             </button>
           </div>
         </section>
+        
+        {showAddWallet && (
+          <WalletForm 
+            onClose={() => setShowAddWallet(false)}
+            onSuccess={() => {
+              setShowAddWallet(false);
+              fetchData();
+            }}
+          />
+        )}
         
         {/* Budget Section - Show if enabled */}
         {settings.show_budgeting && (
