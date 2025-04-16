@@ -1,156 +1,304 @@
-
-import { useState } from "react";
-import { BalanceCard } from "@/components/finance/BalanceCard";
-import { BudgetCard } from "@/components/finance/BudgetProgress";
-import { TransactionList, Transaction } from "@/components/finance/TransactionList";
-import { AddTransactionForm } from "@/components/finance/AddTransactionForm";
-import { ChevronDownIcon, Wallet } from "lucide-react";
-
-// Initial demo data
-const initialTransactions: Transaction[] = [
-  {
-    id: "1",
-    description: "Salary",
-    amount: 3000,
-    category: "Salary",
-    date: "Apr 12, 2025",
-    type: "income",
-  },
-  {
-    id: "2",
-    description: "Grocery shopping",
-    amount: 85.45,
-    category: "Groceries",
-    date: "Apr 14, 2025",
-    type: "expense",
-  },
-  {
-    id: "3",
-    description: "Restaurant dinner",
-    amount: 54.20,
-    category: "Entertainment",
-    date: "Apr 15, 2025",
-    type: "expense",
-  },
-  {
-    id: "4",
-    description: "Coffee shop",
-    amount: 4.75,
-    category: "Coffee",
-    date: "Apr 16, 2025",
-    type: "expense",
-  },
-];
-
-const budgetCategories = [
-  { category: "Groceries", current: 280, max: 400, color: "finance-primary" },
-  { category: "Entertainment", current: 120, max: 200, color: "finance-accent" },
-  { category: "Transportation", current: 140, max: 250, color: "finance-secondary" },
-  { category: "Coffee", current: 30, max: 50, color: "finance-expense" },
-];
+import React, { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import Layout from "@/components/Layout";
+import WalletCard from "@/components/WalletCard";
+import BudgetCard from "@/components/BudgetCard";
+import SavingsCard from "@/components/SavingsCard";
+import LoansCard from "@/components/LoansCard";
+import TransactionList from "@/components/TransactionList";
+import TransactionActions from "@/components/TransactionActions";
+import { Plus, ArrowRight } from "lucide-react";
+import { Transaction, Wallet, Budget, Saving, Loan, UserSettings } from "@/types";
 
 const Index = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
+  const { toast } = useToast();
   
-  // Calculate totals
-  const balance = transactions.reduce((total, transaction) => 
-    transaction.type === "income" 
-      ? total + transaction.amount 
-      : total - transaction.amount, 
-    0
-  );
+  // State for data
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [savings, setSavings] = useState<Saving[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
   
-  const totalIncome = transactions
-    .filter(t => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
+  // State for summary values
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpense, setTotalExpense] = useState(0);
+  const [balance, setBalance] = useState(0);
   
-  const totalExpenses = transactions
-    .filter(t => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  // User settings
+  const [settings, setSettings] = useState<UserSettings>({
+    id: "",
+    user_id: "",
+    show_budgeting: true,
+    show_savings: true,
+    show_loans: true,
+  });
+  
+  // Fetch all data when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          toast({
+            title: "Tidak Terautentikasi",
+            description: "Silakan login untuk melihat data",
+            variant: "destructive"
+          });
+          return;
+        }
 
-  const handleAddTransaction = (newTransaction: {
-    description: string;
-    amount: number;
-    category: string;
-    type: "income" | "expense";
-  }) => {
-    const transaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 9),
-      description: newTransaction.description,
-      amount: newTransaction.amount,
-      category: newTransaction.category,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      type: newTransaction.type,
+        // Fetch transactions
+        const { data: transactionsData, error: transactionsError } = await supabase
+          .from('transactions')
+          .select('*')
+          .order('date', { ascending: false });
+
+        if (transactionsError) throw transactionsError;
+        setTransactions(transactionsData as Transaction[]);
+
+        // Fetch wallets
+        const { data: walletsData, error: walletsError } = await supabase
+          .from('wallets')
+          .select('*')
+          .order('name');
+
+        if (walletsError) throw walletsError;
+        setWallets(walletsData as Wallet[]);
+
+        // Fetch user settings if available
+        const { data: settingsData, error: settingsError } = await supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (!settingsError && settingsData) {
+          setSettings(settingsData as UserSettings);
+        }
+
+        // Based on settings, fetch other data
+        const fetchPromises = [];
+
+        // Fetch budgets if enabled
+        if (settings.show_budgeting || !settingsData) {
+          fetchPromises.push(
+            supabase.from('budgets').select('*').then(({ data, error }) => {
+              if (error) throw error;
+              setBudgets(data as Budget[]);
+            })
+          );
+        }
+
+        // Fetch savings if enabled
+        if (settings.show_savings || !settingsData) {
+          fetchPromises.push(
+            supabase.from('savings').select('*').then(({ data, error }) => {
+              if (error) throw error;
+              setSavings(data as Saving[]);
+            })
+          );
+        }
+
+        // Fetch loans if enabled
+        if (settings.show_loans || !settingsData) {
+          fetchPromises.push(
+            supabase.from('loans').select('*').then(({ data, error }) => {
+              if (error) throw error;
+              setLoans(data as Loan[]);
+            })
+          );
+        }
+
+        await Promise.all(fetchPromises);
+
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        toast({
+          title: "Gagal Memuat Data",
+          description: "Terjadi kesalahan saat mengambil data",
+          variant: "destructive"
+        });
+      }
     };
+
+    fetchData();
+  }, [toast, settings]);
+  
+  // Calculate summary values from transactions and wallets
+  useEffect(() => {
+    let incomeSum = 0;
+    let expenseSum = 0;
+    let walletBalance = 0;
     
+    transactions.forEach(transaction => {
+      if (transaction.type === "income") {
+        incomeSum += transaction.amount;
+      } else if (transaction.type === "expense") {
+        expenseSum += transaction.amount;
+      }
+    });
+    
+    wallets.forEach(wallet => {
+      walletBalance += wallet.balance;
+    });
+    
+    setTotalIncome(incomeSum);
+    setTotalExpense(expenseSum);
+    setBalance(walletBalance);
+  }, [transactions, wallets]);
+  
+  const handleAddTransaction = (transaction: Transaction) => {
     setTransactions([transaction, ...transactions]);
   };
+  
+  const handleFilterTransactions = async (query: string) => {
+    if (!query) {
+      // Reset to default if query is empty
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false });
 
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm py-4 px-6 border-b">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <Wallet className="h-6 w-6 text-finance-primary mr-2" />
-            <h1 className="text-xl font-bold text-finance-dark">Finance Friend</h1>
-          </div>
-          <div className="flex items-center space-x-1 text-sm text-finance-neutral">
-            <span>April 2025</span>
-            <ChevronDownIcon className="h-4 w-4" />
-          </div>
-        </div>
-      </header>
+      if (error) {
+        console.error('Error fetching all transactions:', error);
+        return;
+      }
+
+      setTransactions(data as Transaction[]);
+      return;
+    }
+    
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .ilike('title', `%${query}%`)
+        .order('date', { ascending: false });
+
+      if (error) throw error;
       
-      {/* Main content */}
-      <main className="max-w-6xl mx-auto py-6 px-6">
-        {/* Balance overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <BalanceCard 
-            title="Total Balance" 
-            amount={balance} 
-            type="balance"
-          />
-          <BalanceCard 
-            title="Total Income" 
-            amount={totalIncome} 
-            type="income"
-          />
-          <BalanceCard 
-            title="Total Expenses" 
-            amount={totalExpenses} 
-            type="expense"
-          />
+      setTransactions(data as Transaction[]);
+      
+      toast({
+        title: "Mencari transaksi",
+        description: `Hasil pencarian untuk "${query}"`,
+      });
+    } catch (error) {
+      console.error('Error filtering transactions:', error);
+      toast({
+        title: "Gagal Mencari Transaksi",
+        description: "Terjadi kesalahan saat mencari transaksi",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleWalletClick = (wallet: Wallet) => {
+    // This will be implemented in a future update
+    toast({
+      title: "Coming Soon",
+      description: "Fitur klik wallet akan segera tersedia",
+    });
+  };
+  
+  const handleAddWallet = () => {
+    // This will be implemented in a future update
+    toast({
+      title: "Coming Soon",
+      description: "Fitur tambah wallet akan segera tersedia",
+    });
+  };
+  
+  return (
+    <Layout>
+      <div className="container mx-auto p-4 pb-32">
+        {/* Profile and Title Section */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-xl font-bold">Manajemen Keuangan</h1>
+            <p className="text-sm text-gray-500">30 hari aktif</p>
+          </div>
         </div>
         
-        {/* Main grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left side */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Budget tracking */}
-            <BudgetCard 
-              title="Budget Tracking" 
-              items={budgetCategories}
-            />
+        {/* Wallets Section */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold">Saldo Dompet dan Rekening</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {wallets.map(wallet => (
+              <WalletCard 
+                key={wallet.id} 
+                wallet={wallet} 
+                onClick={() => handleWalletClick(wallet)}
+              />
+            ))}
+            <button 
+              onClick={handleAddWallet}
+              className="rounded-lg p-3 border border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500"
+            >
+              <Plus className="w-4 h-4 mb-1" />
+              <span className="text-xs">Tambah Wallet</span>
+            </button>
+          </div>
+        </section>
+        
+        {/* Budget Section - Show if enabled */}
+        {settings.show_budgeting && (
+          <section className="mb-6">
+            <BudgetCard budgets={budgets} />
+          </section>
+        )}
+        
+        {/* Savings Section - Show if enabled */}
+        {settings.show_savings && (
+          <section className="mb-6">
+            <SavingsCard savings={savings} />
+          </section>
+        )}
+        
+        {/* Loans Section - Show if enabled */}
+        {settings.show_loans && (
+          <section className="mb-6">
+            <LoansCard loans={loans} />
+          </section>
+        )}
+        
+        {/* Summary Section */}
+        <section className="mb-6">
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="p-3 rounded-lg bg-green-100 border border-green-200">
+              <p className="text-xs text-green-800">Total Pemasukan</p>
+              <p className="font-semibold mt-1">Rp {totalIncome.toLocaleString()}</p>
+            </div>
             
-            {/* Transactions */}
-            <TransactionList transactions={transactions} />
+            <div className="p-3 rounded-lg bg-red-100 border border-red-200">
+              <p className="text-xs text-red-800">Total Pengeluaran</p>
+              <p className="font-semibold mt-1">Rp {totalExpense.toLocaleString()}</p>
+            </div>
+            
+            <div className="p-3 rounded-lg bg-blue-100 border border-blue-200">
+              <p className="text-xs text-blue-800">Saldo Total</p>
+              <p className="font-semibold mt-1">Rp {balance.toLocaleString()}</p>
+            </div>
           </div>
-          
-          {/* Right side - Add Transaction */}
-          <div className="lg:col-span-4">
-            <AddTransactionForm onAddTransaction={handleAddTransaction} />
-          </div>
-        </div>
-      </main>
-      
-      {/* Footer */}
-      <footer className="bg-white border-t py-4 px-6">
-        <div className="max-w-6xl mx-auto text-center text-sm text-finance-neutral">
-          Finance Friend © 2025
-        </div>
-      </footer>
-    </div>
+        </section>
+        
+        {/* Transactions Section */}
+        <section>
+          <TransactionList 
+            transactions={transactions} 
+            onFilter={handleFilterTransactions}
+          />
+        </section>
+        
+        {/* Floating Action Buttons */}
+        <TransactionActions onTransactionAdded={handleAddTransaction} />
+      </div>
+    </Layout>
   );
 };
 
