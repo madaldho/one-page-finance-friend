@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,22 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import ColorPicker from "./ColorPicker";
 
 const walletTypes = [
   { id: "cash", name: "Cash" },
   { id: "bank", name: "Bank" },
   { id: "ewallet", name: "E-Wallet" },
   { id: "other", name: "Lainnya" },
-];
-
-const colorOptions = [
-  { id: "green", name: "Hijau", class: "bg-green-500" },
-  { id: "blue", name: "Biru", class: "bg-blue-500" },
-  { id: "purple", name: "Ungu", class: "bg-purple-500" },
-  { id: "pink", name: "Pink", class: "bg-pink-500" },
-  { id: "orange", name: "Oranye", class: "bg-orange-500" },
-  { id: "yellow", name: "Kuning", class: "bg-yellow-500" },
-  { id: "red", name: "Merah", class: "bg-red-500" },
 ];
 
 interface WalletFormProps {
@@ -128,17 +119,8 @@ const WalletForm = ({ wallet, onClose, onSuccess }: WalletFormProps) => {
             <label htmlFor="color" className="block font-medium">
               Warna
             </label>
-            <div className="grid grid-cols-7 gap-2">
-              {colorOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`h-10 rounded-md ${option.class} ${
-                    color === option.id ? "ring-2 ring-offset-2 ring-black" : ""
-                  }`}
-                  onClick={() => setColor(option.id)}
-                />
-              ))}
+            <div className="flex justify-center mb-4">
+              <ColorPicker value={color} onChange={setColor} />
             </div>
           </div>
           
@@ -190,7 +172,14 @@ const WalletForm = ({ wallet, onClose, onSuccess }: WalletFormProps) => {
               Batal
             </Button>
             <Button type="submit" disabled={loading}>
-              {wallet ? "Simpan" : "Tambah"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {wallet ? "Memperbarui..." : "Menambahkan..."}
+                </>
+              ) : (
+                wallet ? "Simpan" : "Tambah"
+              )}
             </Button>
           </DialogFooter>
         </form>

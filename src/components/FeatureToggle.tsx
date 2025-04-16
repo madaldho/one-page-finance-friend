@@ -8,28 +8,47 @@ import { Link } from "react-router-dom";
 interface FeatureToggleProps {
   icon: React.ReactNode;
   title: string;
+  description?: string;
   checked: boolean;
   onToggle: () => void;
   managementLink?: string;
+  disabled?: boolean;
+  loading?: boolean;
 }
 
-const FeatureToggle = ({ icon, title, checked, onToggle, managementLink }: FeatureToggleProps) => {
+const FeatureToggle = ({ 
+  icon, 
+  title, 
+  description, 
+  checked, 
+  onToggle, 
+  managementLink,
+  disabled = false,
+  loading = false
+}: FeatureToggleProps) => {
   return (
     <div className="flex items-center justify-between p-4 border-b border-gray-100">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
           {icon}
         </div>
-        <Label htmlFor={`toggle-${title}`}>{title}</Label>
+        <div>
+          <Label htmlFor={`toggle-${title}`} className="cursor-pointer">{title}</Label>
+          {description && (
+            <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-4">
         <Switch 
           id={`toggle-${title}`}
           checked={checked} 
           onCheckedChange={onToggle}
+          disabled={disabled || loading}
+          aria-label={`Toggle ${title}`}
         />
-        {managementLink && (
-          <Link to={managementLink} className="text-gray-500">
+        {managementLink && checked && (
+          <Link to={managementLink} className="text-gray-500 hover:text-gray-700 transition-colors" aria-label={`Manage ${title}`}>
             <ChevronRight className="w-5 h-5" />
           </Link>
         )}

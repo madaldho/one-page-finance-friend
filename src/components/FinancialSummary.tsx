@@ -11,13 +11,16 @@ interface Transaction {
   type: "income" | "expense";
   date: string;
   category: string;
+  wallet?: string;
 }
 
 interface FinancialSummaryProps {
   transactions: Transaction[];
+  walletMap?: Record<string, string>;
+  showWalletData?: boolean;
 }
 
-const FinancialSummary = ({ transactions }: FinancialSummaryProps) => {
+const FinancialSummary = ({ transactions, walletMap = {}, showWalletData = true }: FinancialSummaryProps) => {
   // Calculate category totals for expenses
   const expensesByCategory = transactions
     .filter(t => t.type === 'expense')
@@ -54,13 +57,49 @@ const FinancialSummary = ({ transactions }: FinancialSummaryProps) => {
     }
   });
   
-  const trendData = Object.entries(monthlyData).map(([month, data]) => ({
-    name: month,
+  const trendData = Object.entries(monthlyData)
+    .sort()
+    .slice(-10)
+    .map(([month, data]) => ({
+      name: month,
+      income: data.income,
+      expense: data.expense,
+      net: data.income - data.expense
+    }));
+
+  // Prepare wallet-based data if wallet info is available
+  const walletData = showWalletData ? transactions
+    .reduce((acc: Record<string, {income: number, expense: number}>, transaction) => {
+      if (!transaction.wallet) return acc;
+      
+      const walletId = transaction.wallet;
+      const walletName = walletMap[walletId] || `Wallet ${walletId.slice(0, 4)}`;
+      
+      if (!acc[walletName]) {
+        acc[walletName] = { income: 0, expense: 0 };
+      }
+      
+      if (transaction.type === 'income') {
+        acc[walletName].income += transaction.amount;
+      } else {
+        acc[walletName].expense += transaction.amount;
+      }
+      
+      return acc;
+    }, {}) : {};
+
+  const walletChartData = Object.entries(walletData).map(([name, data]) => ({
+    name,
     income: data.income,
     expense: data.expense,
+    net: data.income - data.expense
   }));
 
-  const COLORS = ['#4CAF50', '#FFA000', '#F44336', '#2196F3', '#9C27B0', '#00BCD4'];
+  const COLORS = ['#4CAF50', '#FFA000', '#F44336', '#2196F3', '#9C27B0', '#00BCD4', '#8884d8'];
+
+  const formatToRupiah = (value: number) => {
+    return `Rp ${value.toLocaleString()}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -89,15 +128,14 @@ const FinancialSummary = ({ transactions }: FinancialSummaryProps) => {
                       outerRadius={80}
                       paddingAngle={2}
                       dataKey="value"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     >
                       {categoryChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Legend
-                      formatter={(value, entry) => `${value}: Rp ${(entry.payload as any).value.toLocaleString()}`}
-                    />
+                    <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatToRupiah(value as number)} />} />
+                    <Legend formatter={(value, entry) => `${value}: Rp ${(entry.payload as any).value.toLocaleString()}`} />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -119,14 +157,15 @@ const FinancialSummary = ({ transactions }: FinancialSummaryProps) => {
                 config={{
                   income: { color: "#22c55e" },
                   expense: { color: "#ef4444" },
+                  net: { color: "#6E59A5" },
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={trendData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" />
-                    <YAxis />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <YAxis tickFormatter={(value) => `${(value / 1000)}K`} />
+                    <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatToRupiah(value as number)} />} />
                     <Bar dataKey="income" name="Pemasukan" fill="#22c55e" />
                     <Bar dataKey="expense" name="Pengeluaran" fill="#ef4444" />
                   </BarChart>
@@ -140,6 +179,39 @@ const FinancialSummary = ({ transactions }: FinancialSummaryProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {showWalletData && walletChartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Transaksi per Wallet</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[300px]">
+            <ChartContainer
+              config={{
+                income: { color: "#22c55e" },
+                expense: { color: "#ef4444" },
+                net: { color: "#6E59A5" },
+              }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={walletChartData}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
+                  <XAxis type="number" tickFormatter={(value) => formatToRupiah(value)} />
+                  <YAxis dataKey="name" type="category" width={80} />
+                  <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatToRupiah(value as number)} />} />
+                  <Legend />
+                  <Bar dataKey="income" name="Pemasukan" fill="#22c55e" />
+                  <Bar dataKey="expense" name="Pengeluaran" fill="#ef4444" />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

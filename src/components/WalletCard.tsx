@@ -39,7 +39,24 @@ const WalletCard = ({ wallet, onClick, onDelete }: WalletCardProps) => {
     default: "bg-gray-100 border-gray-200"
   };
 
-  const colorClass = colors[wallet.color] || colors.default;
+  // Check if wallet.color is a hex color
+  const isCustomColor = wallet.color && wallet.color.startsWith('#');
+  
+  // Get background and border color styles for custom colors
+  const getCustomColorStyle = () => {
+    if (isCustomColor) {
+      const hexColor = wallet.color;
+      // Create a lighter version for the background
+      return {
+        backgroundColor: `${hexColor}20`, // 20% opacity
+        borderColor: `${hexColor}40`,     // 40% opacity
+      };
+    }
+    return {};
+  };
+
+  // Get the CSS class for predefined colors
+  const colorClass = !isCustomColor ? (colors[wallet.color as string] || colors.default) : '';
 
   const handleDelete = async () => {
     try {
@@ -70,6 +87,7 @@ const WalletCard = ({ wallet, onClick, onDelete }: WalletCardProps) => {
       <div 
         className={`relative rounded-lg p-3 border ${colorClass} cursor-pointer group`}
         onClick={onClick}
+        style={isCustomColor ? getCustomColorStyle() : {}}
       >
         <div className="text-xs font-medium uppercase">{wallet.name}</div>
         <div className="font-semibold mt-1">Rp {wallet.balance.toLocaleString()}</div>
@@ -79,7 +97,7 @@ const WalletCard = ({ wallet, onClick, onDelete }: WalletCardProps) => {
               e.stopPropagation();
               setIsEditing(true);
             }}
-            className="p-1 bg-white rounded-full shadow-sm"
+            className="p-1 bg-white rounded-full shadow-sm hover:bg-gray-50 transition-colors"
           >
             <Pencil className="w-3 h-3 text-gray-600" />
           </button>
@@ -87,7 +105,7 @@ const WalletCard = ({ wallet, onClick, onDelete }: WalletCardProps) => {
             <AlertDialogTrigger asChild>
               <button 
                 onClick={(e) => e.stopPropagation()}
-                className="p-1 bg-white rounded-full shadow-sm"
+                className="p-1 bg-white rounded-full shadow-sm hover:bg-gray-50 transition-colors"
               >
                 <Trash2 className="w-3 h-3 text-red-600" />
               </button>
