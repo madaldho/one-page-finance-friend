@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Transaction } from "@/types";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { PieChart, Pie, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Toggle, ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { PieChart, Pie, BarChart, Bar, Cell, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from "recharts";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
 
@@ -16,13 +15,11 @@ const Analysis = () => {
   const [period, setPeriod] = useState<"week" | "month" | "year">("month");
   const [chartType, setChartType] = useState<"category" | "wallet">("category");
   
-  // Group data
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [walletData, setWalletData] = useState<any[]>([]);
   const [incomeVsExpense, setIncomeVsExpense] = useState<any[]>([]);
   const [dailyTransactions, setDailyTransactions] = useState<any[]>([]);
 
-  // Format number to Rupiah
   const formatToRupiah = (value: number) => {
     return `Rp ${value.toLocaleString()}`;
   };
@@ -30,25 +27,20 @@ const Analysis = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        // Calculate date range based on period
         const now = new Date();
         let startDate;
         
         if (period === "week") {
-          // Last 7 days
           startDate = new Date(now);
           startDate.setDate(startDate.getDate() - 7);
         } else if (period === "month") {
-          // Last 30 days
           startDate = new Date(now);
           startDate.setDate(startDate.getDate() - 30);
         } else {
-          // Last 365 days
           startDate = new Date(now);
           startDate.setDate(startDate.getDate() - 365);
         }
         
-        // Format dates for database query
         const startDateStr = startDate.toISOString().slice(0, 10);
         const endDateStr = now.toISOString().slice(0, 10);
 
@@ -76,9 +68,6 @@ const Analysis = () => {
   }, [toast, period]);
 
   useEffect(() => {
-    // Process transactions into chart data
-    
-    // Group by category
     const categorySums = transactions.reduce((acc: Record<string, number>, transaction: Transaction) => {
       if (transaction.type === "expense") {
         const key = transaction.category || "Lainnya";
@@ -93,7 +82,6 @@ const Analysis = () => {
     }));
     setCategoryData(categoryChartData);
     
-    // Group by wallet
     const walletSums = transactions.reduce((acc: Record<string, {income: number, expense: number}>, transaction: Transaction) => {
       const walletId = transaction.wallet || "unknown";
       
@@ -110,7 +98,6 @@ const Analysis = () => {
       return acc;
     }, {});
     
-    // We'll need to fetch wallet names
     const getWalletNames = async () => {
       try {
         const { data: wallets, error } = await supabase
@@ -139,7 +126,6 @@ const Analysis = () => {
     
     getWalletNames();
     
-    // Income vs Expense by period
     const totalIncome = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
     const totalExpense = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
     
@@ -148,7 +134,6 @@ const Analysis = () => {
       { name: 'Pengeluaran', value: totalExpense },
     ]);
     
-    // Daily transactions (for bar chart)
     const dailyTxns = transactions.reduce((acc: Record<string, {income: number, expense: number}>, t: Transaction) => {
       const date = t.date.slice(0, 10);
       
@@ -165,10 +150,9 @@ const Analysis = () => {
       return acc;
     }, {});
     
-    // Convert to array and sort by date
     const dailyChartData = Object.keys(dailyTxns)
       .sort()
-      .slice(-10) // Only show last 10 days
+      .slice(-10)
       .map(date => ({
         date: new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
         income: dailyTxns[date].income,
@@ -184,7 +168,6 @@ const Analysis = () => {
       <div className="container mx-auto p-4 pb-32">
         <h1 className="text-xl font-bold mb-6">Analisis Keuangan</h1>
         
-        {/* Period selector */}
         <div className="mb-6">
           <p className="text-sm mb-2">Pilih periode:</p>
           <ToggleGroup type="single" value={period} onValueChange={(value) => value && setPeriod(value as "week" | "month" | "year")}>
@@ -200,7 +183,6 @@ const Analysis = () => {
           </ToggleGroup>
         </div>
         
-        {/* Summary cards */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="p-4 bg-white rounded-lg shadow-sm">
             <p className="text-sm text-gray-500">Total Pemasukan</p>
@@ -216,7 +198,6 @@ const Analysis = () => {
           </div>
         </div>
         
-        {/* Income vs Expense pie chart */}
         <div className="mb-8 bg-white p-4 rounded-lg">
           <h2 className="text-lg font-semibold mb-4">Pemasukan vs Pengeluaran</h2>
           <div className="aspect-[4/3] w-full">
@@ -244,7 +225,6 @@ const Analysis = () => {
           </div>
         </div>
         
-        {/* Daily transactions bar chart */}
         <div className="mb-8 bg-white p-4 rounded-lg">
           <h2 className="text-lg font-semibold mb-4">Transaksi Harian</h2>
           <div className="aspect-[4/3] w-full">
@@ -261,7 +241,6 @@ const Analysis = () => {
           </div>
         </div>
         
-        {/* Toggle between category and wallet pie charts */}
         <div className="mb-4">
           <ToggleGroup type="single" value={chartType} onValueChange={(value) => value && setChartType(value as "category" | "wallet")}>
             <ToggleGroupItem value="category" aria-label="Toggle categories">
@@ -273,7 +252,6 @@ const Analysis = () => {
           </ToggleGroup>
         </div>
         
-        {/* Category or wallet pie chart */}
         {chartType === "category" ? (
           <div className="mb-8 bg-white p-4 rounded-lg">
             <h2 className="text-lg font-semibold mb-4">Pengeluaran per Kategori</h2>
@@ -318,7 +296,6 @@ const Analysis = () => {
           </div>
         )}
         
-        {/* Transaction stats */}
         <div className="mb-8 bg-white p-4 rounded-lg">
           <h2 className="text-lg font-semibold mb-4">Statistik Transaksi</h2>
           <div className="grid grid-cols-2 gap-4">
