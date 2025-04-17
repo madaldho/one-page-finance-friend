@@ -63,7 +63,7 @@ const LoansCard: React.FC<LoansCardProps> = ({ loans, loading, onViewAll }) => {
             </div>
             <div className="flex items-center">
               <div className="text-right mr-2">
-                <p className={`font-medium ${loan.type === "hutang" ? "text-red-500" : "text-green-500"}`}>
+                <p className={`font-medium ${loan.type === "payable" ? "text-red-500" : "text-green-500"}`}>
                   {formatCurrency(loan.remaining_amount)}
                 </p>
                 <p className="text-xs text-gray-500">

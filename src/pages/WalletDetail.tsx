@@ -26,7 +26,6 @@ const WalletDetail = () => {
     const fetchWalletAndTransactions = async () => {
       setLoading(true);
       try {
-        // Fetch wallet details
         const { data: walletData, error: walletError } = await supabase
           .from('wallets')
           .select('*')
@@ -40,7 +39,6 @@ const WalletDetail = () => {
 
         setWallet(walletData);
 
-        // Fetch transactions for the wallet
         const { data: transactionsData, error: transactionsError } = await supabase
           .from('transactions')
           .select('*')
@@ -55,7 +53,6 @@ const WalletDetail = () => {
         setTransactions(transactionsData || []);
       } catch (error) {
         console.error("Failed to fetch wallet details and transactions", error);
-        // Optionally redirect or display an error message to the user
       } finally {
         setLoading(false);
       }
@@ -105,7 +102,6 @@ const WalletDetail = () => {
         throw error;
       }
 
-      // Optimistically update the UI
       setTransactions(prevTransactions =>
         prevTransactions.filter(transaction => transaction.id !== transactionId)
       );
@@ -127,7 +123,6 @@ const WalletDetail = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-semibold mb-4">{wallet.name}</h1>
 
-      {/* Search and Filter */}
       <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 mb-4">
         <input
           type="text"
@@ -147,7 +142,6 @@ const WalletDetail = () => {
         </select>
       </div>
 
-      {/* Transactions List */}
       {filteredTransactions.length === 0 ? (
         <div className="text-gray-500">Tidak ada transaksi yang ditemukan.</div>
       ) : (

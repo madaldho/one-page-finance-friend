@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +17,6 @@ const Index = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   
-  // State for data
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -26,12 +24,10 @@ const Index = () => {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [showAddWallet, setShowAddWallet] = useState(false);
   
-  // State for summary values
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [balance, setBalance] = useState(0);
   
-  // User settings
   const [settings, setSettings] = useState<UserSettings>({
     id: "",
     user_id: "",
@@ -40,7 +36,6 @@ const Index = () => {
     show_loans: true,
   });
   
-  // Fetch all data when component mounts
   useEffect(() => {
     if (!user) return;
     fetchData();
@@ -57,7 +52,6 @@ const Index = () => {
         return;
       }
 
-      // Fetch transactions
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('transactions')
         .select('*')
@@ -67,7 +61,6 @@ const Index = () => {
       if (transactionsError) throw transactionsError;
       setTransactions(transactionsData as Transaction[]);
 
-      // Fetch wallets
       const { data: walletsData, error: walletsError } = await supabase
         .from('wallets')
         .select('*')
@@ -77,7 +70,6 @@ const Index = () => {
       if (walletsError) throw walletsError;
       setWallets(walletsData as Wallet[]);
 
-      // Fetch user settings if available
       const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
         .select('*')
@@ -88,10 +80,8 @@ const Index = () => {
         setSettings(settingsData as UserSettings);
       }
 
-      // Based on settings, fetch other data
       const fetchPromises = [];
 
-      // Fetch budgets if enabled
       if (settings.show_budgeting || !settingsData) {
         fetchPromises.push(
           supabase.from('budgets')
@@ -104,7 +94,6 @@ const Index = () => {
         );
       }
 
-      // Fetch savings if enabled
       if (settings.show_savings || !settingsData) {
         fetchPromises.push(
           supabase.from('savings')
@@ -117,7 +106,6 @@ const Index = () => {
         );
       }
 
-      // Fetch loans if enabled
       if (settings.show_loans || !settingsData) {
         fetchPromises.push(
           supabase.from('loans')
@@ -142,7 +130,6 @@ const Index = () => {
     }
   };
   
-  // Calculate summary values from transactions and wallets
   useEffect(() => {
     let incomeSum = 0;
     let expenseSum = 0;
@@ -166,14 +153,13 @@ const Index = () => {
   }, [transactions, wallets]);
   
   const handleAddTransaction = (transaction: Transaction) => {
-    fetchData(); // Refresh all data
+    fetchData();
   };
   
   const handleFilterTransactions = async (query: string) => {
     if (!user) return;
     
     if (!query) {
-      // Reset to default if query is empty
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
@@ -216,17 +202,22 @@ const Index = () => {
   };
   
   const handleWalletClick = (wallet: Wallet) => {
-    // Filter transactions by wallet
     toast({
       title: wallet.name,
       description: `Saldo: Rp ${wallet.balance.toLocaleString()}`,
     });
   };
   
+  const handleViewAllLoans = () => {
+    toast({
+      title: "Hutang & Piutang",
+      description: "Menampilkan semua data hutang dan piutang",
+    });
+  };
+  
   return (
     <Layout>
       <div className="container mx-auto p-4 pb-32">
-        {/* Profile and Title Section */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold">Manajemen Keuangan</h1>
@@ -234,7 +225,6 @@ const Index = () => {
           </div>
         </div>
         
-        {/* Wallets Section */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold">Saldo Dompet dan Rekening</h2>
@@ -268,28 +258,28 @@ const Index = () => {
           />
         )}
         
-        {/* Budget Section - Show if enabled */}
         {settings.show_budgeting && (
           <section className="mb-6">
             <BudgetCard budgets={budgets} />
           </section>
         )}
         
-        {/* Savings Section - Show if enabled */}
         {settings.show_savings && (
           <section className="mb-6">
             <SavingsCard savings={savings} />
           </section>
         )}
         
-        {/* Loans Section - Show if enabled */}
         {settings.show_loans && (
           <section className="mb-6">
-            <LoansCard loans={loans} />
+            <LoansCard 
+              loans={loans} 
+              loading={false} 
+              onViewAll={handleViewAllLoans} 
+            />
           </section>
         )}
         
-        {/* Summary Section */}
         <section className="mb-6">
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="p-3 rounded-lg bg-green-100 border border-green-200">
@@ -309,7 +299,6 @@ const Index = () => {
           </div>
         </section>
         
-        {/* Transactions Section */}
         <section>
           <TransactionList 
             transactions={transactions} 
@@ -317,7 +306,6 @@ const Index = () => {
           />
         </section>
         
-        {/* Floating Action Buttons */}
         <TransactionActions onTransactionAdded={handleAddTransaction} />
       </div>
     </Layout>
