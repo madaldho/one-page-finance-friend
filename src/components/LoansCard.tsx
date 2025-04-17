@@ -1,78 +1,81 @@
+
 import React from "react";
+import { Card } from "@/components/ui/card";
 import { Loan } from "@/types";
-import { format } from "date-fns";
-import { id } from "date-fns/locale";
+import { formatCurrency } from "@/lib/utils";
+import { formatDistance } from "date-fns";
+import { ChevronRight } from "lucide-react";
 
 interface LoansCardProps {
   loans: Loan[];
+  loading: boolean;
+  onViewAll: () => void;
 }
 
-const LoansCard = ({ loans }: LoansCardProps) => {
-  const formatDate = (date: string | null) => {
-    if (!date) return "Tidak ada jatuh tempo";
-    return format(new Date(date), "dd MMM yyyy", { locale: id });
-  };
+const LoansCard: React.FC<LoansCardProps> = ({ loans, loading, onViewAll }) => {
+  if (loading) {
+    return (
+      <Card className="p-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-lg">Hutang & Piutang</h2>
+        </div>
+        <div className="animate-pulse">
+          <div className="h-12 bg-gray-200 rounded mb-2"></div>
+          <div className="h-12 bg-gray-200 rounded mb-2"></div>
+        </div>
+      </Card>
+    );
+  }
 
-  const getStatusColor = (status: Loan["status"]) => {
-    switch (status) {
-      case "paid":
-        return "text-green-600";
-      case "partial":
-        return "text-yellow-600";
-      case "unpaid":
-        return "text-red-600";
-      default:
-        return "text-gray-600";
-    }
-  };
-
-  const getTypeLabel = (type: Loan["type"]) => {
-    return type === "receivable" ? "Piutang" : "Hutang";
-  };
+  if (!loans || loans.length === 0) {
+    return (
+      <Card className="p-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-lg">Hutang & Piutang</h2>
+        </div>
+        <div className="text-gray-500 text-center py-4">
+          Belum ada data hutang atau piutang
+        </div>
+      </Card>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-medium">Pinjaman</h2>
-        <button className="text-sm text-blue-600 hover:text-blue-700">
+    <Card className="p-4 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-semibold text-lg">Hutang & Piutang</h2>
+        <button className="text-[#6E59A5] text-sm font-medium" onClick={onViewAll}>
           Lihat Semua
         </button>
       </div>
 
-      <div className="space-y-4">
-        {loans.map((loan) => (
-          <div key={loan.id} className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">{loan.description}</span>
-              <span className={`text-sm ${getStatusColor(loan.status)}`}>
-                {loan.status === "paid"
-                  ? "Lunas"
-                  : loan.status === "partial"
-                  ? "Sebagian"
-                  : "Belum Lunas"}
-              </span>
+      <div className="space-y-3">
+        {loans.slice(0, 3).map((loan) => (
+          <div
+            key={loan.id}
+            className="border border-gray-100 rounded-lg p-3 flex justify-between items-center"
+          >
+            <div>
+              <p className="font-medium text-sm">{loan.title}</p>
+              <p className="text-gray-500 text-xs">
+                {loan.lender}
+              </p>
             </div>
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>{getTypeLabel(loan.type)}</span>
-              <span>Rp {loan.amount.toLocaleString()}</span>
-            </div>
-            {loan.borrower && (
-              <div className="text-sm text-gray-500">
-                Peminjam: {loan.borrower}
+            <div className="flex items-center">
+              <div className="text-right mr-2">
+                <p className={`font-medium ${loan.type === "hutang" ? "text-red-500" : "text-green-500"}`}>
+                  {formatCurrency(loan.remaining_amount)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {formatDistance(new Date(loan.due_date), new Date(), { addSuffix: true })}
+                </p>
               </div>
-            )}
-            <div className="text-sm text-gray-500">
-              Jatuh Tempo: {formatDate(loan.due_date)}
+              <ChevronRight className="w-4 h-4 text-gray-400" />
             </div>
-            {loan.paid_amount && (
-              <div className="text-sm text-gray-500">
-                Terbayar: Rp {loan.paid_amount.toLocaleString()}
-              </div>
-            )}
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 };
 
