@@ -1,9 +1,8 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { Wallet, ChevronDown, LogOut, User, Settings as SettingsIcon } from "lucide-react";
 import TransactionForm from "./TransactionForm";
 import {
@@ -19,20 +18,22 @@ interface HeaderProps {
 }
 
 const Header = ({ onAddTransaction }: HeaderProps) => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [profileName, setProfileName] = useState("");
   const [profileAvatar, setProfileAvatar] = useState("");
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await signOut();
       
       toast({
         title: "Berhasil Keluar",
         description: "Anda telah keluar dari akun",
       });
+      
+      navigate('/', { replace: true });
     } catch (error: any) {
       toast({
         title: "Gagal Keluar",

@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +33,7 @@ const Auth = () => {
           description: "Silakan periksa email Anda untuk konfirmasi.",
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error, data } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -42,6 +44,9 @@ const Auth = () => {
           title: "Berhasil Masuk",
           description: "Selamat datang kembali!",
         });
+
+        // Redirect to home page on successful login
+        navigate('/home', { replace: true });
       }
     } catch (error: any) {
       toast({

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -10,20 +11,44 @@ import Analysis from './pages/Analysis';
 import WalletDetail from './pages/WalletDetail';
 import NotFound from './pages/NotFound';
 import TransactionPage from './pages/TransactionPage';
+import { useAuth } from './contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+// Create a wrapper component to handle auth redirects
+const AuthRedirect = () => {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const token = localStorage.getItem('supabase.auth.token');
-    setIsAuthenticated(!!token);
-  }, []);
+    if (!isLoading) {
+      if (user && location.pathname === '/') {
+        navigate('/home', { replace: true });
+      } else if (!user && location.pathname !== '/') {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [user, isLoading, navigate, location.pathname]);
 
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!user && location.pathname !== '/') {
+    return <Auth />;
+  }
+
+  return null;
+};
+
+function App() {
   return (
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
+        <AuthRedirect />
         <Routes>
-          <Route path="/" element={!isAuthenticated ? <Auth /> : <Index />} />
+          <Route path="/" element={<Auth />} />
+          <Route path="/home" element={<Index />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/analysis" element={<Analysis />} />
