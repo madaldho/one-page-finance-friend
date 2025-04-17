@@ -3,21 +3,12 @@ import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import {
-  DollarSign,
-  PiggyBank,
-  CreditCard,
-  User,
-  FileText,
-  HelpCircle,
-  LogOut,
-  FileDown,
-  Loader2,
-  Shield
-} from "lucide-react";
-import FeatureToggle from "@/components/FeatureToggle";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import ProfileSection from "@/components/settings/ProfileSection";
+import FeaturesSection from "@/components/settings/FeaturesSection";
+import ActionSection from "@/components/settings/ActionSection";
+import Footer from "@/components/settings/Footer";
 
 interface UserSettingsForm {
   showBudgeting: boolean;
@@ -63,7 +54,6 @@ const Settings = () => {
           .single();
           
         if (profileData) {
-          // Just store the profile data, it will be used later
           setUser(prev => ({
             ...prev,
             profile: profileData
@@ -238,34 +228,6 @@ const Settings = () => {
     }
   };
   
-  const handleLogout = async () => {
-    try {
-      setLoading(true);
-      await supabase.auth.signOut();
-      toast({
-        title: "Berhasil Keluar",
-        description: "Kamu telah berhasil keluar dari akun",
-      });
-      
-      setTimeout(() => {
-        navigate('/');
-      }, 500);
-    } catch (error) {
-      console.error('Error logging out:', error);
-      toast({
-        title: "Gagal Keluar",
-        description: "Terjadi kesalahan saat proses keluar",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  const handleEditProfile = () => {
-    navigate('/profile');
-  };
-  
   if (loading) {
     return (
       <Layout>
@@ -284,166 +246,20 @@ const Settings = () => {
       <div className="container mx-auto p-4 pb-32 max-w-2xl">
         <h1 className="text-xl font-bold mb-6">Pengaturan</h1>
         
-        <section className="mb-8 bg-white p-4 rounded-lg shadow-sm">
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 rounded-full bg-[#6E59A5] flex items-center justify-center mr-3 overflow-hidden">
-              {user?.profile?.avatar_url ? (
-                <img 
-                  src={user.profile.avatar_url} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-white text-lg font-semibold">
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              )}
-            </div>
-            <div>
-              <p className="font-medium">
-                {user?.profile?.name || user?.email || 'User'}
-              </p>
-              <p className="text-sm text-gray-500">Akun Personal</p>
-            </div>
-          </div>
-          <Button 
-            variant="link" 
-            className="text-[#6E59A5] p-0 h-auto font-medium"
-            onClick={handleEditProfile}
-          >
-            Edit Profile
-          </Button>
-        </section>
+        <ProfileSection user={user} />
         
-        <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
-          <h2 className="font-semibold p-4 border-b border-gray-100">Fitur</h2>
-          
-          <FeatureToggle
-            icon={<DollarSign className="w-4 h-4 text-blue-600" />}
-            title="Budgeting"
-            description="Atur dan pantau anggaran keuangan kamu"
-            checked={settings.showBudgeting}
-            onToggle={() => handleToggleChange('showBudgeting')}
-            managementLink="/budgets"
-            loading={toggleLoading.showBudgeting}
-          />
-          
-          <FeatureToggle
-            icon={<PiggyBank className="w-4 h-4 text-green-600" />}
-            title="Tabungan"
-            description="Atur target dan pantau tabungan kamu"
-            checked={settings.showSavings}
-            onToggle={() => handleToggleChange('showSavings')}
-            managementLink="/savings"
-            loading={toggleLoading.showSavings}
-          />
-          
-          <FeatureToggle
-            icon={<CreditCard className="w-4 h-4 text-red-600" />}
-            title="Hutang & Piutang"
-            description="Kelola data hutang dan piutang"
-            checked={settings.showLoans}
-            onToggle={() => handleToggleChange('showLoans')}
-            managementLink="/loans"
-            loading={toggleLoading.showLoans}
-          />
-        </section>
+        <FeaturesSection 
+          settings={settings} 
+          toggleLoading={toggleLoading} 
+          onToggleChange={handleToggleChange} 
+        />
         
-        <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
-          <Button 
-            variant="ghost" 
-            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50"
-            onClick={handleExportData}
-            disabled={loading}
-          >
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                <FileDown className="w-4 h-4 text-gray-600" />
-              </div>
-              <span>Export Data</span>
-            </div>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-            onClick={() => navigate("/profile")}
-          >
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                <User className="w-4 h-4 text-gray-600" />
-              </div>
-              <span>Profil</span>
-            </div>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-            onClick={() => toast({ 
-              title: "Coming Soon", 
-              description: "Fitur ini akan segera tersedia" 
-            })}
-          >
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                <Shield className="w-4 h-4 text-gray-600" />
-              </div>
-              <span>Privasi & Keamanan</span>
-            </div>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-            onClick={() => toast({ 
-              title: "Coming Soon", 
-              description: "Fitur ini akan segera tersedia" 
-            })}
-          >
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                <FileText className="w-4 h-4 text-gray-600" />
-              </div>
-              <span>Syarat dan Ketentuan</span>
-            </div>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-            onClick={() => toast({ 
-              title: "Coming Soon", 
-              description: "Fitur ini akan segera tersedia" 
-            })}
-          >
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-                <HelpCircle className="w-4 h-4 text-gray-600" />
-              </div>
-              <span>Bantuan</span>
-            </div>
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100 text-red-600"
-            onClick={handleLogout}
-            disabled={loading}
-          >
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3">
-                <LogOut className="w-4 h-4 text-red-600" />
-              </div>
-              <span>{loading ? "Sedang Keluar..." : "Keluar"}</span>
-            </div>
-          </Button>
-        </section>
+        <ActionSection 
+          loading={loading} 
+          onExportData={handleExportData} 
+        />
         
-        <div className="text-center text-gray-500 text-sm">
-          <p>DompetKu v1.0.0</p>
-          <p>&copy; 2025 All rights reserved</p>
-        </div>
+        <Footer />
       </div>
     </Layout>
   );
