@@ -177,35 +177,62 @@ export type Database = {
           category: string
           created_at: string | null
           date: string
+          description: string | null
+          destination_wallet_id: string | null
+          fee: number | null
           id: string
           title: string
           type: string
           updated_at: string | null
           user_id: string
+          wallet_id: string | null
         }
         Insert: {
           amount: number
           category: string
           created_at?: string | null
           date?: string
+          description?: string | null
+          destination_wallet_id?: string | null
+          fee?: number | null
           id?: string
           title: string
           type: string
           updated_at?: string | null
           user_id: string
+          wallet_id?: string | null
         }
         Update: {
           amount?: number
           category?: string
           created_at?: string | null
           date?: string
+          description?: string | null
+          destination_wallet_id?: string | null
+          fee?: number | null
           id?: string
           title?: string
           type?: string
           updated_at?: string | null
           user_id?: string
+          wallet_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_destination_wallet_id_fkey"
+            columns: ["destination_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       wallets: {
         Row: {

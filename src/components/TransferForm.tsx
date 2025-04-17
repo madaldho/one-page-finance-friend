@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Wallet } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Button } from "./ui/button";
+import { useNavigate } from "react-router-dom";
 
 const transferSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah harus lebih dari 0"),
@@ -31,6 +33,7 @@ interface TransferFormProps {
 
 const TransferForm = ({ onAddTransaction, onClose }: TransferFormProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(true);
   const [wallets, setWallets] = useState<Wallet[]>([]);
 
@@ -79,107 +82,16 @@ const TransferForm = ({ onAddTransaction, onClose }: TransferFormProps) => {
     fetchWallets();
   }, [toast]);
 
-  const onSubmit = async (data: TransferFormValues) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        toast({
-          title: "Error",
-          description: "Anda harus login terlebih dahulu",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const sourceWallet = wallets.find(w => w.id === data.sourceWallet);
-      const destWallet = wallets.find(w => w.id === data.destinationWallet);
-
-      if (!sourceWallet || !destWallet) {
-        toast({
-          title: "Error",
-          description: "Wallet tidak ditemukan",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const actualTransferAmount = data.amount - data.fee;
-
-      // First, check if source wallet has enough balance
-      if (sourceWallet.balance < data.amount) {
-        toast({
-          title: "Saldo tidak cukup",
-          description: `Saldo di ${sourceWallet.name} tidak mencukupi`,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Update source wallet (subtract amount)
-      const { error: sourceWalletError } = await supabase
-        .from('wallets')
-        .update({ balance: sourceWallet.balance - data.amount })
-        .eq('id', data.sourceWallet);
-
-      if (sourceWalletError) throw sourceWalletError;
-
-      // Update destination wallet (add amount minus fee)
-      const { error: destWalletError } = await supabase
-        .from('wallets')
-        .update({ balance: destWallet.balance + actualTransferAmount })
-        .eq('id', data.destinationWallet);
-
-      if (destWalletError) throw destWalletError;
-
-      // Record the transfer transaction
-      const transferData = {
-        user_id: session.user.id,
-        title: `Transfer dari ${sourceWallet.name} ke ${destWallet.name}`,
-        amount: data.amount,
-        type: "transfer",
-        category: "Transfer",
-        description: data.description || `Transfer dengan biaya admin Rp ${data.fee.toLocaleString()}`,
-        date: data.date,
-        wallet: data.sourceWallet,
-        destination_wallet: data.destinationWallet,
-        fee: data.fee,
-      };
-
-      const { data: insertedData, error } = await supabase
-        .from('transactions')
-        .insert(transferData)
-        .select();
-
-      if (error) throw error;
-
-      // Call onAddTransaction with the new transaction data
-      onAddTransaction({
-        ...transferData,
-        id: insertedData[0].id,
-      });
-
-      toast({
-        title: "Transfer berhasil",
-        description: `Transfer dari ${sourceWallet.name} ke ${destWallet.name} sebesar Rp ${actualTransferAmount.toLocaleString()} berhasil`,
-      });
-
-      // Play a bell sound effect
-      const audio = new Audio("/bell-sound.mp3");
-      audio.play().catch(e => console.log("Sound play error:", e));
-
-      form.reset();
-      handleClose();
-    } catch (error) {
-      console.error("Error processing transfer:", error);
-      toast({
-        title: "Gagal melakukan transfer",
-        description: "Terjadi kesalahan saat memproses transfer",
-        variant: "destructive"
-      });
+  const handleNavigateToTransferPage = () => {
+    setIsOpen(false);
+    if (onClose) {
+      setTimeout(() => {
+        navigate('/transaction/transfer');
+      }, 300);
     }
   };
-  
+
+  // Instead of handling the transfer directly, we'll redirect to the transaction page
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetContent className="sm:max-w-md">
@@ -189,168 +101,25 @@ const TransferForm = ({ onAddTransaction, onClose }: TransferFormProps) => {
             Transfer Antar Wallet
           </SheetTitle>
         </SheetHeader>
-        <div className="mt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="sourceWallet"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Wallet Asal</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih wallet asal" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {wallets.map(wallet => (
-                          <SelectItem key={wallet.id} value={wallet.id}>
-                            {wallet.name} (Rp {wallet.balance.toLocaleString()})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="destinationWallet"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Wallet Tujuan</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih wallet tujuan" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {wallets
-                          .filter(w => w.id !== form.getValues("sourceWallet"))
-                          .map(wallet => (
-                            <SelectItem key={wallet.id} value={wallet.id}>
-                              {wallet.name} (Rp {wallet.balance.toLocaleString()})
-                            </SelectItem>
-                          ))
-                        }
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jumlah Transfer (Rp)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0" 
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="fee"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Biaya Admin (Rp)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0" 
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber)}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tanggal</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Deskripsi (Opsional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="text" 
-                        placeholder="Deskripsi transfer" 
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <div className="bg-blue-50 p-3 rounded-lg mt-4">
-                <p className="text-sm font-medium">Ringkasan Transfer</p>
-                <div className="text-sm mt-2 space-y-1">
-                  <div className="flex justify-between">
-                    <span>Jumlah Transfer:</span>
-                    <span>Rp {form.getValues("amount").toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Biaya Admin:</span>
-                    <span>- Rp {form.getValues("fee").toLocaleString()}</span>
-                  </div>
-                  <div className="border-t border-blue-200 my-1"></div>
-                  <div className="flex justify-between font-medium">
-                    <span>Total Diterima:</span>
-                    <span>Rp {(form.getValues("amount") - form.getValues("fee")).toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-2 mt-6">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-4 py-2 border border-gray-300 rounded-lg"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-                >
-                  Proses Transfer
-                </button>
-              </div>
-            </form>
-          </Form>
+        <div className="mt-10 flex flex-col items-center justify-center">
+          <img src="/placeholder.svg" alt="Transfer illustration" className="w-32 h-32 mb-4" />
+          <h3 className="text-lg font-medium mb-2">Lakukan Transfer Antar Wallet</h3>
+          <p className="text-sm text-gray-500 text-center mb-6">
+            Transfer dana antar wallet Anda dengan mudah dan pantau setiap pergerakan dana.
+          </p>
+          <Button 
+            onClick={handleNavigateToTransferPage}
+            className="w-full bg-blue-600 hover:bg-blue-700"
+          >
+            Lanjutkan ke Transfer
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleClose}
+            className="w-full mt-2"
+          >
+            Batal
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

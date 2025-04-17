@@ -47,7 +47,7 @@ const TransactionPage = () => {
       amount: 0,
       category: "",
       date: new Date().toISOString().split("T")[0],
-      wallet: "",
+      wallet_id: "",
       description: "",
       source_wallet: "",
       destination_wallet: "",
@@ -84,11 +84,11 @@ const TransactionPage = () => {
   const getPageTitle = () => {
     switch (type) {
       case "income":
-        return "Tambah Pemasukan Baru";
+        return "Tambah Pemasukan";
       case "expense":
-        return "Tambah Pengeluaran Baru";
+        return "Tambah Pengeluaran";
       case "transfer":
-        return "Convert Saldo";
+        return "Transfer Antar Wallet";
       default:
         return "Tambah Transaksi";
     }
@@ -165,6 +165,9 @@ const TransactionPage = () => {
           return;
         }
         
+        // Calculate total fees
+        const totalFees = (data.source_fee || 0) + (data.destination_fee || 0);
+        
         // Create transfer transaction
         const { data: transferData, error: transferError } = await supabase
           .from("transactions")
@@ -175,7 +178,10 @@ const TransactionPage = () => {
             date: data.date,
             category: "Transfer",
             description: data.description,
-            user_id: user.id
+            user_id: user.id,
+            wallet_id: sourceWallet.id,
+            destination_wallet_id: destWallet.id,
+            fee: totalFees
           })
           .select()
           .single();
@@ -186,7 +192,7 @@ const TransactionPage = () => {
         await supabase
           .from("wallets")
           .update({ 
-            balance: sourceWallet.balance - data.amount - (data.source_fee || 0) 
+            balance: sourceWallet.balance - data.amount 
           })
           .eq("id", sourceWallet.id);
           
@@ -194,14 +200,14 @@ const TransactionPage = () => {
         await supabase
           .from("wallets")
           .update({ 
-            balance: destWallet.balance + data.amount - (data.destination_fee || 0) 
+            balance: destWallet.balance + (data.amount - totalFees)
           })
           .eq("id", destWallet.id);
           
         transactionData = transferData;
       } else {
         // Handle income or expense transaction
-        const wallet = wallets.find(w => w.id === data.wallet);
+        const wallet = wallets.find(w => w.id === data.wallet_id);
         
         if (!wallet) {
           toast({
@@ -234,7 +240,8 @@ const TransactionPage = () => {
             date: data.date,
             category: data.category,
             description: data.description,
-            user_id: user.id
+            user_id: user.id,
+            wallet_id: data.wallet_id
           })
           .select()
           .single();
@@ -276,7 +283,7 @@ const TransactionPage = () => {
   };
 
   const handleClose = () => {
-    navigate("/");
+    navigate("/home");
   };
 
   // Show success screen
@@ -320,7 +327,9 @@ const TransactionPage = () => {
             
             <div className="flex justify-between mb-2">
               <span className="text-white/80">Wallet</span>
-              <span>{form.getValues().wallet ? wallets.find(w => w.id === form.getValues().wallet)?.name : "-"}</span>
+              <span>{type === "transfer" ? 
+                `${wallets.find(w => w.id === transaction.wallet_id)?.name} → ${wallets.find(w => w.id === transaction.destination_wallet_id)?.name}` : 
+                wallets.find(w => w.id === transaction.wallet_id)?.name}</span>
             </div>
             
             <div className="mt-4 text-xs text-center text-white/60">
@@ -375,6 +384,23 @@ const TransactionPage = () => {
                 )}
               />
               
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Judul Transaksi</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={type === "income" ? "Contoh: Gaji Bulanan" : type === "expense" ? "Contoh: Belanja Bulanan" : "Contoh: Transfer ke BCA"}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
               {type !== "transfer" && (
                 <FormField
                   control={form.control}
@@ -408,17 +434,17 @@ const TransactionPage = () => {
               {type !== "transfer" ? (
                 <FormField
                   control={form.control}
-                  name="wallet"
+                  name="wallet_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Jenis Transaksi</FormLabel>
+                      <FormLabel>Wallet</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Pilih Dompet" />
+                            <SelectValue placeholder="Pilih Wallet" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -480,11 +506,14 @@ const TransactionPage = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {wallets.map((wallet) => (
-                                <SelectItem key={wallet.id} value={wallet.id}>
-                                  {wallet.name} ({formatCurrency(wallet.balance)})
-                                </SelectItem>
-                              ))}
+                              {wallets
+                                .filter(wallet => wallet.id !== form.getValues("source_wallet"))
+                                .map((wallet) => (
+                                  <SelectItem key={wallet.id} value={wallet.id}>
+                                    {wallet.name} ({formatCurrency(wallet.balance)})
+                                  </SelectItem>
+                                ))
+                              }
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -507,6 +536,7 @@ const TransactionPage = () => {
                         placeholder="0" 
                         {...field}
                         onChange={e => field.onChange(Number(e.target.value))}
+                        className="text-lg font-semibold"
                       />
                     </FormControl>
                     <FormMessage />
@@ -573,6 +603,27 @@ const TransactionPage = () => {
                 )}
               />
               
+              {type === "transfer" && form.getValues("source_wallet") && form.getValues("destination_wallet") && form.getValues("amount") > 0 && (
+                <div className="bg-blue-50 p-3 rounded-lg mt-4">
+                  <p className="text-sm font-medium">Ringkasan Transfer</p>
+                  <div className="text-sm mt-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Jumlah Transfer:</span>
+                      <span>Rp {form.getValues("amount").toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Biaya Admin:</span>
+                      <span>- Rp {((form.getValues("source_fee") || 0) + (form.getValues("destination_fee") || 0)).toLocaleString()}</span>
+                    </div>
+                    <div className="border-t border-blue-200 my-1"></div>
+                    <div className="flex justify-between font-medium">
+                      <span>Total Diterima:</span>
+                      <span>Rp {(form.getValues("amount") - (form.getValues("source_fee") || 0) - (form.getValues("destination_fee") || 0)).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex justify-end gap-2 pt-4">
                 <Button 
                   type="button" 
@@ -584,7 +635,7 @@ const TransactionPage = () => {
                   type="submit" 
                   className={getButtonColor()}
                   disabled={loading}>
-                  {loading ? "Menyimpan..." : type === "transfer" ? "Konversi" : "Simpan"}
+                  {loading ? "Menyimpan..." : type === "transfer" ? "Transfer" : "Simpan"}
                 </Button>
               </div>
             </form>

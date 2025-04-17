@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import Auth from './components/Auth';
@@ -22,9 +22,10 @@ const AuthRedirect = () => {
 
   useEffect(() => {
     if (!isLoading) {
+      // Skip redirect for transaction pages if user is authenticated
       if (user && location.pathname === '/') {
         navigate('/home', { replace: true });
-      } else if (!user && location.pathname !== '/') {
+      } else if (!user && location.pathname !== '/' && !location.pathname.includes('/auth')) {
         navigate('/', { replace: true });
       }
     }
@@ -34,11 +35,34 @@ const AuthRedirect = () => {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
+  // If no user and not on auth page, render nothing (will redirect)
   if (!user && location.pathname !== '/') {
-    return <Auth />;
+    return null;
   }
 
   return null;
+};
+
+// Create a protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return <>{children}</>;
 };
 
 function App() {
@@ -48,12 +72,36 @@ function App() {
         <AuthRedirect />
         <Routes>
           <Route path="/" element={<Auth />} />
-          <Route path="/home" element={<Index />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/analysis" element={<Analysis />} />
-          <Route path="/wallet/:id" element={<WalletDetail />} />
-          <Route path="/transaction/:type" element={<TransactionPage />} />
+          <Route path="/home" element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/analysis" element={
+            <ProtectedRoute>
+              <Analysis />
+            </ProtectedRoute>
+          } />
+          <Route path="/wallet/:id" element={
+            <ProtectedRoute>
+              <WalletDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/transaction/:type" element={
+            <ProtectedRoute>
+              <TransactionPage />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
