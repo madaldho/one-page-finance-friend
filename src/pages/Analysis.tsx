@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Transaction } from "@/types";
+import { Transaction, Wallet } from "@/types";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,6 @@ import { id } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, Download, RefreshCw } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-import { Wallet } from "@/types";
 import FinancialSummary from "@/components/FinancialSummary";
 
 const COLORS = ['#4CAF50', '#FFA000', '#F44336', '#2196F3', '#9C27B0', '#00BCD4', '#8884d8'];
@@ -87,7 +86,7 @@ const Analysis = () => {
         // Fetch wallets for reference
         const { data: walletsData, error: walletsError } = await supabase
           .from('wallets')
-          .select('id, name, color');
+          .select('id, name, color, balance, type');
           
         if (walletsError) throw walletsError;
         setWallets(walletsData || []);
@@ -344,7 +343,7 @@ const Analysis = () => {
           
           <TabsContent value="charts">
             <FinancialSummary 
-              transactions={filteredTransactions} 
+              transactions={filteredTransactions as any} 
               walletMap={walletMap}
               showWalletData={true}
             />

@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import WalletForm from "./WalletForm";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +28,7 @@ interface WalletCardProps {
 const WalletCard = ({ wallet, onClick, onDelete }: WalletCardProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const colors: Record<string, string> = {
     green: "bg-green-100 border-green-200",
@@ -82,11 +84,15 @@ const WalletCard = ({ wallet, onClick, onDelete }: WalletCardProps) => {
     }
   };
 
+  const handleCardClick = () => {
+    navigate(`/wallets/${wallet.id}`);
+  };
+
   return (
     <>
       <div 
         className={`relative rounded-lg p-3 border ${colorClass} cursor-pointer group`}
-        onClick={onClick}
+        onClick={handleCardClick}
         style={isCustomColor ? getCustomColorStyle() : {}}
       >
         <div className="text-xs font-medium uppercase">{wallet.name}</div>

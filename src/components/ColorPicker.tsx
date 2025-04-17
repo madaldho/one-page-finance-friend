@@ -24,7 +24,7 @@ const colorOptions = [
 ];
 
 const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
-  const [customColor, setCustomColor] = useState("#7E69AB");
+  const [customColor, setCustomColor] = useState(value.startsWith('#') ? value : "#7E69AB");
   const selectedColor = colorOptions.find((c) => c.id === value);
   
   // Check if value is a hex color code

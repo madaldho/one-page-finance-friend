@@ -1,65 +1,39 @@
-
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "./contexts/AuthContext";
-import { useAuth } from "./contexts/AuthContext";
-
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Analysis from "./pages/Analysis";
-import Settings from "./pages/Settings";
-import Auth from "./components/Auth";
-import Profile from "./pages/Profile";
-
-// Create a client
-const queryClient = new QueryClient();
-
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
-  
-  if (isLoading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
-  
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-const AppRoutes = () => {
-  const { user } = useAuth();
-  
-  return (
-    <Routes>
-      <Route path="/auth" element={user ? <Navigate to="/" /> : <Auth />} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/analysis" element={<ProtectedRoute><Analysis /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  );
-};
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { Auth } from "@supabase/ui";
+import { supabase } from "@/integrations/supabase/client";
+import Index from "@/pages/Index";
+import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
+import Analysis from "@/pages/Analysis";
+import NotFound from "@/pages/NotFound";
+import { AuthContextProvider } from "@/contexts/AuthContext";
+import WalletDetail from "@/pages/WalletDetail";
 
 const App = () => {
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+  }, []);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <AuthContextProvider>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/analytics" element={<Analysis />} />
+        <Route path="/wallets/:id" element={<WalletDetail />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AuthContextProvider>
   );
 };
 
