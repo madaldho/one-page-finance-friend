@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart, CartesianGrid, XAxis, YAxis, Bar, ResponsiveContainer, Cell } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { BarChart, CartesianGrid, XAxis, YAxis, Bar, ResponsiveContainer } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { formatCurrency } from "@/lib/utils";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface DailyExpensesChartProps {
   dayOfWeekChartData: Array<{
@@ -12,19 +13,33 @@ interface DailyExpensesChartProps {
   }>;
 }
 
-const COLORS = [
-  '#4CAF50', '#FFA000', '#F44336', '#2196F3', 
-  '#9C27B0', '#00BCD4', '#8884d8'
-];
+const chartConfig = {
+  value: {
+    label: "Amount",
+    color: "hsl(262.1 83.3% 57.8%)", // purple-500
+  },
+} satisfies ChartConfig;
+
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function DailyExpensesChart({ dayOfWeekChartData }: DailyExpensesChartProps) {
   if (!dayOfWeekChartData.length) {
     return (
-      <div className="flex items-center justify-center h-[300px]">
-        <p className="text-muted-foreground">No daily expenses data available</p>
-      </div>
+      <Card>
+        <CardContent className="flex items-center justify-center h-[300px]">
+          <p className="text-muted-foreground">No daily expenses data available</p>
+        </CardContent>
+      </Card>
     );
   }
+
+  const maxDay = dayOfWeekChartData.reduce((max, curr) => 
+    curr.value > max.value ? curr : max
+  );
+
+  const minDay = dayOfWeekChartData.reduce((min, curr) => 
+    curr.value < min.value ? curr : min
+  );
 
   return (
     <Card>
@@ -34,44 +49,67 @@ export function DailyExpensesChart({ dayOfWeekChartData }: DailyExpensesChartPro
           Identifikasi pola pengeluaran berdasarkan hari
         </CardDescription>
       </CardHeader>
-      <CardContent className="h-[400px]">
+      <CardContent>
         <ChartContainer
-          config={{
-            value: { color: "#8b5cf6" },
-          }}
+          config={chartConfig}
+          className="h-[300px]"
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={dayOfWeekChartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                vertical={false}
+                className="stroke-muted/20" 
+              />
               <XAxis 
                 dataKey="name"
-                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                className="text-xs fill-muted-foreground"
               />
               <YAxis 
                 tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-                width={60}
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                className="text-xs fill-muted-foreground"
+                width={48}
               />
-              <ChartTooltip content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)} />} />
+              <ChartTooltip 
+                cursor={false}
+                content={
+                  <ChartTooltipContent 
+                    formatter={(value) => formatCurrency(value as number)}
+                    indicator="dot"
+                  />
+                }
+              />
               <Bar 
                 dataKey="value" 
                 name="Pengeluaran"
-                maxBarSize={50}
-              >
-                {dayOfWeekChartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={COLORS[index % COLORS.length]}
-                    radius={[4, 4, 0, 0]}
-                  />
-                ))}
-              </Bar>
+                fill="var(--color-value)"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={48}
+              />
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
+      <CardFooter className="flex-col items-start gap-2 text-sm border-t">
+        <div className="grid gap-2">
+          <div className="flex items-center gap-2 font-medium">
+            Highest spending on {maxDay.name}
+            <TrendingUp className="h-4 w-4 text-red-500" />
+          </div>
+          <div className="text-muted-foreground">
+            Lowest spending on {minDay.name}: {formatCurrency(minDay.value)}
+          </div>
+        </div>
+      </CardFooter>
     </Card>
   );
 }

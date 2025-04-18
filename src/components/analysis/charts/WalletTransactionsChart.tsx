@@ -1,9 +1,10 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar, ResponsiveContainer, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { formatCurrency } from "@/lib/utils";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { Wallet } from "@/types";
 
 interface WalletTransactionsChartProps {
@@ -15,14 +16,34 @@ interface WalletTransactionsChartProps {
   }>;
 }
 
+const chartConfig = {
+  income: {
+    label: "Pemasukan",
+    color: "hsl(142.1 76.2% 36.3%)", // green-600
+  },
+  expense: {
+    label: "Pengeluaran",
+    color: "hsl(0 84.2% 60.2%)", // red-500
+  },
+} satisfies ChartConfig;
+
 export function WalletTransactionsChart({ walletChartData }: WalletTransactionsChartProps) {
   if (!walletChartData.length) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <p className="text-muted-foreground">No wallet data available</p>
-      </div>
+      <Card className="w-full">
+        <CardContent className="flex items-center justify-center min-h-[350px]">
+          <p className="text-muted-foreground">No wallet data available</p>
+        </CardContent>
+      </Card>
     );
   }
+
+  const totalIncome = walletChartData.reduce((acc, curr) => acc + curr.income, 0);
+  const totalExpense = walletChartData.reduce((acc, curr) => acc + curr.expense, 0);
+  const percentChange = totalIncome > 0 
+    ? ((totalIncome - totalExpense) / totalIncome) * 100 
+    : 0;
+  const isPositiveChange = percentChange > 0;
 
   return (
     <Card className="w-full">
@@ -32,44 +53,47 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
           Perbandingan pemasukan dan pengeluaran antar dompet
         </CardDescription>
       </CardHeader>
-      <CardContent className="h-full min-h-[350px] max-h-[500px]">
-        <ChartContainer
-          config={{
-            income: { color: "#22c55e" },
-            expense: { color: "#ef4444" },
-            net: { color: "#6E59A5" },
-          }}
-          className="w-full h-full"
+      <CardContent className="h-full min-h-[350px]">
+        <ChartContainer 
+          config={chartConfig}
+          className="w-full h-[300px]"
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={walletChartData}
               layout="vertical"
-              margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              margin={{ top: 0, right: 16, left: 100, bottom: 0 }}
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 horizontal={true} 
                 vertical={false} 
-                className="stroke-gray-200 dark:stroke-gray-700"
+                className="stroke-muted/20" 
               />
               <XAxis 
                 type="number" 
                 tickFormatter={(value) => formatCurrency(value)}
                 domain={['auto', 'auto']}
-                className="text-xs"
+                className="text-xs fill-muted-foreground"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
               />
               <YAxis 
                 dataKey="name" 
                 type="category" 
                 width={120}
                 tick={{ fontSize: 12 }}
-                className="text-sm"
+                className="text-sm fill-muted-foreground"
+                tickLine={false}
+                axisLine={false}
               />
               <ChartTooltip 
+                cursor={false}
                 content={
                   <ChartTooltipContent 
-                    formatter={(value) => formatCurrency(value as number)} 
+                    formatter={(value) => formatCurrency(value as number)}
+                    indicator="dashed" 
                   />
                 } 
               />
@@ -77,27 +101,47 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
                 verticalAlign="top" 
                 height={36} 
                 iconType="circle" 
-                iconSize={10}
-                wrapperStyle={{ paddingBottom: 10 }}
+                iconSize={8}
+                formatter={(value) => (
+                  <span className="text-sm text-muted-foreground">{value}</span>
+                )}
               />
               <Bar 
                 dataKey="income" 
                 name="Pemasukan" 
-                fill="#22c55e" 
+                fill="var(--color-income)"
                 radius={[0, 4, 4, 0]}
-                barSize={30}
+                barSize={24}
               />
               <Bar 
                 dataKey="expense" 
                 name="Pengeluaran" 
-                fill="#ef4444" 
+                fill="var(--color-expense)"
                 radius={[0, 4, 4, 0]}
-                barSize={30}
+                barSize={24}
               />
             </BarChart>
           </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
+      <CardFooter className="flex-col items-start gap-2 text-sm border-t">
+        <div className="flex items-center gap-2 font-medium leading-none">
+          {isPositiveChange ? (
+            <>
+              Net positive by {Math.abs(percentChange).toFixed(1)}% 
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </>
+          ) : (
+            <>
+              Net negative by {Math.abs(percentChange).toFixed(1)}%
+              <TrendingDown className="h-4 w-4 text-red-500" />
+            </>
+          )}
+        </div>
+        <div className="text-muted-foreground">
+          Total Income: {formatCurrency(totalIncome)} | Total Expense: {formatCurrency(totalExpense)}
+        </div>
+      </CardFooter>
     </Card>
   );
 }
