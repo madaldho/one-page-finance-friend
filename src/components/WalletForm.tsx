@@ -45,12 +45,25 @@ import { useForm } from 'react-hook-form';
 import ColorPicker from '@/components/ColorPicker';
 import { Wallet } from '@/types';
 
+const WALLET_COLORS = [
+  "#6E59A5", // Purple
+  "#3b82f6", // Blue
+  "#10b981", // Green
+  "#f59e0b", // Orange
+  "#ef4444", // Red
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#14b8a6", // Teal
+  "#64748b", // Slate
+  "#000000", // Black
+];
+
 const GRADIENTS = [
-  { id: 'blue', value: 'from-[#3b82f6] to-[#8b5cf6]', label: 'Biru-Ungu' },
-  { id: 'green', value: 'from-[#10b981] to-[#3b82f6]', label: 'Hijau-Biru' },
-  { id: 'orange', value: 'from-[#f59e0b] to-[#ef4444]', label: 'Oranye-Merah' },
-  { id: 'purple', value: 'from-[#8b5cf6] to-[#ec4899]', label: 'Ungu-Pink' },
-  { id: 'teal', value: 'from-[#14b8a6] to-[#8b5cf6]', label: 'Teal-Ungu' },
+  { id: 'blue-purple', color: '#3b82f6', gradient: '#8b5cf6', label: 'Biru-Ungu' },
+  { id: 'green-blue', color: '#10b981', gradient: '#3b82f6', label: 'Hijau-Biru' },
+  { id: 'orange-red', color: '#f59e0b', gradient: '#ef4444', label: 'Oranye-Merah' },
+  { id: 'purple-pink', color: '#8b5cf6', gradient: '#ec4899', label: 'Ungu-Pink' },
+  { id: 'teal-purple', color: '#14b8a6', gradient: '#8b5cf6', label: 'Teal-Ungu' },
 ];
 
 const formSchema = z.object({
@@ -74,6 +87,7 @@ export default function WalletForm({
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedGradient, setSelectedGradient] = useState(GRADIENTS[0]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -83,11 +97,37 @@ export default function WalletForm({
       balance: wallet?.balance || 0,
       color: wallet?.color || "#6E59A5",
       useGradient: !!wallet?.gradient,
-      gradient: wallet?.gradient || GRADIENTS[0].value,
+      gradient: wallet?.gradient || '',
     },
   });
 
   const values = form.watch();
+  const useGradient = form.watch('useGradient');
+
+  // Initialize the gradient value when the form loads if wallet has a gradient
+  React.useEffect(() => {
+    if (wallet?.gradient && wallet?.color) {
+      // Try to find a matching gradient from our predefined list
+      const matchedGradient = GRADIENTS.find(g => g.gradient === wallet.gradient);
+      if (matchedGradient) {
+        setSelectedGradient(matchedGradient);
+        form.setValue('gradient', matchedGradient.gradient);
+      } else {
+        // If no match, use the first gradient
+        setSelectedGradient(GRADIENTS[0]);
+        form.setValue('gradient', GRADIENTS[0].gradient);
+      }
+    }
+  }, [wallet, form]);
+
+  // Update gradient value when useGradient changes
+  React.useEffect(() => {
+    if (useGradient) {
+      form.setValue('gradient', selectedGradient.gradient);
+    } else {
+      form.setValue('gradient', undefined);
+    }
+  }, [useGradient, selectedGradient, form]);
 
   const onSubmit = async (formValues: z.infer<typeof formSchema>) => {
     if (!user) {
@@ -147,6 +187,17 @@ export default function WalletForm({
     }
   };
 
+  const handleSelectGradient = (gradientId: string) => {
+    const gradient = GRADIENTS.find(g => g.id === gradientId) || GRADIENTS[0];
+    setSelectedGradient(gradient);
+    form.setValue('gradient', gradient.gradient);
+    
+    // If selecting a gradient, ensure useGradient is true
+    if (!form.getValues('useGradient')) {
+      form.setValue('useGradient', true);
+    }
+  };
+
   return (
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -168,7 +219,7 @@ export default function WalletForm({
                 values.useGradient && "bg-gradient-to-r"
               )}
               style={{
-                background: values.useGradient
+                background: values.useGradient && values.gradient
                   ? `linear-gradient(135deg, ${values.color}, ${values.gradient})`
                   : values.color,
                 color: 'white'
@@ -284,11 +335,19 @@ export default function WalletForm({
                     <FormLabel>Warna</FormLabel>
                     <FormControl>
                       <div className="flex gap-2 items-center">
-                        <ColorPicker 
-                          value={field.value}
-                          onChange={field.onChange}
-                          showGradients={false}
-                        />
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {WALLET_COLORS.map(color => (
+                            <div
+                              key={color}
+                              className={cn(
+                                "w-8 h-8 rounded-full cursor-pointer border-2",
+                                field.value === color ? "border-white shadow-md scale-110" : "border-transparent"
+                              )}
+                              style={{ backgroundColor: color }}
+                              onClick={() => field.onChange(color)}
+                            />
+                          ))}
+                        </div>
                         <Input
                           type="text"
                           value={field.value}
@@ -334,29 +393,41 @@ export default function WalletForm({
                     <FormItem>
                       <FormLabel>Warna Gradient</FormLabel>
                       <FormControl>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih gradient" />
-                          </SelectTrigger>
-                          <SelectContent>
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
                             {GRADIENTS.map((gradient) => (
-                              <SelectItem 
-                                key={gradient.id} 
-                                value={gradient.value}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <div 
-                                    className={`w-8 h-4 rounded bg-gradient-to-r ${gradient.value}`}
-                                  ></div>
-                                  <span>{gradient.label}</span>
-                                </div>
-                              </SelectItem>
+                              <div
+                                key={gradient.id}
+                                className={cn(
+                                  "w-12 h-12 rounded-lg cursor-pointer border-2 transition-all",
+                                  selectedGradient.id === gradient.id 
+                                    ? "border-white scale-110 shadow-md" 
+                                    : "border-transparent"
+                                )}
+                                style={{
+                                  background: `linear-gradient(135deg, ${gradient.color}, ${gradient.gradient})`
+                                }}
+                                onClick={() => handleSelectGradient(gradient.id)}
+                              />
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="text-sm">
+                              <Label>Warna Awal</Label>
+                              <div 
+                                className="w-full h-8 rounded mt-1"
+                                style={{ backgroundColor: values.color }}
+                              />
+                            </div>
+                            <div className="text-sm">
+                              <Label>Warna Akhir</Label>
+                              <div 
+                                className="w-full h-8 rounded mt-1"
+                                style={{ backgroundColor: selectedGradient.gradient }}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

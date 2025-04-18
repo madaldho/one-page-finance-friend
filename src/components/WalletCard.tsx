@@ -1,5 +1,6 @@
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "./ui/card";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils";
@@ -52,6 +53,7 @@ export function getWalletIcon(type: string) {
 }
 
 export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardProps) {
+  const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
@@ -65,6 +67,16 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
       transition: "all 0.3s ease",
     };
     return style;
+  };
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Prevent navigation if clicking on the dropdown
+    if (e.target instanceof HTMLElement && 
+        (e.target.closest('.wallet-dropdown') || 
+         e.target.closest('button'))) {
+      return;
+    }
+    navigate(`/wallet/${wallet.id}`);
   };
 
   const handleDelete = async () => {
@@ -104,6 +116,7 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
           "before:content-[''] before:absolute before:inset-0 before:bg-black/10 before:opacity-0 group-hover:before:opacity-100 before:transition-opacity"
         )}
         style={getCardStyle()}
+        onClick={handleCardClick}
       >
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2">
@@ -118,8 +131,9 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                className="h-8 w-8 p-0 text-white hover:bg-white/20 wallet-dropdown"
                 disabled={isDeleting}
+                onClick={(e) => e.stopPropagation()}
               >
                 <span className="sr-only">Buka menu</span>
                 <MoreVertical className="h-4 w-4" />
@@ -128,14 +142,20 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 className="flex items-center gap-2 cursor-pointer"
-                onClick={() => onEdit?.(wallet)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onEdit) onEdit(wallet);
+                }}
               >
                 <Pencil className="h-4 w-4" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
-                onClick={() => setShowDeleteDialog(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDeleteDialog(true);
+                }}
                 disabled={wallet.is_default}
               >
                 <Trash2 className="h-4 w-4" />
