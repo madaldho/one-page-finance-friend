@@ -5,12 +5,12 @@ import { DollarSign, PiggyBank, CreditCard } from "lucide-react";
 
 interface FeaturesSectionProps {
   settings: {
-    showBudgeting: boolean;
-    showSavings: boolean;
-    showLoans: boolean;
+    show_budgeting: boolean;
+    show_savings: boolean;
+    show_loans: boolean;
   };
   toggleLoading: Record<string, boolean>;
-  onToggleChange: (setting: 'showBudgeting' | 'showSavings' | 'showLoans') => void;
+  onToggleChange: (setting: 'show_budgeting' | 'show_savings' | 'show_loans') => void;
 }
 
 const FeaturesSection = ({ 
@@ -26,30 +26,30 @@ const FeaturesSection = ({
         icon={<DollarSign className="w-4 h-4 text-blue-600" />}
         title="Budgeting"
         description="Atur dan pantau anggaran keuangan kamu"
-        checked={settings.showBudgeting}
-        onToggle={() => onToggleChange('showBudgeting')}
+        checked={settings.show_budgeting}
+        onToggle={() => onToggleChange('show_budgeting')}
         managementLink="/budgets"
-        loading={toggleLoading.showBudgeting}
+        loading={toggleLoading.show_budgeting}
       />
       
       <FeatureToggle
         icon={<PiggyBank className="w-4 h-4 text-green-600" />}
         title="Tabungan"
         description="Atur target dan pantau tabungan kamu"
-        checked={settings.showSavings}
-        onToggle={() => onToggleChange('showSavings')}
+        checked={settings.show_savings}
+        onToggle={() => onToggleChange('show_savings')}
         managementLink="/savings"
-        loading={toggleLoading.showSavings}
+        loading={toggleLoading.show_savings}
       />
       
       <FeatureToggle
         icon={<CreditCard className="w-4 h-4 text-red-600" />}
         title="Hutang & Piutang"
         description="Kelola data hutang dan piutang"
-        checked={settings.showLoans}
-        onToggle={() => onToggleChange('showLoans')}
+        checked={settings.show_loans}
+        onToggle={() => onToggleChange('show_loans')}
         managementLink="/loans"
-        loading={toggleLoading.showLoans}
+        loading={toggleLoading.show_loans}
       />
     </section>
   );

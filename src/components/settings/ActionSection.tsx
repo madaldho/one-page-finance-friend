@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -15,10 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ActionSectionProps {
   loading: boolean;
-  onExportData: () => Promise<void>;
+  handleExportData: () => Promise<void>;
 }
 
-const ActionSection = ({ loading, onExportData }: ActionSectionProps) => {
+const ActionSection = ({ loading, handleExportData }: ActionSectionProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -48,7 +47,7 @@ const ActionSection = ({ loading, onExportData }: ActionSectionProps) => {
       <Button 
         variant="ghost" 
         className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50"
-        onClick={onExportData}
+        onClick={handleExportData}
         disabled={loading}
       >
         <div className="flex items-center">

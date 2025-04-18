@@ -1,6 +1,7 @@
 
 import { useNavigate } from "react-router-dom";
-import { Plus, ArrowDownUp, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, ArrowRight, Minus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface TransactionActionsProps {
   onTransactionAdded: (transaction: any) => void;
@@ -14,26 +15,26 @@ const TransactionActions = ({ onTransactionAdded }: TransactionActionsProps) => 
   };
 
   return (
-    <div className="fixed bottom-20 left-0 right-0 flex justify-center">
-      <div className="bg-white rounded-full shadow-lg p-1 flex">
-        <button
-          onClick={() => handleNavigate("income")}
-          className="flex items-center gap-2 bg-green-500 text-white py-2 px-4 rounded-full text-sm mr-2"
+    <div className="fixed bottom-16 left-0 right-0 flex justify-center z-50">
+      <div className="flex gap-3 p-3 bg-white rounded-full shadow-lg">
+        <Button 
+          className="bg-green-500 hover:bg-green-600 px-5 rounded-full text-sm" 
+          onClick={() => handleNavigate('income')}
         >
-          <TrendingUp className="w-4 h-4" /> Pemasukan
-        </button>
-        <button
-          onClick={() => handleNavigate("expense")}
-          className="flex items-center gap-2 bg-red-500 text-white py-2 px-4 rounded-full text-sm mr-2"
+          <Plus className="w-4 h-4 mr-2" /> Pemasukan
+        </Button>
+        <Button 
+          className="bg-red-500 hover:bg-red-600 px-5 rounded-full text-sm" 
+          onClick={() => handleNavigate('expense')}
         >
-          <TrendingDown className="w-4 h-4" /> Pengeluaran
-        </button>
-        <button
-          onClick={() => handleNavigate("transfer")}
-          className="flex items-center gap-2 bg-blue-500 text-white py-2 px-4 rounded-full text-sm"
+          <Minus className="w-4 h-4 mr-2" /> Pengeluaran
+        </Button>
+        <Button 
+          className="bg-blue-500 hover:bg-blue-600 px-5 rounded-full text-sm" 
+          onClick={() => handleNavigate('transfer')}
         >
-          <ArrowDownUp className="w-4 h-4" /> Convert
-        </button>
+          <ArrowRight className="w-4 h-4 mr-2" /> Transfer
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,11 +8,12 @@ import ProfileSection from "@/components/settings/ProfileSection";
 import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
 import Footer from "@/components/settings/Footer";
+import { Button } from "@/components/ui/button";
 
 interface UserSettingsForm {
-  showBudgeting: boolean;
-  showSavings: boolean;
-  showLoans: boolean;
+  show_budgeting: boolean;
+  show_savings: boolean;
+  show_loans: boolean;
 }
 
 const Settings = () => {
@@ -22,9 +22,9 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [settings, setSettings] = useState<UserSettingsForm>({
-    showBudgeting: true,
-    showSavings: true,
-    showLoans: true,
+    show_budgeting: true,
+    show_savings: true,
+    show_loans: true,
   });
   const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
 
@@ -73,9 +73,9 @@ const Settings = () => {
         
         if (data) {
           setSettings({
-            showBudgeting: data.show_budgeting || false,
-            showSavings: data.show_savings || false,
-            showLoans: data.show_loans || false,
+            show_budgeting: data.show_budgeting || false,
+            show_savings: data.show_savings || false,
+            show_loans: data.show_loans || false,
           });
         }
       } catch (error) {
@@ -128,8 +128,7 @@ const Settings = () => {
         const { error: updateError } = await supabase
           .from('user_settings')
           .update({
-            [setting === 'showBudgeting' ? 'show_budgeting' : 
-              setting === 'showSavings' ? 'show_savings' : 'show_loans']: !settings[setting]
+            [setting]: !settings[setting]
           })
           .eq('user_id', session.user.id);
           
@@ -139,9 +138,9 @@ const Settings = () => {
           .from('user_settings')
           .insert({
             user_id: session.user.id,
-            show_budgeting: setting === 'showBudgeting' ? !settings.showBudgeting : settings.showBudgeting,
-            show_savings: setting === 'showSavings' ? !settings.showSavings : settings.showSavings,
-            show_loans: setting === 'showLoans' ? !settings.showLoans : settings.showLoans,
+            show_budgeting: setting === 'show_budgeting' ? !settings.show_budgeting : settings.show_budgeting,
+            show_savings: setting === 'show_savings' ? !settings.show_savings : settings.show_savings,
+            show_loans: setting === 'show_loans' ? !settings.show_loans : settings.show_loans,
           });
           
         if (insertError) throw insertError;
@@ -250,14 +249,32 @@ const Settings = () => {
         
         <FeaturesSection 
           settings={settings} 
+          handleToggleChange={handleToggleChange} 
           toggleLoading={toggleLoading} 
-          onToggleChange={handleToggleChange} 
         />
         
-        <ActionSection 
-          loading={loading} 
-          onExportData={handleExportData} 
-        />
+        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
+          <h2 className="text-lg font-medium mb-4">Konfigurasi</h2>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium">Kategori</h3>
+                <p className="text-sm text-muted-foreground">
+                  Kelola kategori untuk transaksi pemasukan dan pengeluaran
+                </p>
+              </div>
+              <Button 
+                variant="ghost" 
+                onClick={() => navigate('/categories')}
+              >
+                Kelola
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        <ActionSection handleExportData={handleExportData} loading={loading} />
         
         <Footer />
       </div>

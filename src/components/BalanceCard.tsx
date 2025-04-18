@@ -1,6 +1,6 @@
-
 import { BadgeDollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
 
 interface BalanceCardProps {
   balance: number;
@@ -16,7 +16,7 @@ const BalanceCard = ({ balance, income, expense }: BalanceCardProps) => {
         <h2 className="text-lg font-medium text-white">Total Saldo</h2>
       </div>
       <p className="text-3xl font-bold text-white">
-        Rp {balance.toLocaleString()}
+        {formatCurrency(balance)}
       </p>
       <div className="mt-4 flex gap-4">
         <div className="flex-1">
@@ -24,14 +24,14 @@ const BalanceCard = ({ balance, income, expense }: BalanceCardProps) => {
             <TrendingUp className="w-4 h-4" />
             <p>Pemasukan</p>
           </div>
-          <p className="text-white font-medium">Rp {income.toLocaleString()}</p>
+          <p className="text-white font-medium">{formatCurrency(income)}</p>
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-1 text-white/80 text-sm">
             <TrendingDown className="w-4 h-4" />
             <p>Pengeluaran</p>
           </div>
-          <p className="text-white font-medium">Rp {expense.toLocaleString()}</p>
+          <p className="text-white font-medium">{formatCurrency(expense)}</p>
         </div>
       </div>
     </Card>

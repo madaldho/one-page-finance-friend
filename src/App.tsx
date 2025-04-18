@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -11,8 +10,17 @@ import Analysis from './pages/Analysis';
 import WalletDetail from './pages/WalletDetail';
 import NotFound from './pages/NotFound';
 import TransactionPage from './pages/TransactionPage';
+import BudgetManagement from './pages/BudgetManagement';
+import AddBudgetSource from './pages/AddBudgetSource';
+import AddBudget from './pages/AddBudget';
+import SavingsManagement from './pages/SavingsManagement';
+import AddSavingsTarget from './pages/AddSavingsTarget';
+import LoansManagement from './pages/LoansManagement';
+import LoanDetail from './pages/LoanDetail';
 import { useAuth } from './contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Categories from "@/pages/Categories";
+import Transactions from "@/pages/Transactions";
 
 // Create a wrapper component to handle auth redirects
 const AuthRedirect = () => {
@@ -100,6 +108,56 @@ function App() {
           <Route path="/transaction/:type" element={
             <ProtectedRoute>
               <TransactionPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/transaction/:type/:id" element={
+            <ProtectedRoute>
+              <TransactionPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/budgets" element={
+            <ProtectedRoute>
+              <BudgetManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/budget-sources/add" element={
+            <ProtectedRoute>
+              <AddBudgetSource />
+            </ProtectedRoute>
+          } />
+          <Route path="/budget/add" element={
+            <ProtectedRoute>
+              <AddBudget />
+            </ProtectedRoute>
+          } />
+          <Route path="/savings" element={
+            <ProtectedRoute>
+              <SavingsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/savings/add" element={
+            <ProtectedRoute>
+              <AddSavingsTarget />
+            </ProtectedRoute>
+          } />
+          <Route path="/loans" element={
+            <ProtectedRoute>
+              <LoansManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/loans/:id" element={
+            <ProtectedRoute>
+              <LoanDetail />
+            </ProtectedRoute>
+          } />
+          <Route path="/categories" element={
+            <ProtectedRoute>
+              <Categories />
+            </ProtectedRoute>
+          } />
+          <Route path="/transactions" element={
+            <ProtectedRoute>
+              <Transactions />
             </ProtectedRoute>
           } />
           <Route path="*" element={<NotFound />} />

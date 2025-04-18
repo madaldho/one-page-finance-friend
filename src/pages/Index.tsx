@@ -1,21 +1,53 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import Layout from "@/components/Layout";
-import WalletCard from "@/components/WalletCard";
+import { 
+  Plus,
+  Wallet as WalletIcon,
+  Receipt, 
+  PiggyBank, 
+  CreditCard, 
+  ChevronRight, 
+  Home, 
+  Minus, 
+  ArrowRight, 
+  BarChart2, 
+  Settings,
+  PieChart
+} from "lucide-react";
+import { Transaction, Wallet } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import Header from '@/components/Header';
+import Layout from '@/components/Layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { WalletCard } from "@/components/WalletCard";
 import BudgetCard from "@/components/BudgetCard";
 import SavingsCard from "@/components/SavingsCard";
 import LoansCard from "@/components/LoansCard";
 import TransactionList from "@/components/TransactionList";
 import TransactionActions from "@/components/TransactionActions";
 import WalletForm from "@/components/WalletForm";
-import { Plus, ArrowRight } from "lucide-react";
-import { Transaction, Wallet, Budget, Saving, Loan, UserSettings } from "@/types";
-import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { getWalletIcon } from '@/components/WalletCard';
+
+interface UserSettings {
+  id: string;
+  user_id: string;
+  show_budgeting: boolean;
+  show_savings: boolean;
+  show_loans: boolean;
+}
 
 const Index = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isDesktop = useMediaQuery("(min-width: 768px)");
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -23,6 +55,7 @@ const Index = () => {
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [showAddWallet, setShowAddWallet] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
@@ -36,6 +69,9 @@ const Index = () => {
     show_loans: true,
   });
   
+  const [showWalletForm, setShowWalletForm] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
+  
   useEffect(() => {
     if (!user) return;
     fetchData();
@@ -43,6 +79,7 @@ const Index = () => {
   
   const fetchData = async () => {
     try {
+      setIsLoading(true);
       if (!user) {
         toast({
           title: "Tidak Terautentikasi",
@@ -52,15 +89,6 @@ const Index = () => {
         return;
       }
 
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
-
-      if (transactionsError) throw transactionsError;
-      setTransactions(transactionsData as Transaction[]);
-
       const { data: walletsData, error: walletsError } = await supabase
         .from('wallets')
         .select('*')
@@ -69,6 +97,24 @@ const Index = () => {
 
       if (walletsError) throw walletsError;
       setWallets(walletsData as Wallet[]);
+
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false });
+
+      if (transactionsError) throw transactionsError;
+
+      const enrichedTransactions = transactionsData.map(tx => {
+        const wallet = walletsData.find(w => w.id === tx.wallet_id);
+        return {
+          ...tx,
+          wallet_name: wallet?.name || 'N/A',
+        };
+      });
+
+      setTransactions(enrichedTransactions as Transaction[]);
 
       const { data: settingsData, error: settingsError } = await supabase
         .from('user_settings')
@@ -80,45 +126,38 @@ const Index = () => {
         setSettings(settingsData as UserSettings);
       }
 
-      const fetchPromises = [];
+      const { data: budgetsData, error: budgetsError } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user.id);
 
-      if (settings.show_budgeting || !settingsData) {
-        fetchPromises.push(
-          supabase.from('budgets')
-            .select('*')
-            .eq('user_id', user.id)
-            .then(({ data, error }) => {
-              if (error) throw error;
-              setBudgets(data as Budget[]);
-            })
-        );
+      if (budgetsError) {
+        console.error("Budget fetch error:", budgetsError);
+      } else {
+      setBudgets(budgetsData as Budget[]);
       }
 
-      if (settings.show_savings || !settingsData) {
-        fetchPromises.push(
-          supabase.from('savings')
-            .select('*')
-            .eq('user_id', user.id)
-            .then(({ data, error }) => {
-              if (error) throw error;
-              setSavings(data as Saving[]);
-            })
-        );
+      const { data: savingsData, error: savingsError } = await supabase
+        .from('savings')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (savingsError) {
+        console.error("Savings fetch error:", savingsError);
+      } else {
+      setSavings(savingsData as Saving[]);
       }
 
-      if (settings.show_loans || !settingsData) {
-        fetchPromises.push(
-          supabase.from('loans')
-            .select('*')
-            .eq('user_id', user.id)
-            .then(({ data, error }) => {
-              if (error) throw error;
-              setLoans(data as Loan[]);
-            })
-        );
-      }
+      const { data: loansData, error: loansError } = await supabase
+        .from('loans')
+        .select('*')
+        .eq('user_id', user.id);
 
-      await Promise.all(fetchPromises);
+      if (loansError) {
+        console.error("Loans fetch error:", loansError);
+      } else {
+      setLoans(loansData as Loan[]);
+      }
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -127,6 +166,8 @@ const Index = () => {
         description: "Terjadi kesalahan saat mengambil data",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -160,18 +201,7 @@ const Index = () => {
     if (!user) return;
     
     if (!query) {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('date', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching all transactions:', error);
-        return;
-      }
-
-      setTransactions(data as Transaction[]);
+      fetchData();
       return;
     }
     
@@ -202,112 +232,336 @@ const Index = () => {
   };
   
   const handleWalletClick = (wallet: Wallet) => {
-    toast({
-      title: wallet.name,
-      description: `Saldo: Rp ${wallet.balance.toLocaleString()}`,
-    });
+    navigate(`/wallet/${wallet.id}`);
   };
   
-  const handleViewAllLoans = () => {
-    toast({
-      title: "Hutang & Piutang",
-      description: "Menampilkan semua data hutang dan piutang",
-    });
+  const handleDeleteTransaction = async (id: string | string[]) => {
+    try {
+      const ids = Array.isArray(id) ? id : [id];
+      
+      for (const transactionId of ids) {
+        const { error } = await supabase
+          .from('transactions')
+          .delete()
+          .eq('id', transactionId);
+          
+        if (error) throw error;
+      }
+      
+      toast({
+        title: "Transaksi Dihapus",
+        description: `${ids.length} transaksi berhasil dihapus`
+      });
+      
+      fetchData();
+    } catch (error: unknown) {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Gagal Menghapus Transaksi",
+        description: "Terjadi kesalahan saat menghapus transaksi",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleEditTransaction = (transaction: Transaction) => {
+    navigate(`/transaction/${transaction.type}/${transaction.id}`);
+  };
+  
+  const handleDateRangeChange = (range: { from: Date; to: Date } | undefined) => {
+    if (!range || !range.from || !range.to) return;
+    
+    console.log("Date range:", range.from, range.to);
+    // Implement date filtering
   };
   
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-bold">Manajemen Keuangan</h1>
-            <p className="text-sm text-gray-500">30 hari aktif</p>
-          </div>
-        </div>
-        
-        <section className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold">Saldo Dompet dan Rekening</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {wallets.map(wallet => (
-              <WalletCard 
-                key={wallet.id} 
-                wallet={wallet} 
-                onClick={() => handleWalletClick(wallet)}
-                onDelete={fetchData}
-              />
-            ))}
-            <button 
-              onClick={() => setShowAddWallet(true)}
-              className="rounded-lg p-3 border border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500"
-            >
-              <Plus className="w-4 h-4 mb-1" />
-              <span className="text-xs">Tambah Wallet</span>
-            </button>
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      
+      <main className="container mx-auto px-4 pb-32 pt-2">
+        {/* Wallet Section */}
+        <section className="mb-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold">Saldo Dompet dan Rekening</h2>
+                <Button 
+                  size="sm" 
+                onClick={() => {
+                  setSelectedWallet(null);
+                  setShowWalletForm(true);
+                }}
+                className="bg-black text-white hover:bg-gray-800 transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Tambah Dompet
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {wallets.length === 0 ? (
+                <Card className="col-span-full flex flex-col items-center justify-center py-8 text-center">
+                  <WalletIcon className="w-8 h-8 text-gray-400 mb-2" />
+                  <p className="text-gray-500 mb-2">Belum ada dompet</p>
+                  <Button 
+                    onClick={() => {
+                      setSelectedWallet(null);
+                      setShowWalletForm(true);
+                    }}
+                    className="bg-black text-white hover:bg-gray-800 transition-colors"
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> Tambah Dompet
+                </Button>
+              </Card>
+            ) : (
+              <>
+                {wallets.map(wallet => (
+                  <WalletCard 
+                    key={wallet.id} 
+                    wallet={wallet} 
+                      onEdit={(wallet) => {
+                        setSelectedWallet(wallet);
+                        setShowWalletForm(true);
+                      }}
+                      onDelete={async (id) => {
+                        try {
+                          const { error } = await supabase
+                            .from('wallets')
+                            .delete()
+                            .eq('id', id);
+                            
+                          if (error) throw error;
+                          
+                          toast({
+                            title: "Dompet berhasil dihapus",
+                            description: "Data dompet telah dihapus dari sistem"
+                          });
+                          
+                          fetchData();
+                        } catch (error) {
+                          console.error('Error deleting wallet:', error);
+                          toast({
+                            variant: "destructive",
+                            title: "Gagal menghapus dompet",
+                            description: "Terjadi kesalahan saat menghapus dompet"
+                          });
+                        }
+                      }}
+                      onSuccess={fetchData}
+                  />
+                ))}
+              </>
+            )}
           </div>
         </section>
-        
-        {showAddWallet && (
-          <WalletForm 
-            onClose={() => setShowAddWallet(false)}
-            onSuccess={() => {
-              setShowAddWallet(false);
-              fetchData();
-            }}
-          />
-        )}
-        
+
+        {/* Budget Card Section */}
         {settings.show_budgeting && (
-          <section className="mb-6">
-            <BudgetCard budgets={budgets} />
+          <section className="mb-5">
+            <Card>
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b p-4 flex flex-row items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mr-2">
+                    <span className="text-xs text-green-700 font-bold">A</span>
+                  </div>
+                  <CardTitle className="text-base font-medium text-green-800">Anggaran Bulan Ini</CardTitle>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-green-600 hover:text-green-700 p-0 flex items-center"
+                  onClick={() => navigate('/budgets')}
+                >
+                  Kelola <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                {budgets && budgets.length > 0 ? (
+                  <BudgetCard budgets={budgets.slice(0, 2)} />
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-gray-500 mb-2">Belum ada anggaran</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate('/budgets')}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Tambah Anggaran
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </section>
         )}
-        
+
+        {/* Savings Card Section */}
         {settings.show_savings && (
-          <section className="mb-6">
-            <SavingsCard savings={savings} />
+          <section className="mb-5">
+            <Card>
+              <CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 border-b p-4 flex flex-row items-center justify-between">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mr-2">
+                    <span className="text-xs text-amber-700 font-bold">T</span>
+                  </div>
+                  <CardTitle className="text-base font-medium text-amber-800">Target Tabungan</CardTitle>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-xs text-amber-600 hover:text-amber-700 p-0 flex items-center"
+                  onClick={() => navigate('/savings')}
+                >
+                  Kelola <ChevronRight className="h-3 w-3 ml-1" />
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                {savings && savings.length > 0 ? (
+                  <SavingsCard savings={savings} />
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-gray-500 mb-2">Belum ada tabungan</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate('/savings')}
+                    >
+                      <Plus className="w-4 h-4 mr-1" /> Tambah Tabungan
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </section>
         )}
-        
+
+        {/* Loans Card Section */}
         {settings.show_loans && (
-          <section className="mb-6">
-            <LoansCard 
-              loans={loans} 
-              loading={false} 
-              onViewAll={handleViewAllLoans} 
-            />
+          <section className="mb-5">
+            {loans && loans.length > 0 ? (
+              <LoansCard loans={loans} loading={isLoading} onViewAll={() => navigate('/loans')} />
+            ) : (
+              <Card>
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b p-4 flex flex-row items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                      <span className="text-xs text-blue-700 font-bold">H</span>
+                    </div>
+                    <CardTitle className="text-base font-medium text-blue-800">Hutang & Piutang</CardTitle>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-xs text-blue-600 hover:text-blue-700 p-0 flex items-center"
+                    onClick={() => navigate('/loans')}
+                  >
+                    Kelola <ChevronRight className="h-3 w-3 ml-1" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="text-center py-6">
+                  <p className="text-gray-500 mb-2">Belum ada hutang atau piutang</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate('/loans')}
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Tambah Hutang/Piutang
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </section>
         )}
-        
-        <section className="mb-6">
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="p-3 rounded-lg bg-green-100 border border-green-200">
-              <p className="text-xs text-green-800">Total Pemasukan</p>
-              <p className="font-semibold mt-1">Rp {totalIncome.toLocaleString()}</p>
-            </div>
-            
-            <div className="p-3 rounded-lg bg-red-100 border border-red-200">
-              <p className="text-xs text-red-800">Total Pengeluaran</p>
-              <p className="font-semibold mt-1">Rp {totalExpense.toLocaleString()}</p>
-            </div>
-            
-            <div className="p-3 rounded-lg bg-blue-100 border border-blue-200">
-              <p className="text-xs text-blue-800">Saldo Total</p>
-              <p className="font-semibold mt-1">Rp {balance.toLocaleString()}</p>
-            </div>
-          </div>
+
+        {/* Transactions List Section */}
+        <section className="mb-20">
+          <Card>
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b p-4 flex flex-row items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center mr-2">
+                  <span className="text-xs text-gray-700 font-bold">T</span>
+                </div>
+                <CardTitle className="text-base font-medium text-gray-800">Transaksi Terbaru</CardTitle>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-xs text-gray-600 hover:text-gray-700 p-0 flex items-center"
+                onClick={() => navigate('/transactions')}
+              >
+                Lihat Semua <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-4">
+              <TransactionList 
+                transactions={transactions.slice(0, 5)} 
+                onFilter={handleFilterTransactions}
+                onDelete={handleDeleteTransaction}
+                onEdit={handleEditTransaction}
+                onDateRangeChange={handleDateRangeChange}
+                  hideHeader={true}
+              />
+            </CardContent>
+          </Card>
         </section>
-        
-        <section>
-          <TransactionList 
-            transactions={transactions} 
-            onFilter={handleFilterTransactions}
-          />
-        </section>
-        
-        <TransactionActions onTransactionAdded={handleAddTransaction} />
+      </main>
+
+      {/* Fixed Action Buttons at Bottom */}
+        <div className="fixed bottom-20 left-0 right-0 flex justify-center z-50 px-4">
+          <div className="flex gap-2 p-2 bg-white rounded-full shadow-lg max-w-md w-full justify-between">
+          <Button 
+              className="bg-green-500 hover:bg-green-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
+            onClick={() => navigate('/transaction/income')}
+              aria-label="Tambah Pemasukan"
+          >
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline ml-1">Pemasukan</span>
+          </Button>
+          <Button 
+              className="bg-red-500 hover:bg-red-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
+            onClick={() => navigate('/transaction/expense')}
+              aria-label="Tambah Pengeluaran"
+          >
+              <Minus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline ml-1">Pengeluaran</span>
+          </Button>
+          <Button 
+              className="bg-blue-500 hover:bg-blue-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
+            onClick={() => navigate('/transaction/transfer')}
+              aria-label="Tambah Transfer"
+          >
+              <ArrowRight className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline ml-1">Transfer</span>
+          </Button>
+        </div>
       </div>
+
+        {/* Add Dialog for Wallet Form */}
+        <Dialog open={showWalletForm} onOpenChange={(open) => {
+          setShowWalletForm(open);
+          if (!open) setSelectedWallet(null);
+        }}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedWallet ? 'Edit Dompet' : 'Tambah Dompet'}
+              </DialogTitle>
+            </DialogHeader>
+        <WalletForm 
+              wallet={selectedWallet}
+          onSuccess={() => {
+                setShowWalletForm(false);
+                setSelectedWallet(null);
+            fetchData();
+          }}
+              onClose={() => {
+                setShowWalletForm(false);
+                setSelectedWallet(null);
+              }}
+        />
+          </DialogContent>
+        </Dialog>
+    </div>
     </Layout>
   );
 };

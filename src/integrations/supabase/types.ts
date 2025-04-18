@@ -9,6 +9,99 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      budget_analysis: {
+        Row: {
+          budget_amount: number | null
+          budget_type: string | null
+          category: string | null
+          end_date: string | null
+          percent_used: number | null
+          period: string | null
+          source_name: string | null
+          spent_amount: number | null
+          start_date: string | null
+          user_id: string | null
+        }
+        Insert: {
+          budget_amount?: number | null
+          budget_type?: string | null
+          category?: string | null
+          end_date?: string | null
+          percent_used?: number | null
+          period?: string | null
+          source_name?: string | null
+          spent_amount?: number | null
+          start_date?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          budget_amount?: number | null
+          budget_type?: string | null
+          category?: string | null
+          end_date?: string | null
+          percent_used?: number | null
+          period?: string | null
+          source_name?: string | null
+          spent_amount?: number | null
+          start_date?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      budget_items: {
+        Row: {
+          amount: number
+          budget_type: string
+          category: string
+          color: string
+          created_at: string | null
+          end_date: string | null
+          id: string
+          percent_value: number | null
+          period: string
+          source_id: string | null
+          source_name: string | null
+          spent: number | null
+          start_date: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          budget_type: string
+          category: string
+          color: string
+          created_at?: string | null
+          end_date?: string | null
+          id: string
+          percent_value?: number | null
+          period: string
+          source_id?: string | null
+          source_name?: string | null
+          spent?: number | null
+          start_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          budget_type?: string
+          category?: string
+          color?: string
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          percent_value?: number | null
+          period?: string
+          source_id?: string | null
+          source_name?: string | null
+          spent?: number | null
+          start_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       budget_sources: {
         Row: {
           amount: number
@@ -69,6 +162,242 @@ export type Database = {
           spent?: number | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          name: string
+          type: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id: string
+          name: string
+          type: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      debt_contacts: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          type: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          type: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      debt_items: {
+        Row: {
+          amount: number
+          created_at: string | null
+          due_date: string
+          id: string
+          installments: number | null
+          lender: string | null
+          remaining_amount: number
+          status: string | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string | null
+          wallet_name: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          due_date: string
+          id: string
+          installments?: number | null
+          lender?: string | null
+          remaining_amount: number
+          status?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id?: string | null
+          wallet_name?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          installments?: number | null
+          lender?: string | null
+          remaining_amount?: number
+          status?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string | null
+          wallet_name?: string | null
+        }
+        Relationships: []
+      }
+      debt_payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          debt_id: string | null
+          id: string
+          payment_date: string
+          transaction_id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          debt_id?: string | null
+          id: string
+          payment_date: string
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          debt_id?: string | null
+          id?: string
+          payment_date?: string
+          transaction_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_payments_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debt_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debt_settings: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expired_budgets: {
+        Row: {
+          amount: number
+          budget_type: string
+          category: string
+          color: string
+          created_at: string | null
+          end_date: string | null
+          id: string
+          percent_value: number | null
+          period: string
+          source_id: string | null
+          source_name: string | null
+          spent: number | null
+          start_date: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          budget_type: string
+          category: string
+          color: string
+          created_at?: string | null
+          end_date?: string | null
+          id: string
+          percent_value?: number | null
+          period: string
+          source_id?: string | null
+          source_name?: string | null
+          spent?: number | null
+          start_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          budget_type?: string
+          category?: string
+          color?: string
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          percent_value?: number | null
+          period?: string
+          source_id?: string | null
+          source_name?: string | null
+          spent?: number | null
+          start_date?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -142,8 +471,10 @@ export type Database = {
         Row: {
           created_at: string | null
           current_amount: number | null
+          description: string | null
           id: string
           name: string
+          savings_category: string | null
           target_amount: number
           target_date: string | null
           updated_at: string | null
@@ -152,8 +483,10 @@ export type Database = {
         Insert: {
           created_at?: string | null
           current_amount?: number | null
+          description?: string | null
           id?: string
           name: string
+          savings_category?: string | null
           target_amount: number
           target_date?: string | null
           updated_at?: string | null
@@ -162,12 +495,107 @@ export type Database = {
         Update: {
           created_at?: string | null
           current_amount?: number | null
+          description?: string | null
           id?: string
           name?: string
+          savings_category?: string | null
           target_amount?: number
           target_date?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      savings_goals: {
+        Row: {
+          created_at: string | null
+          current: number | null
+          description: string | null
+          end_date: string | null
+          id: string
+          name: string
+          savings_type: string | null
+          target: number
+          updated_at: string | null
+          wallet_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current?: number | null
+          description?: string | null
+          end_date?: string | null
+          id: string
+          name: string
+          savings_type?: string | null
+          target: number
+          updated_at?: string | null
+          wallet_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current?: number | null
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          name?: string
+          savings_type?: string | null
+          target?: number
+          updated_at?: string | null
+          wallet_id?: string | null
+        }
+        Relationships: []
+      }
+      savings_transactions: {
+        Row: {
+          created_at: string | null
+          deskripsi: string | null
+          id: string
+          jenistransaksi: string | null
+          kategori: string | null
+          pemasukan: string | null
+          pengeluaran: string | null
+          savings_id: string | null
+          savings_name: string | null
+          status: string | null
+          tanggal: string | null
+          transaction_description: string | null
+          transaction_type: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          deskripsi?: string | null
+          id: string
+          jenistransaksi?: string | null
+          kategori?: string | null
+          pemasukan?: string | null
+          pengeluaran?: string | null
+          savings_id?: string | null
+          savings_name?: string | null
+          status?: string | null
+          tanggal?: string | null
+          transaction_description?: string | null
+          transaction_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          deskripsi?: string | null
+          id?: string
+          jenistransaksi?: string | null
+          kategori?: string | null
+          pemasukan?: string | null
+          pengeluaran?: string | null
+          savings_id?: string | null
+          savings_name?: string | null
+          status?: string | null
+          tanggal?: string | null
+          transaction_description?: string | null
+          transaction_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -234,11 +662,42 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          show_budgeting: boolean
+          show_loans: boolean
+          show_savings: boolean
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          show_budgeting?: boolean
+          show_loans?: boolean
+          show_savings?: boolean
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          show_budgeting?: boolean
+          show_loans?: boolean
+          show_savings?: boolean
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       wallets: {
         Row: {
           balance: number
           color: string | null
           created_at: string | null
+          gradient: string | null
           id: string
           is_default: boolean | null
           name: string
@@ -250,6 +709,7 @@ export type Database = {
           balance?: number
           color?: string | null
           created_at?: string | null
+          gradient?: string | null
           id?: string
           is_default?: boolean | null
           name: string
@@ -261,6 +721,7 @@ export type Database = {
           balance?: number
           color?: string | null
           created_at?: string | null
+          gradient?: string | null
           id?: string
           is_default?: boolean | null
           name?: string

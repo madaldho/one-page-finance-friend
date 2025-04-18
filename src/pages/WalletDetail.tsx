@@ -1,13 +1,26 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Trash2, ArrowLeftRight, ArrowUp, ArrowDown, ChevronLeft, Filter } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { 
+  ChevronLeft, 
+  Search, 
+  Plus, 
+  ArrowUp, 
+  ArrowDown, 
+  ArrowLeftRight,
+  MoreVertical,
+  Trash2,
+  Pencil,
+  Calendar,
+  Filter,
+  ExternalLink,
+  ArrowDownRight,
+  ArrowUpRight
+} from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -15,65 +28,139 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import TransactionForm from '@/components/TransactionForm';
+import { getWalletIcon, getDefaultGradient } from '@/components/WalletCard';
+import Layout from '@/components/Layout';
+import { Card } from '@/components/ui/card';
+import TransactionList from '@/components/TransactionList';
+import { DateRange } from 'react-day-picker';
+import { DateRangePicker } from '@/components/DateRangePicker';
 
 interface Transaction {
   id: string;
-  created_at: string;
-  amount: number;
   title: string;
-  description: string;
-  type: 'income' | 'expense' | 'transfer';
-  wallet_id: string;
-  destination_wallet_id?: string;
-  category: string;
+  amount: number;
+  type: 'income' | 'expense' | 'transfer' | string;
   date: string;
+  description?: string;
+  category?: string;
+  category_data?: Category;
+  wallet_id: string | null;
+  destination_wallet_id?: string | null;
+}
+
+interface Wallet {
+  id: string;
+  name: string;
+  balance: number;
+  type?: 'cash' | 'bank' | 'savings' | string;
+  color?: string;
+  gradient?: string;
+  icon?: string;
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
+  is_default?: boolean;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+  color?: string;
+  icon?: string;
 }
 
 const WalletDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [wallet, setWallet] = useState<{ id: string; name: string; balance: number } | null>(null);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
-  const [loading, setLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [showTransactionForm, setShowTransactionForm] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
+    fetchWalletAndTransactions();
+  }, [id]);
+
     const fetchWalletAndTransactions = async () => {
+    try {
       setLoading(true);
-      try {
+      
+      // Fetch wallet
         const { data: walletData, error: walletError } = await supabase
           .from('wallets')
           .select('*')
           .eq('id', id)
           .single();
 
-        if (walletError) {
-          console.error("Error fetching wallet:", walletError);
-          throw walletError;
-        }
-
+      if (walletError) throw walletError;
         setWallet(walletData);
 
-        const { data: transactionsData, error: transactionsError } = await supabase
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', walletData.user_id);
+
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
+
+      // Fetch transactions
+      let query = supabase
           .from('transactions')
           .select('*')
-          .or(`wallet_id.eq.${id},destination_wallet_id.eq.${id}`)
+        .eq('wallet_id', id)
           .order('date', { ascending: false });
 
-        if (transactionsError) {
-          console.error("Error fetching transactions:", transactionsError);
-          throw transactionsError;
-        }
+      if (filterType !== 'all') {
+        query = query.eq('type', filterType);
+      }
 
-        setTransactions(transactionsData || []);
+      if (dateRange?.from && dateRange?.to) {
+        query = query
+          .gte('date', dateRange.from.toISOString())
+          .lte('date', dateRange.to.toISOString());
+      }
+
+      const { data: transactionsData, error: transactionsError } = await query;
+
+      if (transactionsError) throw transactionsError;
+      
+      // Tambahkan data kategori ke transaksi
+      const transactionsWithCategories = transactionsData?.map(transaction => {
+        const categoryData = categoriesData?.find(cat => cat.id === transaction.category);
+        return {
+          ...transaction,
+          category_data: categoryData
+        };
+      }) || [];
+      
+      setTransactions(transactionsWithCategories);
       } catch (error) {
-        console.error("Failed to fetch wallet details and transactions", error);
+      console.error('Error fetching data:', error);
         toast({
           title: "Error",
-          description: "Gagal memuat detail wallet dan transaksi",
+        description: "Gagal memuat data wallet",
           variant: "destructive"
         });
       } finally {
@@ -81,20 +168,31 @@ const WalletDetail = () => {
       }
     };
 
-    if (id) {
-      fetchWalletAndTransactions();
-    }
-  }, [id, toast]);
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transactionId);
 
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+      if (error) throw error;
+
+      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      toast({
+        title: "Berhasil",
+        description: "Transaksi berhasil dihapus",
+      });
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast({
+        title: "Error",
+        description: "Gagal menghapus transaksi",
+        variant: "destructive"
+      });
+    }
   };
 
-  const getTransactionTypeIcon = (type: string, isDestination: boolean = false) => {
+  const getTransactionIcon = (type: string, isDestination: boolean = false) => {
     if (type === 'transfer' && isDestination) {
       return <ArrowDown className="w-4 h-4 text-green-500" />;
     }
@@ -122,7 +220,7 @@ const WalletDetail = () => {
       case 'expense':
         return 'text-red-600';
       case 'transfer':
-        return 'text-red-600';
+        return 'text-blue-600';
       default:
         return '';
     }
@@ -148,17 +246,10 @@ const WalletDetail = () => {
     .filter(transaction => {
       const searchTermLower = searchTerm.toLowerCase();
       return (
-        (transaction.title && transaction.title.toLowerCase().includes(searchTermLower)) ||
-        (transaction.description && transaction.description.toLowerCase().includes(searchTermLower)) ||
-        formatDate(transaction.date).toLowerCase().includes(searchTermLower) ||
-        (transaction.category && transaction.category.toLowerCase().includes(searchTermLower))
+        transaction.title.toLowerCase().includes(searchTermLower) ||
+        (transaction.description?.toLowerCase().includes(searchTermLower) || false) ||
+        formatDate(transaction.date).toLowerCase().includes(searchTermLower)
       );
-    })
-    .filter(transaction => {
-      if (filterType === 'all') {
-        return true;
-      }
-      return transaction.type === filterType;
     })
     .sort((a, b) => {
       const dateA = new Date(a.date).getTime();
@@ -166,132 +257,14 @@ const WalletDetail = () => {
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
 
-  const handleDelete = async (transactionId: string) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) {
-      return;
-    }
-
-    try {
-      // First get the transaction details
-      const { data: transactionData, error: fetchError } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('id', transactionId)
-        .single();
-        
-      if (fetchError) throw fetchError;
-      
-      // Delete the transaction
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transactionId);
-
-      if (error) throw error;
-      
-      // If needed, update wallet balances
-      if (transactionData) {
-        // For income transaction, subtract the amount from the wallet
-        if (transactionData.type === 'income' && transactionData.wallet_id) {
-          const { data: walletData } = await supabase
-            .from('wallets')
-            .select('balance')
-            .eq('id', transactionData.wallet_id)
-            .single();
-            
-          if (walletData) {
-            await supabase
-              .from('wallets')
-              .update({ balance: walletData.balance - transactionData.amount })
-              .eq('id', transactionData.wallet_id);
-          }
-        }
-        
-        // For expense transaction, add the amount back to the wallet
-        else if (transactionData.type === 'expense' && transactionData.wallet_id) {
-          const { data: walletData } = await supabase
-            .from('wallets')
-            .select('balance')
-            .eq('id', transactionData.wallet_id)
-            .single();
-            
-          if (walletData) {
-            await supabase
-              .from('wallets')
-              .update({ balance: walletData.balance + transactionData.amount })
-              .eq('id', transactionData.wallet_id);
-          }
-        }
-        
-        // For transfer transaction, handle both wallets
-        else if (transactionData.type === 'transfer') {
-          if (transactionData.wallet_id) {
-            const { data: sourceWalletData } = await supabase
-              .from('wallets')
-              .select('balance')
-              .eq('id', transactionData.wallet_id)
-              .single();
-              
-            if (sourceWalletData) {
-              await supabase
-                .from('wallets')
-                .update({ balance: sourceWalletData.balance + transactionData.amount })
-                .eq('id', transactionData.wallet_id);
-            }
-          }
-          
-          if (transactionData.destination_wallet_id) {
-            const { data: destWalletData } = await supabase
-              .from('wallets')
-              .select('balance')
-              .eq('id', transactionData.destination_wallet_id)
-              .single();
-              
-            if (destWalletData) {
-              const fee = transactionData.fee || 0;
-              await supabase
-                .from('wallets')
-                .update({ balance: destWalletData.balance - (transactionData.amount - fee) })
-                .eq('id', transactionData.destination_wallet_id);
-            }
-          }
-        }
-      }
-
-      // Update the local state to remove the deleted transaction
-      setTransactions(prevTransactions =>
-        prevTransactions.filter(transaction => transaction.id !== transactionId)
-      );
-      
-      toast({
-        title: "Berhasil",
-        description: "Transaksi berhasil dihapus",
-      });
-      
-      // Refresh the wallet data to show updated balance
-      const { data: refreshedWallet } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('id', id)
-        .single();
-        
-      if (refreshedWallet) {
-        setWallet(refreshedWallet);
-      }
-      
-    } catch (error) {
-      console.error("Error deleting transaction:", error);
-      toast({
-        title: "Error",
-        description: "Gagal menghapus transaksi",
-        variant: "destructive"
-      });
-    }
+  // Fungsi untuk melihat semua transaksi dompet ini di halaman Transactions
+  const navigateToAllTransactions = () => {
+    navigate(`/transactions?wallet=${id}`);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-pulse">
           <div className="h-8 w-48 bg-gray-200 rounded mb-4"></div>
           <div className="h-24 w-80 bg-gray-200 rounded"></div>
@@ -302,126 +275,141 @@ const WalletDetail = () => {
 
   if (!wallet) {
     return (
-      <div className="p-4 text-center">
-        <p className="text-lg text-gray-600 mb-4">Wallet tidak ditemukan.</p>
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <p className="text-lg text-gray-600 mb-4">Wallet tidak ditemukan</p>
         <Button onClick={() => navigate('/home')}>Kembali ke Home</Button>
       </div>
     );
   }
 
+  const getCardStyle = () => {
+    const style: React.CSSProperties = {
+      background: wallet.gradient 
+        ? `linear-gradient(135deg, ${wallet.color}, ${wallet.gradient})`
+        : wallet.color,
+      color: "white",
+    };
+    return style;
+  };
+
   return (
-    <div className="bg-gray-50 min-h-screen pb-16">
-      <div className="bg-white p-4 shadow-sm">
-        <div className="flex items-center">
+    <Layout>
+      <div className="container mx-auto px-4 py-6">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => navigate('/home')}
-            className="mr-2"
+            onClick={() => navigate(-1)}
+            className="rounded-full"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-xl font-semibold">Detail Wallet</h1>
+          <h1 className="text-2xl font-semibold">Detail Dompet</h1>
+        </div>
+
+        {/* Wallet Card */}
+        <Card className="mb-6 p-6" style={getCardStyle()}>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">{wallet.name}</h2>
+              <Button
+                variant="ghost"
+                className="text-white hover:bg-white/20"
+                onClick={() => navigate(`/wallet/${wallet.id}/edit`)}
+              >
+                Edit
+              </Button>
+            </div>
+            <p className="text-sm opacity-90">
+              {wallet.type === "bank"
+                ? "Rekening Bank"
+                : wallet.type === "savings"
+                ? "Tabungan"
+                : "Uang Tunai"}
+            </p>
+            <div className="mt-4">
+              <p className="text-sm opacity-90">Saldo Saat Ini</p>
+              <p className="text-3xl font-bold">{formatCurrency(wallet.balance)}</p>
         </div>
       </div>
-      
-      <div className="p-4">
-        <Card className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-5 mb-6 rounded-xl">
-          <h2 className="text-sm font-medium opacity-80 mb-1">{wallet.name}</h2>
-          <p className="text-2xl font-bold">{formatCurrency(wallet.balance)}</p>
         </Card>
         
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex gap-2 items-center">
-            <Filter className="h-4 w-4 text-gray-500" />
-            <span className="text-sm font-medium">Filter</span>
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <Button
+            className="bg-green-500 hover:bg-green-600"
+            onClick={() => navigate(`/transaction/income?wallet=${wallet.id}`)}
+          >
+            <ArrowDownRight className="w-4 h-4 mr-2" />
+            Tambah Pemasukan
+          </Button>
+          <Button
+            className="bg-red-500 hover:bg-red-600"
+            onClick={() => navigate(`/transaction/expense?wallet=${wallet.id}`)}
+          >
+            <ArrowUpRight className="w-4 h-4 mr-2" />
+            Tambah Pengeluaran
+          </Button>
           </div>
-          <div className="flex gap-2">
-            <Select
-              value={filterType}
-              onValueChange={(value: 'all' | 'income' | 'expense' | 'transfer') => setFilterType(value)}
-            >
-              <SelectTrigger className="h-9 w-32">
-                <SelectValue placeholder="Filter transaksi" />
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter Transaksi" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua</SelectItem>
+              <SelectItem value="all">Semua Transaksi</SelectItem>
                 <SelectItem value="income">Pemasukan</SelectItem>
                 <SelectItem value="expense">Pengeluaran</SelectItem>
                 <SelectItem value="transfer">Transfer</SelectItem>
               </SelectContent>
             </Select>
             
-            <Select
-              value={sortOrder}
-              onValueChange={(value: 'newest' | 'oldest') => setSortOrder(value)}
-            >
-              <SelectTrigger className="h-9 w-32">
-                <SelectValue placeholder="Urutkan" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Terbaru</SelectItem>
-                <SelectItem value="oldest">Terlama</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        <div className="mb-4">
-          <Input
-            type="text"
-            placeholder="Cari transaksi..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
+          <DateRangePicker
+            value={dateRange}
+            onChange={setDateRange}
+            className="w-full sm:w-auto"
           />
         </div>
 
-        {filteredTransactions.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Tidak ada transaksi yang ditemukan.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredTransactions.map(transaction => {
-              const isDestinationWallet = transaction.destination_wallet_id === id;
-              
-              return (
-                <Card key={transaction.id} className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-gray-100">
-                        {getTransactionTypeIcon(transaction.type, isDestinationWallet)}
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900">{transaction.title || transaction.category}</h3>
-                        <p className="text-xs text-gray-500">{formatDate(transaction.date)}</p>
-                        {transaction.description && (
-                          <p className="text-sm text-gray-600 mt-1">{transaction.description}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <p className={`font-semibold ${getTransactionColor(transaction.type, isDestinationWallet)}`}>
-                        {getTransactionSign(transaction.type, isDestinationWallet)} {formatCurrency(transaction.amount).replace('Rp', '')}
-                      </p>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDelete(transaction.id)}
-                        className="h-6 w-6 text-gray-400 hover:text-red-500 mt-1"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+        {/* Transactions */}
+        <Card>
+          <TransactionList
+            transactions={transactions}
+            isLoading={loading}
+            onDelete={async (id) => {
+              try {
+                const { error } = await supabase
+                  .from("transactions")
+                  .delete()
+                  .eq("id", id);
+
+                if (error) throw error;
+
+                toast({
+                  title: "Transaksi dihapus",
+                  description: "Transaksi berhasil dihapus",
+                });
+
+                fetchWalletAndTransactions();
+              } catch (error) {
+                console.error("Error deleting transaction:", error);
+                toast({
+                  variant: "destructive",
+                  title: "Error",
+                  description: "Gagal menghapus transaksi",
+                });
+              }
+            }}
+            onEdit={(transaction) => {
+              navigate(`/transaction/${transaction.type}/${transaction.id}`);
+            }}
+          />
                 </Card>
-              );
-            })}
-          </div>
-        )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

@@ -1,0 +1,612 @@
+import React, { useState, useEffect } from "react";
+import Layout from "@/components/Layout";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { ArrowLeft, Plus, Info, Calendar, CreditCard, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Loan, Wallet } from "@/types";
+import { format, parseISO } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatCurrency } from "@/lib/utils";
+
+const LoansManagement = () => {
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState("all");
+  const [featureEnabled, setFeatureEnabled] = useState(true);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentWallet, setPaymentWallet] = useState("");
+  const [markPaid, setMarkPaid] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch loans
+      const { data: loansData, error: loansError } = await supabase
+        .from("loans")
+        .select("*")
+        .eq("user_id", user?.id);
+
+      if (loansError) throw loansError;
+      setLoans(loansData as unknown as Loan[]);
+
+      // Fetch wallets
+      const { data: walletsData, error: walletsError } = await supabase
+        .from("wallets")
+        .select("*")
+        .eq("user_id", user?.id);
+
+      if (walletsError) throw walletsError;
+      setWallets(walletsData as Wallet[]);
+
+      // Fetch settings
+      const { data: settingsData, error: settingsError } = await supabase
+        .from("user_settings")
+        .select("show_loans")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (!settingsError && settingsData) {
+        setFeatureEnabled(settingsData.show_loans);
+      }
+
+    } catch (error: any) {
+      console.error("Error fetching loans data:", error.message);
+      toast({
+        title: "Gagal memuat data",
+        description: "Terjadi kesalahan saat mengambil data hutang dan piutang",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleFeature = async () => {
+    const newValue = !featureEnabled;
+    setFeatureEnabled(newValue);
+    
+    try {
+      const { error } = await supabase
+        .from("user_settings")
+        .update({ show_loans: newValue })
+        .eq("user_id", user?.id);
+
+      if (error) throw error;
+      
+      toast({
+        title: `Fitur Hutang & Piutang ${newValue ? "Diaktifkan" : "Dinonaktifkan"}`,
+        description: newValue ? 
+          "Fitur hutang dan piutang sekarang aktif di halaman utama" : 
+          "Fitur hutang dan piutang tidak akan ditampilkan di halaman utama",
+      });
+    } catch (error: any) {
+      console.error("Error updating settings:", error);
+      setFeatureEnabled(!newValue); // Revert state on error
+      toast({
+        title: "Gagal Mengubah Pengaturan",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    try {
+      return format(parseISO(dateString), "dd/MM/yyyy");
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  // Filter loans based on selected tab
+  const filteredLoans = () => {
+    switch (selectedTab) {
+      case "unpaid":
+        return loans.filter(loan => loan.status === "unpaid");
+      case "overdue":
+        return loans.filter(loan => {
+          const dueDate = new Date(loan.due_date);
+          const today = new Date();
+          return loan.status !== "paid" && dueDate < today;
+        });
+      case "paid":
+        return loans.filter(loan => loan.status === "paid");
+      default:
+        return loans;
+    }
+  };
+
+  // Get total for hutang (debts)
+  const totalHutang = loans
+    .filter(loan => loan.type === "payable" && loan.status !== "paid")
+    .reduce((sum, loan) => sum + (loan.remaining_amount || loan.amount), 0);
+
+  // Get total for piutang (receivables)
+  const totalPiutang = loans
+    .filter(loan => loan.type === "receivable" && loan.status !== "paid")
+    .reduce((sum, loan) => sum + (loan.remaining_amount || loan.amount), 0);
+
+  // Count items by status
+  const countHutangItems = loans.filter(loan => loan.type === "payable" && loan.status !== "paid").length;
+  const countPiutangItems = loans.filter(loan => loan.type === "receivable" && loan.status !== "paid").length;
+
+  // Count overdue items
+  const countHutangOverdue = loans.filter(loan => {
+    const dueDate = new Date(loan.due_date);
+    const today = new Date();
+    return loan.type === "payable" && loan.status !== "paid" && dueDate < today;
+  }).length;
+
+  const countPiutangOverdue = loans.filter(loan => {
+    const dueDate = new Date(loan.due_date);
+    const today = new Date();
+    return loan.type === "receivable" && loan.status !== "paid" && dueDate < today;
+  }).length;
+
+  const handleOpenPayment = (loan: Loan) => {
+    setSelectedLoan(loan);
+    setPaymentAmount(String(loan.remaining_amount || loan.amount));
+    setPaymentWallet("");
+    setMarkPaid(false);
+    setPaymentDialogOpen(true);
+  };
+
+  const handlePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedLoan) return;
+    
+    if (!paymentAmount || isNaN(Number(paymentAmount)) || Number(paymentAmount) <= 0) {
+      toast({
+        title: "Jumlah Pembayaran Tidak Valid",
+        description: "Masukkan jumlah pembayaran yang valid",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!paymentWallet) {
+      toast({
+        title: "Pilih Sumber Dana",
+        description: "Pilih dompet atau rekening untuk pembayaran",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const amount = Number(paymentAmount);
+    const maxAmount = selectedLoan.remaining_amount || selectedLoan.amount;
+    
+    if (amount > maxAmount) {
+      toast({
+        title: "Jumlah Melebihi Sisa Hutang",
+        description: `Maksimal pembayaran adalah ${formatCurrency(maxAmount)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // TODO: Implement actual payment logic here
+      toast({
+        title: "Pembayaran Berhasil",
+        description: `Pembayaran ${formatCurrency(amount)} untuk ${selectedLoan.title} berhasil`,
+      });
+      setPaymentDialogOpen(false);
+      // Refresh data
+      fetchData();
+    } catch (error: any) {
+      console.error("Error processing payment:", error.message);
+      toast({
+        title: "Gagal Memproses Pembayaran",
+        description: error.message || "Terjadi kesalahan saat memproses pembayaran",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Layout>
+      <div className="container mx-auto p-4 pb-32 max-w-xl">
+        <div className="flex items-center mb-6">
+          <Link to="/home" className="mr-2">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="text-xl font-bold">Hutang & Piutang</h1>
+        </div>
+
+        {/* Feature Toggle Section */}
+        <section className="mb-6 bg-white rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold">Fitur Hutang & Piutang</h2>
+              <p className="text-sm text-gray-500">Aktif</p>
+            </div>
+            <Switch checked={featureEnabled} onCheckedChange={handleToggleFeature} />
+          </div>
+        </section>
+
+        {/* Summary Section */}
+        <section className="mb-6 grid grid-cols-2 gap-3">
+          <div className="bg-red-50 p-4 rounded-lg border border-red-100">
+            <p className="text-xs text-red-700 mb-1">Total Hutang</p>
+            <p className="text-lg font-semibold text-red-800">{formatCurrency(totalHutang)}</p>
+            <div className="flex justify-between text-xs mt-2">
+              <span>{countHutangItems} lunas</span>
+              <span>{countHutangOverdue} terlambat</span>
+            </div>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+            <p className="text-xs text-green-700 mb-1">Total Piutang</p>
+            <p className="text-lg font-semibold text-green-800">{formatCurrency(totalPiutang)}</p>
+            <div className="flex justify-between text-xs mt-2">
+              <span>{countPiutangItems} lunas</span>
+              <span>{countPiutangOverdue} terlambat</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Tabs Section */}
+        <section className="mb-6">
+          <Tabs defaultValue="all" value={selectedTab} onValueChange={setSelectedTab}>
+            <TabsList className="grid grid-cols-4 mb-4">
+              <TabsTrigger value="all">Semua</TabsTrigger>
+              <TabsTrigger value="unpaid">Belum Lunas</TabsTrigger>
+              <TabsTrigger value="overdue">Terlambat</TabsTrigger>
+              <TabsTrigger value="paid">Lunas</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </section>
+
+        {/* Hutang List Section */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold">Daftar Hutang Aktif</h2>
+            <Button 
+              variant="outline" 
+              size="sm"
+              asChild
+            >
+              <Link to="/loans/add-debt">
+                <Plus className="h-4 w-4 mr-1" />
+                Tambah Hutang Baru
+              </Link>
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <p>Memuat data hutang...</p>
+            </div>
+          ) : loans.filter(loan => loan.type === "payable").length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-lg">
+              <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+              <p>Tidak ada hutang yang ditemukan.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {loans
+                .filter(loan => loan.type === "payable")
+                .map((loan) => {
+                  const isOverdue = new Date(loan.due_date) < new Date() && loan.status !== "paid";
+                  const isPaid = loan.status === "paid";
+                  return (
+                    <div 
+                      key={loan.id} 
+                      className={`bg-white rounded-lg p-4 border-l-4 ${
+                        isPaid ? "border-gray-300" : 
+                        isOverdue ? "border-red-500" : "border-red-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h3 className="font-semibold">{loan.title}</h3>
+                          <div className="text-xs inline-flex items-center space-x-1">
+                            <span className={`px-2 py-0.5 rounded ${
+                              isPaid ? "bg-gray-100" : 
+                              isOverdue ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
+                            }`}>
+                              {isPaid ? "Lunas" : isOverdue ? "Terlambat" : "Belum Lunas"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(loan.amount)}</p>
+                          <p className="text-xs text-gray-500">
+                            {isPaid ? "Lunas" : 
+                              (loan.paid_amount && loan.paid_amount > 0) ? 
+                              `${Math.round((loan.paid_amount / loan.amount) * 100)}% terbayar` : 
+                              "0% terbayar"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {loan.lender && (
+                        <div className="text-sm mb-2">
+                          <p className="text-gray-500">Pemberi: {loan.lender}</p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          <span>Jatuh tempo: {formatDate(loan.due_date)}</span>
+                        </div>
+                      </div>
+
+                      {!isPaid && (
+                        <div>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => handleOpenPayment(loan)}
+                          >
+                            Bayar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </section>
+
+        {/* Piutang List Section */}
+        <section className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold">Daftar Piutang Aktif</h2>
+            <Button 
+              variant="outline" 
+              size="sm"
+              asChild
+            >
+              <Link to="/loans/add-receivable">
+                <Plus className="h-4 w-4 mr-1" />
+                Tambah Piutang Baru
+              </Link>
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <p>Memuat data piutang...</p>
+            </div>
+          ) : loans.filter(loan => loan.type === "receivable").length === 0 ? (
+            <div className="text-center py-8 bg-white rounded-lg">
+              <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+              <p>Tidak ada piutang yang ditemukan.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {loans
+                .filter(loan => loan.type === "receivable")
+                .map((loan) => {
+                  const isOverdue = new Date(loan.due_date) < new Date() && loan.status !== "paid";
+                  const isPaid = loan.status === "paid";
+                  return (
+                    <div 
+                      key={loan.id} 
+                      className={`bg-white rounded-lg p-4 border-l-4 ${
+                        isPaid ? "border-gray-300" : 
+                        isOverdue ? "border-yellow-500" : "border-green-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h3 className="font-semibold">{loan.title}</h3>
+                          <div className="text-xs inline-flex items-center space-x-1">
+                            <span className={`px-2 py-0.5 rounded ${
+                              isPaid ? "bg-gray-100" : 
+                              isOverdue ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"
+                            }`}>
+                              {isPaid ? "Lunas" : isOverdue ? "Belum Lunas" : "Belum Lunas"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(loan.amount)}</p>
+                          <p className="text-xs text-gray-500">
+                            {isPaid ? "Lunas" : 
+                              (loan.paid_amount && loan.paid_amount > 0) ? 
+                              `${Math.round((loan.paid_amount / loan.amount) * 100)}% terbayar` : 
+                              "0% terbayar"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {loan.borrower && (
+                        <div className="text-sm mb-2">
+                          <p className="text-gray-500">Peminjam: {loan.borrower}</p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          <span>Jatuh tempo: {formatDate(loan.due_date)}</span>
+                        </div>
+                      </div>
+
+                      {!isPaid && (
+                        <div>
+                          <Button 
+                            variant="default" 
+                            size="sm" 
+                            className="w-full bg-green-600 hover:bg-green-700"
+                            onClick={() => handleOpenPayment(loan)}
+                          >
+                            Terima Pembayaran
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </section>
+
+        {/* Tips Section */}
+        <section className="bg-blue-50 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold mb-3 text-blue-800">Tips Penggunaan Hutang & Piutang</h3>
+          <ul className="space-y-2 text-sm text-blue-700">
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Hutang yang Anda terima akan masuk sebagai pemasukan dengan label "Ngutang"</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Pembayaran hutang akan masuk sebagai pengeluaran dengan label "Bayar Hutang"</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Pinjaman yang Anda berikan akan masuk sebagai pengeluaran dengan label "Beri Piutang"</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Penerimaan pembayaran pinjaman akan masuk sebagai pemasukan dengan label "Terima dari Piutang"</span>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <span>Anda dapat mengatur anggaran khusus untuk pembayaran hutang di menu Anggaran</span>
+            </li>
+          </ul>
+        </section>
+
+        {/* Feature Description Section */}
+        <section className="bg-purple-50 rounded-lg p-4">
+          <h3 className="font-semibold mb-3 text-purple-800">Penjelasan Fitur Hutang & Piutang</h3>
+          <div className="space-y-2 text-sm text-purple-700">
+            <h4 className="font-medium">Daftar Hutang Aktif:</h4>
+            <p>Menampilkan semua hutang yang Anda miliki (uang yang Anda pinjam dari orang lain atau lembaga). Fitur ini membantu Anda:</p>
+            <ul className="ml-4 space-y-1">
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <span>Melacak jumlah hutang yang masih harus dibayar</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedLoan?.type === "payable" ? "Pembayaran Hutang" : "Terima Pembayaran Piutang"}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handlePayment} className="space-y-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-medium">Detail {selectedLoan?.type === "payable" ? "Hutang" : "Piutang"}</h3>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <p className="text-xs text-gray-500">Total {selectedLoan?.type === "payable" ? "Hutang" : "Piutang"}</p>
+                  <p className="font-medium">{selectedLoan ? formatCurrency(selectedLoan.amount) : "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Sisa {selectedLoan?.type === "payable" ? "Hutang" : "Piutang"}</p>
+                  <p className="font-medium">{selectedLoan ? formatCurrency(selectedLoan.remaining_amount || selectedLoan.amount) : "-"}</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Jumlah Pembayaran</label>
+              <input 
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                className="w-full rounded-md border border-gray-300 p-2"
+                max={selectedLoan?.remaining_amount || selectedLoan?.amount}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Maksimal pembayaran: {selectedLoan ? formatCurrency(selectedLoan.remaining_amount || selectedLoan.amount) : "-"}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Pilih Sumber Dana</label>
+              <div className="flex items-center border rounded-md px-3 py-2">
+                <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
+                <select 
+                  value={paymentWallet}
+                  onChange={(e) => setPaymentWallet(e.target.value)}
+                  className="flex-1 border-0 focus:ring-0"
+                  required
+                >
+                  <option value="">Pilih dompet</option>
+                  {wallets.map(wallet => (
+                    <option key={wallet.id} value={wallet.id}>
+                      {wallet.name} - {formatCurrency(wallet.balance)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input 
+                type="checkbox"
+                id="mark-paid"
+                checked={markPaid}
+                onChange={() => setMarkPaid(!markPaid)}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="mark-paid" className="text-sm">
+                Tandai sebagai lunas meskipun pembayaran parsial
+              </label>
+            </div>
+
+            <div className="flex space-x-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="flex-1"
+                onClick={() => setPaymentDialogOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button 
+                type="submit" 
+                className={`flex-1 ${
+                  selectedLoan?.type === "payable" ? 
+                  "bg-blue-600 hover:bg-blue-700" : 
+                  "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                {selectedLoan?.type === "payable" ? "Bayar Sekarang" : "Terima Pembayaran"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Layout>
+  );
+};
+
+export default LoansManagement;

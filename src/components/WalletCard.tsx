@@ -1,12 +1,22 @@
-
-import { useState } from "react";
+import React from "react";
+import { Card } from "./ui/card";
+import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { Wallet } from "@/types";
-import { Pencil, Trash2 } from "lucide-react";
-import WalletForm from "./WalletForm";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { 
+  MoreVertical,
+  Pencil,
+  Trash2
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import { Button } from "./ui/button";
+import { useToast } from "./ui/use-toast";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -15,137 +25,145 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "./ui/alert-dialog";
 
 interface WalletCardProps {
   wallet: Wallet;
-  onClick?: () => void;
-  onDelete?: () => void;
-  key?: string;
+  onEdit?: (wallet: Wallet) => void;
+  onDelete?: (id: string) => void;
+  onSuccess?: () => void;
 }
 
-const WalletCard = ({ wallet, onClick, onDelete }: WalletCardProps) => {
-  const [isEditing, setIsEditing] = useState(false);
+export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardProps) {
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
-  const navigate = useNavigate();
-  
-  const colors: Record<string, string> = {
-    green: "bg-green-100 border-green-200",
-    pink: "bg-pink-100 border-pink-200",
-    blue: "bg-blue-100 border-blue-200",
-    orange: "bg-orange-100 border-orange-200",
-    purple: "bg-purple-100 border-purple-200",
-    yellow: "bg-yellow-100 border-yellow-200",
-    red: "bg-red-100 border-red-200",
-    default: "bg-gray-100 border-gray-200"
-  };
 
-  // Check if wallet.color is a hex color
-  const isCustomColor = wallet.color && wallet.color.startsWith('#');
-  
-  // Get background and border color styles for custom colors
-  const getCustomColorStyle = () => {
-    if (isCustomColor) {
-      const hexColor = wallet.color;
-      // Create a lighter version for the background
-      return {
-        backgroundColor: `${hexColor}20`, // 20% opacity
-        borderColor: `${hexColor}40`,     // 40% opacity
-      };
-    }
-    return {};
+  const getCardStyle = () => {
+    const style: React.CSSProperties = {
+      background: wallet.gradient 
+        ? `linear-gradient(135deg, ${wallet.color}, ${wallet.gradient})`
+        : wallet.color,
+      color: "white",
+      transition: "all 0.3s ease",
+    };
+    return style;
   };
-
-  // Get the CSS class for predefined colors
-  const colorClass = !isCustomColor ? (colors[wallet.color as string] || colors.default) : '';
 
   const handleDelete = async () => {
     try {
-      const { error } = await supabase
-        .from('wallets')
-        .delete()
-        .eq('id', wallet.id);
-        
-      if (error) throw error;
+      setIsDeleting(true);
+      
+      if (onDelete) {
+        await onDelete(wallet.id);
+      }
       
       toast({
-        title: "Dompet dihapus",
-        description: `${wallet.name} berhasil dihapus`,
+        title: "Dompet berhasil dihapus",
+        description: `Dompet ${wallet.name} telah dihapus`,
       });
       
-      if (onDelete) onDelete();
-    } catch (error: any) {
+      if (onSuccess) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error('Error deleting wallet:', error);
       toast({
+        variant: "destructive",
         title: "Gagal menghapus dompet",
-        description: error.message,
-        variant: "destructive"
+        description: "Terjadi kesalahan saat menghapus dompet",
       });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
-  };
-
-  const handleCardClick = () => {
-    navigate(`/wallets/${wallet.id}`);
   };
 
   return (
     <>
-      <div 
-        className={`relative rounded-lg p-3 border ${colorClass} cursor-pointer group`}
-        onClick={handleCardClick}
-        style={isCustomColor ? getCustomColorStyle() : {}}
+      <Card 
+        className={cn(
+          "relative p-4 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300",
+          "before:content-[''] before:absolute before:inset-0 before:bg-black/10 before:opacity-0 group-hover:before:opacity-100 before:transition-opacity"
+        )}
+        style={getCardStyle()}
       >
-        <div className="text-xs font-medium uppercase">{wallet.name}</div>
-        <div className="font-semibold mt-1">Rp {wallet.balance.toLocaleString()}</div>
-        <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(true);
-            }}
-            className="p-1 bg-white rounded-full shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <Pencil className="w-3 h-3 text-gray-600" />
-          </button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button 
-                onClick={(e) => e.stopPropagation()}
-                className="p-1 bg-white rounded-full shadow-sm hover:bg-gray-50 transition-colors"
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold">{wallet.name}</h3>
+            {wallet.is_default && (
+              <span className="bg-white/20 text-xs px-2 py-0.5 rounded-full">
+                Default
+              </span>
+            )}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                disabled={isDeleting}
               >
-                <Trash2 className="w-3 h-3 text-red-600" />
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Hapus Dompet</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Apakah Anda yakin ingin menghapus dompet ini? Tindakan ini tidak dapat dibatalkan.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Batal</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-red-600">
-                  Hapus
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                <span className="sr-only">Buka menu</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => onEdit?.(wallet)}
+              >
+                <Pencil className="h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={wallet.is_default}
+              >
+                <Trash2 className="h-4 w-4" />
+                Hapus
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </div>
 
-      {isEditing && (
-        <WalletForm 
-          wallet={wallet} 
-          onClose={() => setIsEditing(false)}
-          onSuccess={() => {
-            setIsEditing(false);
-            if (onDelete) onDelete(); // Refresh the list
-          }}
-        />
-      )}
+        <div className="space-y-1">
+          <p className="text-2xl font-bold">
+            {formatCurrency(wallet.balance)}
+          </p>
+          <p className="text-sm opacity-90">
+            {wallet.type === "bank" ? "Rekening Bank" : 
+             wallet.type === "savings" ? "Tabungan" : "Uang Tunai"}
+          </p>
+        </div>
+      </Card>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Dompet</AlertDialogTitle>
+            <AlertDialogDescription>
+              Apakah Anda yakin ingin menghapus dompet {wallet.name}?
+              {wallet.balance > 0 && (
+                <p className="mt-2 text-yellow-600">
+                  Peringatan: Dompet ini masih memiliki saldo {formatCurrency(wallet.balance)}
+                </p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {isDeleting ? "Menghapus..." : "Hapus"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
-};
-
-export default WalletCard;
+}
