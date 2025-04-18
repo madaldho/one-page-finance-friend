@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Card } from "./ui/card";
 import { cn } from "@/lib/utils";
@@ -6,7 +7,10 @@ import { Wallet } from "@/types";
 import { 
   MoreVertical,
   Pencil,
-  Trash2
+  Trash2,
+  CreditCard,
+  PiggyBank,
+  Banknote
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,6 +36,19 @@ interface WalletCardProps {
   onEdit?: (wallet: Wallet) => void;
   onDelete?: (id: string) => void;
   onSuccess?: () => void;
+}
+
+// Function to get the appropriate wallet icon based on type
+export function getWalletIcon(type: string) {
+  switch (type) {
+    case "bank":
+      return <CreditCard className="h-5 w-5" />;
+    case "savings":
+      return <PiggyBank className="h-5 w-5" />;
+    case "cash":
+    default:
+      return <Banknote className="h-5 w-5" />;
+  }
 }
 
 export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardProps) {

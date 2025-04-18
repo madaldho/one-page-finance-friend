@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import ColorPicker from '@/components/ColorPicker';
+import { Wallet } from '@/types';
 
 const GRADIENTS = [
   { id: 'blue', value: 'from-[#3b82f6] to-[#8b5cf6]', label: 'Biru-Ungu' },
@@ -78,7 +79,7 @@ export default function WalletForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: wallet?.name || '',
-      type: (wallet?.type as "cash" | "bank" | "savings") || "cash",
+      type: wallet?.type || "cash",
       balance: wallet?.balance || 0,
       color: wallet?.color || "#6E59A5",
       useGradient: !!wallet?.gradient,
@@ -346,10 +347,11 @@ export default function WalletForm({
                                 key={gradient.id} 
                                 value={gradient.value}
                               >
-                                <div 
-                                  className={`w-full h-6 bg-gradient-to-r ${gradient.value}`}
-                                >
-                                  {gradient.label}
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className={`w-8 h-4 rounded bg-gradient-to-r ${gradient.value}`}
+                                  ></div>
+                                  <span>{gradient.label}</span>
                                 </div>
                               </SelectItem>
                             ))}

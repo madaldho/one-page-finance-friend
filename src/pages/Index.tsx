@@ -15,7 +15,7 @@ import {
   Settings,
   PieChart
 } from "lucide-react";
-import { Transaction, Wallet } from "@/types";
+import { Transaction, Wallet, Budget, Loan, Saving } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import Header from '@/components/Header';
@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { WalletCard } from "@/components/WalletCard";
+import { WalletCard, getWalletIcon } from "@/components/WalletCard";
 import BudgetCard from "@/components/BudgetCard";
 import SavingsCard from "@/components/SavingsCard";
 import LoansCard from "@/components/LoansCard";
@@ -32,7 +32,6 @@ import TransactionList from "@/components/TransactionList";
 import TransactionActions from "@/components/TransactionActions";
 import WalletForm from "@/components/WalletForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { getWalletIcon } from '@/components/WalletCard';
 
 interface UserSettings {
   id: string;
@@ -54,6 +53,7 @@ const Index = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -541,24 +541,19 @@ const Index = () => {
           setShowWalletForm(open);
           if (!open) setSelectedWallet(null);
         }}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedWallet ? 'Edit Dompet' : 'Tambah Dompet'}
-              </DialogTitle>
-            </DialogHeader>
-        <WalletForm 
+          <DialogContent className="sm:max-w-[425px] p-0">
+            <WalletForm 
               wallet={selectedWallet}
-          onSuccess={() => {
+              onSuccess={() => {
                 setShowWalletForm(false);
                 setSelectedWallet(null);
-            fetchData();
-          }}
+                fetchData();
+              }}
               onClose={() => {
                 setShowWalletForm(false);
                 setSelectedWallet(null);
               }}
-        />
+            />
           </DialogContent>
         </Dialog>
     </div>
