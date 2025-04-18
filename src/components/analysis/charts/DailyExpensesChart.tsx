@@ -16,19 +16,17 @@ interface DailyExpensesChartProps {
 const chartConfig = {
   value: {
     label: "Amount",
-    color: "hsl(var(--chart-1))",
+    color: "hsl(262.1 83.3% 57.8%)", // purple-500
   },
-  expense: {
-    label: "Expense",
-    color: "hsl(var(--chart-2))",
-  }
-};
+} satisfies ChartConfig;
+
+const DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function DailyExpensesChart({ dayOfWeekChartData }: DailyExpensesChartProps) {
   if (!dayOfWeekChartData.length) {
     return (
       <Card>
-        <CardContent className="flex items-center justify-center min-h-[350px]">
+        <CardContent className="flex items-center justify-center h-[300px]">
           <p className="text-muted-foreground">No daily expenses data available</p>
         </CardContent>
       </Card>
@@ -44,17 +42,17 @@ export function DailyExpensesChart({ dayOfWeekChartData }: DailyExpensesChartPro
   );
 
   return (
-    <Card className="w-full">
+    <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Daily Spending Patterns</CardTitle>
+        <CardTitle className="text-lg">Pengeluaran per Hari</CardTitle>
         <CardDescription>
-          Analyze spending trends across different days
+          Identifikasi pola pengeluaran berdasarkan hari
         </CardDescription>
       </CardHeader>
-      <CardContent className="min-h-[350px]">
+      <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="w-full h-[300px]"
+          className="h-[300px]"
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
@@ -81,18 +79,18 @@ export function DailyExpensesChart({ dayOfWeekChartData }: DailyExpensesChartPro
                 className="text-xs fill-muted-foreground"
                 width={48}
               />
-              <ChartTooltip
+              <ChartTooltip 
                 cursor={false}
                 content={
                   <ChartTooltipContent 
                     formatter={(value) => formatCurrency(value as number)}
-                    indicator="dashed"
+                    indicator="dot"
                   />
                 }
               />
               <Bar 
-                dataKey="value"
-                name="Daily Expense"
+                dataKey="value" 
+                name="Pengeluaran"
                 fill="var(--color-value)"
                 radius={[4, 4, 0, 0]}
                 maxBarSize={48}
@@ -104,12 +102,11 @@ export function DailyExpensesChart({ dayOfWeekChartData }: DailyExpensesChartPro
       <CardFooter className="flex-col items-start gap-2 text-sm border-t">
         <div className="grid gap-2">
           <div className="flex items-center gap-2 font-medium">
-            Peak spending on {maxDay.name}
-            <TrendingUp className="h-4 w-4 text-destructive" />
+            Highest spending on {maxDay.name}
+            <TrendingUp className="h-4 w-4 text-red-500" />
           </div>
-          <div className="text-muted-foreground flex flex-col gap-1">
-            <span>Lowest spending: {minDay.name}</span>
-            <span className="text-sm">{formatCurrency(minDay.value)}</span>
+          <div className="text-muted-foreground">
+            Lowest spending on {minDay.name}: {formatCurrency(minDay.value)}
           </div>
         </div>
       </CardFooter>

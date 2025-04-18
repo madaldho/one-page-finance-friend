@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { BarChart, CartesianGrid, XAxis, YAxis, Bar, ResponsiveContainer, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { formatCurrency } from "@/lib/utils";
-import { TrendingUp, TrendingDown, WalletCards } from "lucide-react";
-import type { Wallet } from "@/types";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { Wallet } from "@/types";
 
 interface WalletTransactionsChartProps {
   walletChartData: Array<{
@@ -18,18 +18,14 @@ interface WalletTransactionsChartProps {
 
 const chartConfig = {
   income: {
-    label: "Income",
-    color: "hsl(var(--chart-1))",
+    label: "Pemasukan",
+    color: "hsl(142.1 76.2% 36.3%)", // green-600
   },
   expense: {
-    label: "Expense",
-    color: "hsl(var(--chart-2))",
+    label: "Pengeluaran",
+    color: "hsl(0 84.2% 60.2%)", // red-500
   },
-  net: {
-    label: "Net",
-    color: "hsl(var(--chart-3))",
-  }
-};
+} satisfies ChartConfig;
 
 export function WalletTransactionsChart({ walletChartData }: WalletTransactionsChartProps) {
   if (!walletChartData.length) {
@@ -52,17 +48,12 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
   return (
     <Card className="w-full">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg">Wallet Analysis</CardTitle>
-            <CardDescription>
-              Compare income and expenses across wallets
-            </CardDescription>
-          </div>
-          <WalletCards className="h-5 w-5 text-muted-foreground" />
-        </div>
+        <CardTitle className="text-lg">Transaksi per Dompet</CardTitle>
+        <CardDescription>
+          Perbandingan pemasukan dan pengeluaran antar dompet
+        </CardDescription>
       </CardHeader>
-      <CardContent className="min-h-[350px]">
+      <CardContent className="h-full min-h-[350px]">
         <ChartContainer 
           config={chartConfig}
           className="w-full h-[300px]"
@@ -97,25 +88,34 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
                 tickLine={false}
                 axisLine={false}
               />
-              <ChartTooltip
+              <ChartTooltip 
                 cursor={false}
                 content={
                   <ChartTooltipContent 
                     formatter={(value) => formatCurrency(value as number)}
-                    indicator="dot"
+                    indicator="dashed" 
                   />
-                }
+                } 
+              />
+              <Legend 
+                verticalAlign="top" 
+                height={36} 
+                iconType="circle" 
+                iconSize={8}
+                formatter={(value) => (
+                  <span className="text-sm text-muted-foreground">{value}</span>
+                )}
               />
               <Bar 
                 dataKey="income" 
-                name="Income" 
+                name="Pemasukan" 
                 fill="var(--color-income)"
                 radius={[0, 4, 4, 0]}
                 barSize={24}
               />
               <Bar 
                 dataKey="expense" 
-                name="Expense" 
+                name="Pengeluaran" 
                 fill="var(--color-expense)"
                 radius={[0, 4, 4, 0]}
                 barSize={24}
@@ -125,22 +125,21 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm border-t">
-        <div className="flex items-center gap-2 font-medium">
+        <div className="flex items-center gap-2 font-medium leading-none">
           {isPositiveChange ? (
             <>
-              Net positive {Math.abs(percentChange).toFixed(1)}% 
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
+              Net positive by {Math.abs(percentChange).toFixed(1)}% 
+              <TrendingUp className="h-4 w-4 text-green-500" />
             </>
           ) : (
             <>
-              Net negative {Math.abs(percentChange).toFixed(1)}%
-              <TrendingDown className="h-4 w-4 text-destructive" />
+              Net negative by {Math.abs(percentChange).toFixed(1)}%
+              <TrendingDown className="h-4 w-4 text-red-500" />
             </>
           )}
         </div>
-        <div className="text-muted-foreground grid gap-1">
-          <span>Total Income: {formatCurrency(totalIncome)}</span>
-          <span>Total Expense: {formatCurrency(totalExpense)}</span>
+        <div className="text-muted-foreground">
+          Total Income: {formatCurrency(totalIncome)} | Total Expense: {formatCurrency(totalExpense)}
         </div>
       </CardFooter>
     </Card>
