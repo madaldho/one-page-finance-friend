@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Saving, Wallet } from "@/types";
-import { CurrencyInput } from '@/components/ui/currency-input';
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 const SavingsWithdraw = () => {
   const { toast } = useToast();
@@ -41,7 +41,6 @@ const SavingsWithdraw = () => {
     try {
       setLoading(true);
       
-      // Fetch saving
       const { data: savingData, error: savingError } = await supabase
         .from("savings")
         .select("*")
@@ -52,7 +51,6 @@ const SavingsWithdraw = () => {
       if (savingError) throw savingError;
       setSaving(savingData as Saving);
       
-      // Fetch wallets
       const { data: walletsData, error: walletsError } = await supabase
         .from("wallets")
         .select("*")
@@ -96,14 +94,7 @@ const SavingsWithdraw = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
-    if (!saving) {
-      toast({
-        title: "Terjadi Kesalahan",
-        description: "Tidak ada tabungan yang dipilih",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!saving) return;
     
     if (!formData.wallet_id) {
       toast({
@@ -114,7 +105,7 @@ const SavingsWithdraw = () => {
       return;
     }
     
-    const amount = parseFloat(formData.amount);
+    const amount = Number(formData.amount);
     if (isNaN(amount) || amount <= 0) {
       toast({
         title: "Jumlah Tidak Valid",
@@ -133,9 +124,8 @@ const SavingsWithdraw = () => {
       return;
     }
     
-    // Temukan dompet tujuan
-    const targetWallet = wallets.find(w => w.id === formData.wallet_id);
-    if (!targetWallet) {
+    const destinationWallet = wallets.find(w => w.id === formData.wallet_id);
+    if (!destinationWallet) {
       toast({
         title: "Dompet Tidak Ditemukan",
         description: "Dompet tujuan tidak valid",
@@ -147,16 +137,33 @@ const SavingsWithdraw = () => {
     try {
       setSubmitting(true);
       
-      // 1. Tambah saldo dompet tujuan
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
+
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          title: `Tarik dari Tabungan: ${saving.name}`,
+          amount: amount,
+          type: "transfer",
+          date: formData.date,
+          description: formData.notes || `Penarikan dari tabungan ${saving.name}`,
+          wallet_id: formData.wallet_id,
+          destination_wallet_id: null,
+          category: "Tabungan",
+        });
+
+      if (transactionError) throw transactionError;
+
       const { error: walletError } = await supabase
         .from("wallets")
-        .update({ balance: targetWallet.balance + amount })
+        .update({ balance: destinationWallet.balance + amount })
         .eq("id", formData.wallet_id);
         
       if (walletError) throw walletError;
       
-      // 2. Kurangi jumlah tabungan
-      const newAmount = saving.current_amount - amount;
+      const newAmount = Math.max(0, saving.current_amount - amount);
       const { error: savingError } = await supabase
         .from("savings")
         .update({ current_amount: newAmount })
@@ -164,8 +171,7 @@ const SavingsWithdraw = () => {
         
       if (savingError) throw savingError;
       
-      // 3. Catat transaksi penarikan
-      const { error: transactionError } = await supabase
+      const { error: savingsTransactionError } = await supabase
         .from("savings_transactions")
         .insert({
           savings_id: saving.id,
@@ -174,10 +180,10 @@ const SavingsWithdraw = () => {
           type: "withdraw",
           date: formData.date,
           notes: formData.notes || null,
-          user_id: user?.id
+          user_id: user.id
         });
         
-      if (transactionError) throw transactionError;
+      if (savingsTransactionError) throw savingsTransactionError;
       
       toast({
         title: "Penarikan Berhasil",
@@ -337,4 +343,4 @@ const SavingsWithdraw = () => {
   );
 };
 
-export default SavingsWithdraw; 
+export default SavingsWithdraw;

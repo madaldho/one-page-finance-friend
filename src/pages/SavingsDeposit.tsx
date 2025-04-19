@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar, PiggyBank } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,7 +141,32 @@ const SavingsDeposit = () => {
     try {
       setSubmitting(true);
       
-      // 1. Kurangi saldo dompet sumber
+      // Start a Supabase transaction
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not found");
+
+      const amount = Number(formData.amount);
+      const sourceWallet = wallets.find(w => w.id === formData.wallet_id);
+      if (!sourceWallet) throw new Error("Wallet not found");
+
+      // 1. Insert transaction record
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert({
+          user_id: user.id,
+          title: `Setor ke Tabungan: ${saving.name}`,
+          amount: amount,
+          type: "transfer",
+          date: formData.date,
+          description: formData.notes || `Setoran tabungan untuk ${saving.name}`,
+          wallet_id: formData.wallet_id,
+          destination_wallet_id: null, // Since this is a savings deposit
+          category: "Tabungan", // You might want to create a specific category for savings
+        });
+
+      if (transactionError) throw transactionError;
+
+      // 2. Update source wallet balance
       const { error: walletError } = await supabase
         .from("wallets")
         .update({ balance: sourceWallet.balance - amount })
@@ -149,7 +174,7 @@ const SavingsDeposit = () => {
         
       if (walletError) throw walletError;
       
-      // 2. Tambah jumlah tabungan
+      // 3. Update savings balance and record savings transaction
       const newAmount = saving.current_amount + amount;
       const { error: savingError } = await supabase
         .from("savings")
@@ -158,8 +183,8 @@ const SavingsDeposit = () => {
         
       if (savingError) throw savingError;
       
-      // 3. Catat transaksi setoran
-      const { error: transactionError } = await supabase
+      // 4. Record in savings_transactions
+      const { error: savingsTransactionError } = await supabase
         .from("savings_transactions")
         .insert({
           savings_id: saving.id,
@@ -168,10 +193,10 @@ const SavingsDeposit = () => {
           type: "deposit",
           date: formData.date,
           notes: formData.notes || null,
-          user_id: user?.id
+          user_id: user.id
         });
         
-      if (transactionError) throw transactionError;
+      if (savingsTransactionError) throw savingsTransactionError;
       
       toast({
         title: "Setoran Berhasil",
@@ -331,4 +356,4 @@ const SavingsDeposit = () => {
   );
 };
 
-export default SavingsDeposit; 
+export default SavingsDeposit;
