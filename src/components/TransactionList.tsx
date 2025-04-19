@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState } from "react";
 import { Transaction } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronDown, MoreVertical, Trash2, Edit2, Calendar } from "lucide-react";
+import { Search, ChevronDown, MoreVertical, Trash2, Edit2 } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
@@ -21,43 +22,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Category {
   id: string;
   name: string;
   type: 'income' | 'expense';
   color?: string;
-  icon?: string;
-}
-
-interface Wallet {
-  id: string;
-  name: string;
-  type: string;
-  color?: string | null;
-  gradient?: string | null;
-  balance: number;
-  user_id: string;
-  created_at?: string;
-  updated_at?: string;
-  is_default?: boolean;
 }
 
 interface TransactionListProps {
-  transactions: (Transaction & { wallet_name?: string })[];
+  transactions: Transaction[];
   onFilter: (query: string) => void;
   onDelete: (ids: string[]) => Promise<void>;
   onEdit: (transaction: Transaction) => void;
@@ -75,82 +66,11 @@ const TransactionList = ({
 }: TransactionListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [sortConfig, setSortConfig] = useState<{
-    key: keyof Transaction;
-    direction: 'asc' | 'desc';
-  }>({ key: 'date', direction: 'desc' });
-  const [categories, setCategories] = useState<Record<string, Category>>({});
-  const [wallets, setWallets] = useState<Record<string, Wallet>>({});
-  const [expandedTransaction, setExpandedTransaction] = useState<string | null>(null);
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-
-  // Fetch categories and wallets
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('*');
-        
-        if (categoriesError) throw categoriesError;
-        
-        const categoryMap = categoriesData.reduce((acc, cat) => {
-          acc[cat.id] = cat;
-          return acc;
-        }, {} as Record<string, Category>);
-        
-        setCategories(categoryMap);
-
-        // Fetch wallets
-        const { data: walletsData, error: walletsError } = await supabase
-          .from('wallets')
-          .select('*');
-        
-        if (walletsError) throw walletsError;
-        
-        const walletMap = walletsData.reduce((acc, wallet) => {
-          acc[wallet.id] = wallet;
-          return acc;
-        }, {} as Record<string, Wallet>);
-        
-        setWallets(walletMap);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Handle sort
-  const handleSort = (key: keyof Transaction) => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  };
-
-  // Sort transactions
-  const sortedTransactions = [...transactions].sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
-    
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortConfig.direction === 'asc' 
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    }
-    
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortConfig.direction === 'asc' 
-        ? aValue - bValue
-        : bValue - aValue;
-    }
-    
-    return 0;
-  });
 
   // Handle search
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,303 +79,314 @@ const TransactionList = ({
     onFilter(query);
   };
 
-  // Get transaction type color
-  const getTransactionTypeColor = (type: string) => {
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    try {
+      await onDelete(selectedIds);
+      setSelectedIds([]);
+      setIsBulkMode(false);
+      setShowDeleteDialog(false);
+      toast({
+        title: "Success",
+        description: `Deleted ${selectedIds.length} transactions`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete transactions",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Toggle transaction selection
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        const newSelected = prev.filter(i => i !== id);
+        if (newSelected.length === 0) {
+          setIsBulkMode(false);
+        }
+        return newSelected;
+      }
+      return [...prev, id];
+    });
+  };
+
+  // Handle long press for mobile
+  const handleLongPress = (id: string) => {
+    if (!isDesktop) {
+      const timer = setTimeout(() => {
+        setIsBulkMode(true);
+        toggleSelection(id);
+      }, 500);
+      setLongPressTimer(timer);
+    }
+  };
+
+  const handlePressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  // Get transaction type styling
+  const getTransactionTypeStyle = (type: string) => {
     switch (type) {
       case 'income':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
+        return 'bg-emerald-50 text-emerald-600';
       case 'expense':
-        return 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100';
+        return 'bg-rose-50 text-rose-600';
       case 'transfer':
-        return 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100';
+        return 'bg-blue-50 text-blue-600';
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100';
+        return 'bg-gray-50 text-gray-600';
     }
   };
 
-  // Get category badge style
-  const getCategoryBadgeStyle = (categoryId: string) => {
-    const category = categories[categoryId];
-    if (!category) return {};
-    
-    return {
-      backgroundColor: `${category.color}15`,
-      color: category.color,
-      borderColor: `${category.color}30`
-    };
-  };
-
-  // Get wallet badge style
-  const getWalletBadgeStyle = (walletId: string) => {
-    const wallet = wallets[walletId];
-    if (!wallet) return {};
-    
-    if (wallet.gradient) {
-      return {
-        background: `linear-gradient(to right, ${wallet.gradient})`,
-        color: 'white'
-      };
-    }
-    
-    if (wallet.color) {
-      return {
-        backgroundColor: `${wallet.color}15`,
-        color: wallet.color,
-        borderColor: `${wallet.color}30`
-      };
-    }
-
-    return {};
-  };
-
-  // Desktop view
-  const DesktopView = () => (
-    <div className="rounded-lg border bg-card">
-    <Table>
-      <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead onClick={() => handleSort('date')} className="cursor-pointer font-medium">
-              Tanggal {sortConfig.key === 'date' && 
-                <ChevronDown className={cn(
-                  "inline h-4 w-4 transition-transform",
-                  sortConfig.direction === 'desc' && "rotate-180"
-                )} />
-              }
-          </TableHead>
-            <TableHead onClick={() => handleSort('category')} className="cursor-pointer font-medium">
-              Kategori {sortConfig.key === 'category' && 
-                <ChevronDown className={cn(
-                  "inline h-4 w-4 transition-transform",
-                  sortConfig.direction === 'desc' && "rotate-180"
-                )} />
-              }
-          </TableHead>
-            <TableHead onClick={() => handleSort('wallet_id')} className="cursor-pointer font-medium">
-              Dompet {sortConfig.key === 'wallet_id' && 
-                <ChevronDown className={cn(
-                  "inline h-4 w-4 transition-transform",
-                  sortConfig.direction === 'desc' && "rotate-180"
-                )} />
-              }
-          </TableHead>
-            <TableHead className="font-medium">Deskripsi</TableHead>
-            <TableHead onClick={() => handleSort('amount')} className="cursor-pointer text-right font-medium">
-              Jumlah {sortConfig.key === 'amount' && 
-                <ChevronDown className={cn(
-                  "inline h-4 w-4 transition-transform",
-                  sortConfig.direction === 'desc' && "rotate-180"
-                )} />
-              }
-          </TableHead>
-            <TableHead className="w-[100px] text-center font-medium">Aksi</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-          {sortedTransactions.map((transaction) => {
-            const wallet = wallets[transaction.wallet_id];
-            
-            return (
-              <TableRow key={transaction.id} className="group hover:bg-muted/50">
-                <TableCell className="font-medium">
-                  {format(new Date(transaction.date), "dd/MM/yyyy", { locale: id })}
-                </TableCell>
-            <TableCell>
+  // Mobile view component
+  const MobileView = () => (
+    <div className="space-y-2">
+      {transactions.map((transaction) => (
+        <div 
+          key={transaction.id}
+          className={cn(
+            "bg-white rounded-lg border shadow-sm overflow-hidden transition-all",
+            selectedIds.includes(transaction.id) && "border-primary bg-primary/5"
+          )}
+          onTouchStart={() => handleLongPress(transaction.id)}
+          onTouchEnd={handlePressEnd}
+          onTouchMove={handlePressEnd}
+          onClick={() => isBulkMode && toggleSelection(transaction.id)}
+        >
+          <div className="p-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  {isBulkMode && (
+                    <Checkbox
+                      checked={selectedIds.includes(transaction.id)}
+                      onCheckedChange={() => toggleSelection(transaction.id)}
+                    />
+                  )}
                   <Badge 
-                    variant="outline"
-                    className={cn(
-                      "rounded-md font-normal transition-colors",
-                      getTransactionTypeColor(transaction.type)
-                    )}
-                    style={getCategoryBadgeStyle(transaction.category)}
+                    variant="secondary"
+                    className={cn("font-normal", getTransactionTypeStyle(transaction.type))}
                   >
-                    <span className="flex items-center gap-1.5">
-                      {categories[transaction.category]?.icon && (
-                        <i className={`fas fa-${categories[transaction.category].icon} text-xs`}></i>
-                      )}
-                      {categories[transaction.category]?.name || transaction.category}
-                    </span>
+                    {transaction.type === 'income' ? 'Income' : 
+                     transaction.type === 'expense' ? 'Expense' : 'Transfer'}
                   </Badge>
-            </TableCell>
-            <TableCell>
-                  <Badge 
-                    variant="outline"
-                    className="rounded-md font-normal"
-                    style={getWalletBadgeStyle(transaction.wallet_id)}
-                  >
-                    {wallet?.name || transaction.wallet_name || '-'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="max-w-[200px] truncate">
-                  {transaction.description || "-"}
-            </TableCell>
-                <TableCell className={cn(
-                  "text-right font-medium",
-                  transaction.type === "income" && "text-emerald-600",
-                  transaction.type === "expense" && "text-rose-600",
-                transaction.type === "transfer" && "text-blue-600"
-              )}>
-                {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                {formatCurrency(transaction.amount)}
-            </TableCell>
-            <TableCell>
-                  <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(transaction)}
-                      className="h-8 w-8 hover:bg-background"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete([transaction.id])}
-                      className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                </div>
+                <p className="font-medium">{transaction.title || '-'}</p>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(transaction.date), "dd MMM yyyy", { locale: id })}
+                </p>
               </div>
-            </TableCell>
-          </TableRow>
-            );
-          })}
-      </TableBody>
-    </Table>
+              <div className={cn(
+                "text-right",
+                transaction.type === 'income' ? "text-emerald-600" :
+                transaction.type === 'expense' ? "text-rose-600" :
+                "text-blue-600"
+              )}>
+                <p className="font-medium">
+                  {transaction.type === 'expense' ? '-' : '+'}
+                  {formatCurrency(transaction.amount)}
+                </p>
+              </div>
+            </div>
+            
+            {transaction.description && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {transaction.description}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 
-  // Mobile view
-  const MobileView = () => (
-    <div className="space-y-2">
-      {sortedTransactions.map((transaction) => {
-        const isExpanded = expandedTransaction === transaction.id;
-        const wallet = wallets[transaction.wallet_id];
-
-        return (
-        <div
-          key={transaction.id}
-            className="bg-card rounded-lg border overflow-hidden transition-all duration-200"
-          >
-            <div 
-              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => setExpandedTransaction(isExpanded ? null : transaction.id)}
-        >
-          <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <Badge 
-                    variant="outline"
-                    className={cn(
-                      "rounded-md font-normal",
-                      getTransactionTypeColor(transaction.type)
-                    )}
-                    style={getCategoryBadgeStyle(transaction.category)}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {categories[transaction.category]?.icon && (
-                        <i className={`fas fa-${categories[transaction.category].icon} text-xs`}></i>
-                      )}
-                      {categories[transaction.category]?.name || transaction.category}
-              </span>
-                  </Badge>
-                  
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(transaction.date), "dd/MM/yyyy", { locale: id })}
-                    </p>
-                    <span className="text-muted-foreground/30">•</span>
-                    <Badge 
-                      variant="outline"
-                      className="rounded-md font-normal"
-                      style={getWalletBadgeStyle(transaction.wallet_id)}
-                    >
-                      {wallet?.name || transaction.wallet_name || '-'}
-                    </Badge>
-                  </div>
-            </div>
-                <div className={cn(
-                "font-medium",
-                  transaction.type === "income" && "text-emerald-600",
-                  transaction.type === "expense" && "text-rose-600",
-                transaction.type === "transfer" && "text-blue-600"
-              )}>
-                {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                {formatCurrency(transaction.amount)}
-                </div>
-              </div>
-
-              {transaction.description && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {transaction.description}
-                </p>
-              )}
-            </div>
-            
-            <div 
+  // Desktop view component
+  const DesktopView = () => (
+    <div className="rounded-lg border bg-white shadow-sm overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            {isBulkMode && (
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={selectedIds.length === transactions.length && transactions.length > 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedIds(transactions.map(t => t.id));
+                    } else {
+                      setSelectedIds([]);
+                      setIsBulkMode(false);
+                    }
+                  }}
+                />
+              </TableHead>
+            )}
+            <TableHead>Date</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Title</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+            {!isBulkMode && <TableHead className="w-[70px]">Actions</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {transactions.map((transaction) => (
+            <TableRow 
+              key={transaction.id}
               className={cn(
-                "grid transition-all duration-200",
-                isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                "group",
+                selectedIds.includes(transaction.id) && "bg-primary/5"
               )}
             >
-              <div className="overflow-hidden">
-                <div className="flex items-center justify-end gap-2 p-3 border-t bg-muted/50">
-                    <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(transaction);
-                    }}
-                    className="h-8"
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
-                    Edit
-                    </Button>
-                    <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete([transaction.id]);
-                    }}
-                    className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                    Hapus
-                    </Button>
+              {isBulkMode && (
+                <TableCell>
+                  <Checkbox
+                    checked={selectedIds.includes(transaction.id)}
+                    onCheckedChange={() => toggleSelection(transaction.id)}
+                  />
+                </TableCell>
+              )}
+              <TableCell>
+                {format(new Date(transaction.date), "dd MMM yyyy", { locale: id })}
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  variant="secondary"
+                  className={cn("font-normal", getTransactionTypeStyle(transaction.type))}
+                >
+                  {transaction.type === 'income' ? 'Income' : 
+                   transaction.type === 'expense' ? 'Expense' : 'Transfer'}
+                </Badge>
+              </TableCell>
+              <TableCell className="font-medium">
+                {transaction.title || '-'}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {transaction.description || '-'}
+              </TableCell>
+              <TableCell className={cn(
+                "text-right font-medium",
+                transaction.type === 'income' ? "text-emerald-600" :
+                transaction.type === 'expense' ? "text-rose-600" :
+                "text-blue-600"
+              )}>
+                {transaction.type === 'expense' ? '-' : '+'}
+                {formatCurrency(transaction.amount)}
+              </TableCell>
+              {!isBulkMode && (
+                <TableCell>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 p-0"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(transaction)}>
+                          <Edit2 className="mr-2 h-4 w-4" />
+                          <span>Edit</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          className="text-rose-600"
+                          onClick={() => onDelete([transaction.id])}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          <span>Delete</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+                </TableCell>
+              )}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 
   return (
     <div className="space-y-4">
+      {/* Header actions */}
       {!hideHeader && (
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="relative flex-1 w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Cari transaksi..."
-            value={searchQuery}
-            onChange={handleSearch}
-            className="pl-10 w-full"
-          />
-        </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <DateRangePicker
-            onChange={onDateRangeChange}
-            className="w-full md:w-auto"
-          />
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search transactions..."
+              value={searchQuery}
+              onChange={handleSearch}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <DateRangePicker
+              onChange={onDateRangeChange}
+              className="w-full md:w-auto"
+            />
+            {isBulkMode && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setIsBulkMode(false);
+                    setSelectedIds([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={selectedIds.length === 0}
+                >
+                  Delete ({selectedIds.length})
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
 
+      {/* Transaction list */}
       {isDesktop ? <DesktopView /> : <MobileView />}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Transactions</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedIds.length} transaction{selectedIds.length !== 1 ? 's' : ''}? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete}
+              className="bg-rose-600 hover:bg-rose-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
