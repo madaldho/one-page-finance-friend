@@ -56,8 +56,27 @@ export function TransactionListItem({
     }
   };
 
-  const category = categories[transaction.category || ''];
-  const wallet = wallets[transaction.wallet_id || ''];
+  // Safely retrieve category and wallet, with fallbacks
+  const category = transaction.category ? categories[transaction.category] : undefined;
+  const wallet = transaction.wallet_id ? wallets[transaction.wallet_id] : undefined;
+
+  // Get category display name with fallback
+  const getCategoryDisplayName = () => {
+    if (category) {
+      return category.name;
+    }
+    
+    // Fallback based on transaction type
+    if (transaction.type === 'income') {
+      return 'Income';
+    } else if (transaction.type === 'expense') {
+      return 'Expense';
+    } else if (transaction.type === 'transfer') {
+      return 'Transfer';
+    }
+    
+    return transaction.type;
+  };
 
   return (
     <div
@@ -87,7 +106,7 @@ export function TransactionListItem({
                   category ? '' : getTransactionTypeColor(transaction.type)
                 }`}
               >
-                {category?.name || transaction.type}
+                {getCategoryDisplayName()}
               </Badge>
               
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
