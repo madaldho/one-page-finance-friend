@@ -5,7 +5,7 @@ import { id } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
-import { Transaction, Category, Wallet } from "@/types";
+import { Transaction, Category, Wallet } from "@/types/index";
 
 interface TransactionListItemProps {
   transaction: Transaction;

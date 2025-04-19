@@ -1,9 +1,13 @@
+
 export interface Category {
   id: string;
   name: string;
   type: 'income' | 'expense';
   color?: string;
   icon?: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Wallet {
@@ -30,6 +34,8 @@ export interface Transaction {
   description?: string;
   destination_wallet_id?: string;
   user_id?: string;
+  wallet_name?: string;
+  category_name?: string;
 }
 
 export interface TransactionWithNames extends Transaction {

@@ -27,6 +27,8 @@ interface TransactionListProps {
   onEdit: (transaction: Transaction) => void;
   categories: Record<string, Category>;
   wallets: Record<string, Wallet>;
+  hideHeader?: boolean;
+  onDateRangeChange?: (range: { from: Date; to: Date } | undefined) => void;
 }
 
 export function TransactionList({
@@ -35,7 +37,9 @@ export function TransactionList({
   onDelete,
   onEdit,
   categories,
-  wallets
+  wallets,
+  hideHeader = false,
+  onDateRangeChange
 }: TransactionListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -79,44 +83,52 @@ export function TransactionList({
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-10 bg-background pt-4 pb-2 border-b">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1">
-            <TransactionFilters
-              searchTerm={searchTerm}
-              onSearchChange={(value) => {
-                setSearchTerm(value);
-                onFilter(value);
-              }}
-              // ... pass other required props
-            />
-          </div>
-          
-          {isBulkMode && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsBulkMode(false);
-                  setSelectedIds([]);
+      {!hideHeader && (
+        <div className="sticky top-0 z-10 bg-background pt-4 pb-2 border-b">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex-1">
+              <TransactionFilters
+                searchTerm={searchTerm}
+                onSearchChange={(value) => {
+                  setSearchTerm(value);
+                  onFilter(value);
                 }}
-              >
-                Batal
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={selectedIds.length === 0}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Hapus ({selectedIds.length})
-              </Button>
+                activeTab="all"
+                onTabChange={() => {}}
+                selectedWallet="all"
+                walletName="All Wallets"
+                onWalletChange={() => {}}
+                onResetFilters={() => {}}
+                wallets={[]}
+              />
             </div>
-          )}
+            
+            {isBulkMode && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsBulkMode(false);
+                    setSelectedIds([]);
+                  }}
+                >
+                  Batal
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={selectedIds.length === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Hapus ({selectedIds.length})
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="divide-y border rounded-lg overflow-hidden bg-card">
         {transactions.map((transaction) => (
@@ -153,3 +165,6 @@ export function TransactionList({
     </div>
   );
 }
+
+// Add default export
+export default TransactionList;
