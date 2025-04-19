@@ -1,29 +1,34 @@
 export interface Category {
   id: string;
   name: string;
+  type: 'income' | 'expense';
   color?: string;
+  icon?: string;
 }
 
 export interface Wallet {
   id: string;
   name: string;
-  balance: number;
+  type: string;
   color?: string;
   gradient?: string;
+  balance: number;
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
   is_default?: boolean;
-  type: "savings" | "cash" | "bank";
 }
 
 export interface Transaction {
   id: string;
-  title: string;
+  title?: string;
   amount: number;
-  type: "income" | "expense" | "transfer";
+  type: 'income' | 'expense' | 'transfer';
   date: string;
   category?: string;
   wallet_id?: string;
-  destination_wallet_id?: string;
   description?: string;
+  destination_wallet_id?: string;
   user_id?: string;
 }
 
@@ -35,7 +40,6 @@ export interface TransactionWithNames extends Transaction {
   destination_wallet?: Wallet;
 }
 
-// Additional interfaces needed by the application
 export interface Budget {
   id: string;
   category: string;
@@ -112,8 +116,6 @@ export interface SavingTransaction {
 export interface Database {
   public: {
     Tables: {
-      // ... existing tables ...
-      
       savings: {
         Row: Saving;
         Insert: Omit<Saving, 'id' | 'created_at' | 'updated_at'>;
@@ -131,8 +133,6 @@ export interface Database {
         Insert: Omit<Loan, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Loan, 'id' | 'created_at' | 'updated_at'>>;
       };
-      
-      // ... existing tables ...
     };
   };
 }
