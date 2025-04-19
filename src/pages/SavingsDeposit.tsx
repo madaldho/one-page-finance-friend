@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, FormEvent } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -149,20 +150,21 @@ const SavingsDeposit = () => {
       const sourceWallet = wallets.find(w => w.id === formData.wallet_id);
       if (!sourceWallet) throw new Error("Wallet not found");
 
-      // 1. Insert transaction record
-      const { error: transactionError } = await supabase
+      // 1. Insert transaction record for expense (money going from wallet to savings)
+      const { data: transactionData, error: transactionError } = await supabase
         .from("transactions")
         .insert({
           user_id: user.id,
           title: `Setor ke Tabungan: ${saving.name}`,
           amount: amount,
-          type: "transfer",
+          type: "expense",
           date: formData.date,
           description: formData.notes || `Setoran tabungan untuk ${saving.name}`,
           wallet_id: formData.wallet_id,
-          destination_wallet_id: null, // Since this is a savings deposit
-          category: "Tabungan", // You might want to create a specific category for savings
-        });
+          category: "Tabungan",
+        })
+        .select()
+        .single();
 
       if (transactionError) throw transactionError;
 
@@ -311,7 +313,7 @@ const SavingsDeposit = () => {
                     id="amount"
                     placeholder="100000"
                     value={Number(formData.amount)}
-                    onChange={(value) => handleChange({ target: { name: "amount", value: value.toString() } })}
+                    onChange={(value) => setFormData({...formData, amount: value.toString()})}
                     disabled={submitting}
                   />
                 </div>

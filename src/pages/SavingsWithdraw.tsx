@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, FormEvent } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -140,22 +141,25 @@ const SavingsWithdraw = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not found");
 
-      const { error: transactionError } = await supabase
+      // 1. Record the transaction as income (money coming into wallet from savings)
+      const { data: transactionData, error: transactionError } = await supabase
         .from("transactions")
         .insert({
           user_id: user.id,
           title: `Tarik dari Tabungan: ${saving.name}`,
           amount: amount,
-          type: "transfer",
+          type: "income",
           date: formData.date,
           description: formData.notes || `Penarikan dari tabungan ${saving.name}`,
           wallet_id: formData.wallet_id,
-          destination_wallet_id: null,
           category: "Tabungan",
-        });
+        })
+        .select()
+        .single();
 
       if (transactionError) throw transactionError;
 
+      // 2. Update wallet balance
       const { error: walletError } = await supabase
         .from("wallets")
         .update({ balance: destinationWallet.balance + amount })
@@ -163,6 +167,7 @@ const SavingsWithdraw = () => {
         
       if (walletError) throw walletError;
       
+      // 3. Update savings balance
       const newAmount = Math.max(0, saving.current_amount - amount);
       const { error: savingError } = await supabase
         .from("savings")
@@ -171,6 +176,7 @@ const SavingsWithdraw = () => {
         
       if (savingError) throw savingError;
       
+      // 4. Record savings transaction
       const { error: savingsTransactionError } = await supabase
         .from("savings_transactions")
         .insert({
