@@ -140,7 +140,7 @@ const Header = () => {
   }, [user, toast]);
 
   return (
-    <div className="relative mb-6 bg-white p-4 pt-6 rounded-lg shadow-md overflow-hidden">
+    <div className="container mx-auto relative mb-6 bg-white p-4 pt-6 rounded-lg shadow-md overflow-hidden ">
       {/* Animated background */}
       <div className="absolute inset-0 opacity-50">
         <ParticleBackground />

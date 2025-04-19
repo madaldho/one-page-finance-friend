@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.budgets (
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     category_id UUID REFERENCES public.categories(id) ON DELETE CASCADE,
     amount DECIMAL(15,2) NOT NULL,
-    period VARCHAR(50) NOT NULL CHECK (period IN ('daily', 'weekly', 'monthly', 'yearly')),
+    period VARCHAR(50) NOT NULL CHECK (period IN ('daily', 'weekly', 'monthly', 'yearly', 'custom_range')),
     spent DECIMAL(15,2) DEFAULT 0,
     start_date DATE NOT NULL,
     end_date DATE,

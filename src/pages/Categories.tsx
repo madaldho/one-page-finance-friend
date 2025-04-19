@@ -2,22 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Pencil, Trash2, FileDown, ChevronLeft } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, ChevronLeft, MoreHorizontal, Search, X } from 'lucide-react';
 import Layout from '@/components/Layout';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { CategoryForm } from '@/components/CategoryForm';
+import { Card } from '@/components/ui/card';
 import { Database } from '@/integrations/supabase/types';
 import { PostgrestError } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type Category = Database['public']['Tables']['categories']['Row'];
 
@@ -27,10 +40,12 @@ const Categories = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedType, setSelectedType] = useState<'income' | 'expense' | 'all'>('all');
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | undefined>();
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -45,8 +60,8 @@ const Categories = () => {
         .from('categories')
         .select('*')
         .eq('user_id', user.id)
-        .order('type', { ascending: true })  // Sementara hanya sort berdasarkan type
-        .order('name', { ascending: true }); // Dan sort berdasarkan nama
+        .order('type', { ascending: true })
+        .order('name', { ascending: true });
 
       if (error) throw error;
       setCategories(data);
@@ -64,6 +79,16 @@ const Categories = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleShowDeleteDialog = (category: Category) => {
+    setCategoryToDelete(category);
+    setShowDeleteDialog(true);
+  };
+  
+  const handleCloseDeleteDialog = () => {
+    setShowDeleteDialog(false);
+    setCategoryToDelete(null);
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -100,278 +125,246 @@ const Categories = () => {
     }
   };
 
-  const exportCategories = async () => {
+  const formatDate = (dateString: string) => {
     try {
-      if (!user) return;
-
-      const headers = ['id', 'name', 'type', 'color', 'icon', 'user_id', 'created_at', 'updated_at'];
-      
-      const csvContent = [
-        headers.join(','),
-        ...categories.map(category => 
-          headers.map(header => {
-            const value = category[header as keyof typeof category];
-            if (value === undefined || value === null) return '""';
-            return `"${value}"`;
-          }).join(',')
-        )
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `kategori-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Berhasil",
-        description: "Data kategori berhasil diekspor ke CSV",
-      });
-    } catch (error) {
-      console.error('Error exporting categories:', error);
-      toast({
-        title: "Gagal mengekspor data",
-        description: "Terjadi kesalahan saat mengekspor kategori",
-        variant: "destructive"
-      });
+      return format(new Date(dateString), 'd MMM yyyy', { locale: id });
+    } catch {
+      return '-';
     }
   };
 
-  const filteredCategories = categories.filter(cat => 
-    selectedType === 'all' ? true : cat.type === selectedType
+  const filteredCategories = categories
+    .filter(cat => selectedType === 'all' ? true : cat.type === selectedType)
+    .filter(cat => 
+      searchQuery === '' ? true : 
+      cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <Layout>
-      <div className="container mx-auto p-4 pb-32">
-        {/* Header with back button */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+   
+      <div className="container mx-auto p-4 pb-24 max-w-3xl">
+        {/* Header */}
+        <header className="sticky top-0 z-10  pt-2 pb-4">
+          <div className="flex items-center mb-4">
             <Button 
               variant="ghost" 
               size="icon" 
-              className="rounded-full" 
+              className="h-9 w-9 rounded-full mr-2" 
               onClick={() => navigate(-1)}
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold">Kategori</h1>
+            <h1 className="text-xl font-bold">Kategori</h1>
+            
+            <div className="ml-auto flex items-center gap-2">
+              {showSearch ? (
+                <div className="relative flex-1 w-full animation-fade-in">
+                  <Input
+                    placeholder="Cari kategori..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-3 pr-8 h-9 w-full rounded-full border-gray-200 focus:border-primary"
+                    autoFocus
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 rounded-full"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setShowSearch(false);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
           </div>
-          <div className="flex gap-2">
+              ) : (
+                <>
             <Button 
-              variant="outline" 
-              size="sm"
-              onClick={exportCategories}
-              className="hidden sm:flex items-center"
-            >
-              <FileDown className="w-4 h-4 mr-2" />
-              Export
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-9 w-9 rounded-full" 
+                    onClick={() => setShowSearch(true)}
+                  >
+                    <Search className="h-5 w-5" />
             </Button>
+                  
             <Button 
-              variant="default" 
               size="sm"
-              onClick={() => {
-                setSelectedCategory(undefined);
-                setShowCategoryForm(true);
-              }}
-              className="bg-[#6E59A5] hover:bg-[#5D4A8F]"
-            >
-              <Plus className="w-4 h-4 mr-2" />
+                    className="h-9 rounded-full px-4"
+                    onClick={() => navigate('/categories/add')}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
               Tambah
             </Button>
+                </>
+              )}
           </div>
         </div>
 
-        {/* Tab Filter */}
+          {/* Tabs Filter */}
         <Tabs 
           defaultValue="all" 
           value={selectedType}
           onValueChange={(value) => setSelectedType(value as 'all' | 'income' | 'expense')}
-          className="mb-6"
-        >
-          <TabsList className="grid grid-cols-3 mb-4">
-            <TabsTrigger value="all">Semua</TabsTrigger>
-            <TabsTrigger value="income">Pemasukan</TabsTrigger>
-            <TabsTrigger value="expense">Pengeluaran</TabsTrigger>
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-3 h-9 rounded-full p-0.5">
+              <TabsTrigger value="all" className="rounded-full text-xs h-8">Semua</TabsTrigger>
+              <TabsTrigger value="income" className="rounded-full text-xs h-8">Pemasukan</TabsTrigger>
+              <TabsTrigger value="expense" className="rounded-full text-xs h-8">Pengeluaran</TabsTrigger>
           </TabsList>
         </Tabs>
+        </header>
 
         {/* Category List */}
+        <main className="mt-4">
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-200"></div>
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                    </div>
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg animate-pulse border border-gray-100">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-3/4 mb-2" />
+                    <Skeleton className="h-3 w-16" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
             ))}
           </div>
         ) : filteredCategories.length === 0 ? (
-          <Card className="p-8 text-center">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
-                <i className="fas fa-list text-gray-400 text-2xl"></i>
+            <div className="flex flex-col items-center justify-center py-10 px-4 bg-gray-50 rounded-lg text-center">
+              <div className="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                <i className="fas fa-layer-group text-gray-400 text-xl"></i>
               </div>
-              <div>
-                <h3 className="text-lg font-medium mb-1">Belum Ada Kategori</h3>
-                <p className="text-gray-500 mb-4">
-                  {selectedType === 'all' 
-                    ? 'Tambahkan kategori untuk mengelompokkan transaksi Anda' 
+              <h3 className="text-lg font-medium mb-2">
+                {searchQuery ? 'Tidak ada hasil' : 'Belum Ada Kategori'}
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-xs mb-6">
+                {searchQuery 
+                  ? `Tidak ada kategori yang cocok dengan "${searchQuery}"`
+                  : selectedType === 'all' 
+                    ? 'Tambahkan kategori untuk mengelompokkan transaksi keuangan Anda' 
                     : selectedType === 'income' 
                       ? 'Belum ada kategori pemasukan. Tambahkan kategori baru.' 
                       : 'Belum ada kategori pengeluaran. Tambahkan kategori baru.'}
                 </p>
+              {!searchQuery && (
                 <Button 
-                  onClick={() => {
-                    setSelectedCategory(undefined);
-                    setShowCategoryForm(true);
-                  }}
-                  className="bg-[#6E59A5] hover:bg-[#5D4A8F]"
+                  onClick={() => navigate('/categories/add')}
+                  className="rounded-full"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Tambah Kategori {selectedType !== 'all' && (selectedType === 'income' ? 'Pemasukan' : 'Pengeluaran')}
+                  Tambah Kategori
                 </Button>
-              </div>
+              )}
             </div>
-          </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
             {filteredCategories.map((category) => (
               <div
                 key={category.id}
-                className="opacity-100 transform-none"
-              >
-                <Card 
-                  className="overflow-hidden hover:shadow-md transition-shadow"
-                  style={{ borderLeft: `4px solid ${category.color}` }}
+                  className="flex items-center p-3 rounded-lg bg-white border border-gray-100 hover:border-gray-200 transition-all"
                 >
-                  <CardContent className="p-0">
-                    <div className="p-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm"
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0"
                           style={{ backgroundColor: category.color || '#6E59A5' }}
                         >
-                          <i className={`fas fa-${category.icon} text-lg`}></i>
+                    <i className={`fas fa-${category.icon} text-sm`}></i>
                         </div>
-                        <div>
-                          <h3 className="font-medium">{category.name}</h3>
+                  
+                  <div className="ml-3 flex-1 min-w-0">
+                    <h3 className="font-medium truncate">{category.name}</h3>
+                    <div className="flex items-center gap-2 mt-1">
                           <Badge 
                             variant={category.type === 'income' ? 'success' : 'destructive'}
-                            className="text-xs font-normal mt-1"
+                        className="text-[10px] h-4 px-1.5 font-normal"
                           >
                             {category.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}
                           </Badge>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1 rounded-none text-xs py-2 h-10"
-                        onClick={() => {
-                          setSelectedCategory(category);
-                          setShowCategoryForm(true);
-                        }}
-                      >
-                        <Pencil className="w-3.5 h-3.5 mr-1" /> Edit
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full">
+                        <MoreHorizontal className="h-4 w-4" />
                       </Button>
-                      <div className="w-px bg-gray-200"></div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="flex-1 rounded-none text-xs py-2 h-10 text-red-500 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => {
-                          if (confirm('Apakah Anda yakin ingin menghapus kategori ini?')) {
-                            handleDeleteCategory(category.id);
-                          }
-                        }}
-                        disabled={deleting === category.id}
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40 rounded-lg">
+                      <DropdownMenuItem 
+                        onClick={() => navigate(`/categories/edit/${category.id}`)}
+                        className="cursor-pointer"
                       >
-                        {deleting === category.id ? (
-                          <span className="flex items-center justify-center">
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Menghapus...
-                          </span>
-                        ) : (
-                          <>
-                            <Trash2 className="w-3.5 h-3.5 mr-1" /> Hapus
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive focus:text-destructive cursor-pointer"
+                        onClick={() => handleShowDeleteDialog(category)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Hapus
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
               </div>
             ))}
           </div>
         )}
-
-        {/* Mobile Export Button */}
-        <div className="sm:hidden mt-6 flex justify-center">
-          <Button 
-            variant="outline" 
-            onClick={exportCategories}
-            className="w-full max-w-xs"
-          >
-            <FileDown className="w-4 h-4 mr-2" />
-            Export Kategori
-          </Button>
-        </div>
+        </main>
 
         {/* Floating Action Button for Mobile */}
-        <div className="fixed bottom-20 right-4 sm:hidden">
+        <div className="fixed bottom-20 right-4 md:hidden">
           <Button 
             size="icon" 
-            className="h-14 w-14 rounded-full shadow-lg bg-[#6E59A5] hover:bg-[#5D4A8F]"
-            onClick={() => {
-              setSelectedCategory(undefined);
-              setShowCategoryForm(true);
-            }}
+            className="h-12 w-12 rounded-full shadow-lg"
+            onClick={() => navigate('/categories/add')}
           >
-            <Plus className="h-6 w-6" />
+            <Plus className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Add Category Dialog */}
-        <Dialog
-          open={showCategoryForm}
-          onOpenChange={(open) => {
-            setShowCategoryForm(open);
-            if (!open) {
-              setSelectedCategory(undefined);
-              fetchCategories();
-            }
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedCategory ? 'Edit Kategori' : 'Tambah Kategori'}
-              </DialogTitle>
-            </DialogHeader>
-            <CategoryForm
-              category={selectedCategory}
-              onClose={() => setShowCategoryForm(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="max-w-xs mx-auto rounded-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Kategori</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus kategori{' '}
+                <span className="font-semibold">{categoryToDelete?.name}</span>?
+                <br />
+                Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-col gap-2">
+              <AlertDialogAction
+                onClick={() => {
+                  if (categoryToDelete) {
+                    handleDeleteCategory(categoryToDelete.id);
+                  }
+                  handleCloseDeleteDialog();
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full"
+                disabled={deleting === categoryToDelete?.id}
+              >
+                {deleting === categoryToDelete?.id ? 'Menghapus...' : 'Hapus'}
+              </AlertDialogAction>
+              <AlertDialogCancel onClick={handleCloseDeleteDialog} className="w-full mt-0">Batal</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          .animation-fade-in {
+            animation: fadeIn 0.2s ease-in-out;
+          }
+        `}} />
       </div>
-    </Layout>
+    
   );
 };
 

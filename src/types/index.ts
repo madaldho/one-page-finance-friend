@@ -1,4 +1,3 @@
-
 export interface Category {
   id: string;
   name: string;
@@ -43,21 +42,29 @@ export interface Budget {
   amount: number;
   spent?: number;
   period: string;
+  period_display?: string;
   active?: boolean;
   user_id: string;
+  start_date?: string;
+  end_date?: string;
+  source_id?: string;
+  source_percentage?: number;
 }
 
 export interface Loan {
   id: string;
-  type: string;
+  user_id: string;
+  title: string;
   description: string;
   amount: number;
-  paid_amount?: number;
-  remaining_amount?: number; 
-  status: string;
-  due_date?: string;
+  type: string;
   borrower?: string;
-  user_id: string;
+  lender?: string;
+  due_date?: string;
+  status: string;
+  paid_amount?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Payment {
@@ -72,10 +79,60 @@ export interface Payment {
 export interface Saving {
   id: string;
   name: string;
-  description?: string;
   target_amount: number;
-  current_amount?: number;
-  target_date?: string;
-  savings_category?: string;
+  current_amount: number;
+  target_date: string | null;
+  description?: string;
+  savings_type?: string;
+  savings_category?: 'digital' | 'fisik';
+  wallet_id?: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SavingTransaction {
+  id: string;
   user_id: string;
+  savings_id: string;
+  wallet_id: string;
+  amount: number;
+  type: 'deposit' | 'withdraw';
+  date: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+  wallet?: {
+    id: string;
+    name: string;
+    type: string;
+  };
+}
+
+export interface Database {
+  public: {
+    Tables: {
+      // ... existing tables ...
+      
+      savings: {
+        Row: Saving;
+        Insert: Omit<Saving, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Saving, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      
+      savings_transactions: {
+        Row: SavingTransaction;
+        Insert: Omit<SavingTransaction, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<SavingTransaction, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      
+      loans: {
+        Row: Loan;
+        Insert: Omit<Loan, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Loan, 'id' | 'created_at' | 'updated_at'>>;
+      };
+      
+      // ... existing tables ...
+    };
+  };
 }

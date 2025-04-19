@@ -20,6 +20,34 @@ export const formatCurrency = (amount: number) => {
 }
 
 /**
+ * Formats a number with thousand separators (dots) for display in input fields
+ * @param value The number to format
+ * @returns String with thousand separators (e.g., 1000000 -> "1.000.000")
+ */
+export const formatNumberWithSeparator = (value: number | string): string => {
+  if (!value && value !== 0) return '';
+  
+  // Convert to string and remove any non-digit characters
+  const numStr = value.toString().replace(/\D/g, '');
+  
+  // Format with thousand separators
+  return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
+
+/**
+ * Converts a string with thousand separators back to a number
+ * @param formattedValue String with thousand separators (e.g., "1.000.000")
+ * @returns Number value (e.g., 1000000)
+ */
+export const parseFormattedNumber = (formattedValue: string): number => {
+  if (!formattedValue) return 0;
+  
+  // Remove all dots and convert to number
+  const value = formattedValue.replace(/\./g, '');
+  return parseInt(value, 10) || 0;
+};
+
+/**
  * Calculates the percentage of a value compared to a total
  * @param value The current value
  * @param total The total value

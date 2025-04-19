@@ -1,24 +1,45 @@
-
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loan, Payment } from '@/types';
-import { ChevronLeft } from 'lucide-react';
+import { ArrowLeft, Calendar, Trash, Edit, MoreVertical, Info, CreditCard, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
+import Layout from '@/components/Layout';
+import { PostgrestError } from '@supabase/supabase-js';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface LoanWithRemaining extends Loan {
+  remaining_amount: number;
+}
 
 const LoanDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loan, setLoan] = useState<Loan | null>(null);
+  const [loan, setLoan] = useState<LoanWithRemaining | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (user && id) {
@@ -37,98 +58,259 @@ const LoanDetail = () => {
         .eq('id', id)
         .single();
 
-      if (loanError) throw loanError;
+      if (loanError) {
+        throw loanError;
+      }
       
-      // The loan data from the database might not have all the fields we need
-      // so we'll add them here if they're missing
-      const loanWithDefaults = {
-        ...loanData,
-        date: loanData.created_at || new Date().toISOString(),
-        remaining_amount: loanData.remaining_amount || (loanData.amount - (loanData.paid_amount || 0)),
+      if (!loanData) {
+        throw new Error('Data pinjaman tidak ditemukan');
+      }
+      
+      // Menambahkan remaining_amount ke data pinjaman
+      const paidAmount = loanData.paid_amount || 0;
+      const remainingAmount = loanData.amount - paidAmount;
+      
+      // Memastikan semua data pinjaman sesuai dengan interface Loan
+      const loanWithDefaults: LoanWithRemaining = {
+        ...loanData as Loan,
+        paid_amount: paidAmount,
+        remaining_amount: remainingAmount
       };
       
       setLoan(loanWithDefaults);
 
       // Fetch payments
       const { data: paymentsData, error: paymentsError } = await supabase
-        .from('payments')
+        .from('loan_payments')
         .select('*')
         .eq('loan_id', id)
         .order('payment_date', { ascending: false });
 
-      if (paymentsError) throw paymentsError;
+      if (paymentsError) {
+        throw paymentsError;
+      }
+      
       setPayments(paymentsData || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching data:', error);
+      
+      // Pesan error yang lebih spesifik berdasarkan tipe error
+      let errorMessage = 'Terjadi kesalahan yang tidak diketahui';
+      
+      if (error instanceof PostgrestError) {
+        errorMessage = `Error database: ${error.message}`;
+        console.log('PostgrestError code:', error.code);
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Gagal memuat data',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive'
       });
+      
       navigate('/loans');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!loan) return null;
+  const handleDelete = async () => {
+    if (!loan) return;
+    setDeleting(true);
+
+    try {
+      // Check if there are payments
+      if (payments.length > 0) {
+        // Delete all payments first
+        const { error: paymentsError } = await supabase
+          .from('loan_payments')
+          .delete()
+          .eq('loan_id', loan.id);
+
+        if (paymentsError) {
+          throw paymentsError;
+        }
+      }
+
+      // Delete the loan
+      const { error } = await supabase
+        .from('loans')
+        .delete()
+        .eq('id', loan.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Berhasil',
+        description: `${loan.type === 'payable' ? 'Hutang' : 'Piutang'} telah dihapus`,
+      });
+
+      navigate('/loans');
+    } catch (error) {
+      console.error('Error deleting loan:', error);
+      
+      // Pesan error yang lebih spesifik berdasarkan tipe error
+      let errorMessage = 'Terjadi kesalahan yang tidak diketahui';
+      
+      if (error instanceof PostgrestError) {
+        errorMessage = `Error database: ${error.message}`;
+        console.log('PostgrestError code:', error.code);
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      toast({
+        title: 'Gagal Menghapus',
+        description: errorMessage,
+        variant: 'destructive'
+      });
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  if (loading || !loan) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-4 max-w-xl">
+          <div className="flex items-center mb-6">
+            <Link to="/loans" className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <h1 className="text-xl font-bold">Memuat...</h1>
+          </div>
+          <div className="animate-pulse space-y-4">
+            <div className="h-40 bg-gray-200 rounded-lg"></div>
+            <div className="h-20 bg-gray-200 rounded-lg"></div>
+            <div className="h-60 bg-gray-200 rounded-lg"></div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   const canPay = loan.status !== 'paid';
+  const isPaid = loan.status === 'paid';
+  const isOverdue = new Date(loan.due_date) < new Date() && !isPaid;
+  const progressPercentage = loan.paid_amount ? Math.min(100, Math.round((loan.paid_amount / loan.amount) * 100)) : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex flex-col z-50">
-      <div className="bg-white rounded-t-xl flex-1 overflow-y-auto">
-        <div className="sticky top-0 bg-white z-10 flex items-center justify-between border-b p-4">
-          <button onClick={() => navigate(-1)} className="p-1" title="Kembali">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h2 className="font-semibold">
-            Detail {loan.type === 'payable' ? 'Hutang' : 'Piutang'}
-          </h2>
-          <div className="w-6"></div>
+    <Layout>
+      <div className="container mx-auto p-4 max-w-xl pb-24">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center">
+            <Link to="/loans" className="mr-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <h1 className="text-xl font-bold">
+              {loan.type === 'payable' ? 'Hutang' : 'Piutang'}
+            </h1>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate(`/loans/edit/${loan.id}`)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => setDeleteDialogOpen(true)}
+                className="text-red-500 focus:text-red-500"
+              >
+                <Trash className="mr-2 h-4 w-4" />
+                Hapus
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
-        <div className="p-4">
-          {/* Loan Summary */}
-          <div className={`p-4 rounded-lg mb-4 ${loan.type === 'payable' ? 'bg-blue-50' : 'bg-green-50'}`}>
-            <div className="grid grid-cols-2 gap-4">
+        <div className={`bg-white rounded-lg p-5 shadow-sm border-l-4 mb-6 ${
+          isPaid ? "border-gray-300" : 
+          loan.type === 'payable' ? (isOverdue ? "border-red-500" : "border-red-300") :
+          (isOverdue ? "border-yellow-500" : "border-green-300")
+        }`}>
+          <h2 className="text-xl font-semibold mb-2">{loan.description}</h2>
+          
+          <div className="flex items-center mb-4">
+            <span className={`px-2 py-0.5 text-xs rounded-full ${
+              isPaid ? "bg-gray-100 text-gray-700" : 
+              isOverdue ? "bg-red-100 text-red-700" : 
+              "bg-yellow-100 text-yellow-700"
+            }`}>
+              {isPaid ? "Lunas" : isOverdue ? "Terlambat" : "Belum Lunas"}
+            </span>
+            <span className="mx-2 text-gray-400">•</span>
+            <span className="text-sm text-gray-500">
+              {loan.type === 'payable' ? 'Hutang' : 'Piutang'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <p className="text-xs text-gray-500">Total</p>
+              <p className="font-semibold text-lg">{formatCurrency(loan.amount)}</p>
+            </div>
               <div>
-                <p className="text-xs text-gray-500">Total {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
-                <p className="font-medium">{formatCurrency(loan.amount)}</p>
+              <p className="text-xs text-gray-500">Sisa</p>
+              <p className="font-semibold text-lg">{formatCurrency(loan.remaining_amount)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Sisa {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
-                <p className="font-medium">{formatCurrency(loan.remaining_amount || loan.amount)}</p>
+              <p className="text-xs text-gray-500">Terbayar</p>
+              <p className="font-semibold">{formatCurrency(loan.paid_amount || 0)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Sudah Dibayar</p>
-                <p className="font-medium">{formatCurrency(loan.paid_amount || 0)}</p>
+              <p className="text-xs text-gray-500">Progress</p>
+              <p className="font-semibold">{progressPercentage}%</p>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
+            <div 
+              className={`h-2 rounded-full ${
+                isPaid ? "bg-gray-400" : 
+                loan.type === 'payable' ? "bg-red-500" : "bg-green-500"
+              }`}
+              style={{ width: `${progressPercentage}%` }}
+            ></div>
               </div>
+
+          <div className="space-y-2 mb-4">
+            <div className="flex items-start">
+              <Calendar className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
               <div>
-                <p className="text-xs text-gray-500">Status</p>
-                <p className={`font-medium ${
-                  loan.status === 'paid' ? 'text-green-600' :
-                  loan.status === 'partial' ? 'text-yellow-600' :
-                  'text-red-600'
-                }`}>
-                  {loan.status === 'paid' ? 'Lunas' :
-                   loan.status === 'partial' ? 'Sebagian' :
-                   'Belum Lunas'}
+                <p className="text-xs text-gray-500">Jatuh Tempo</p>
+                <p className="font-medium">
+                  {loan.due_date ? format(parseISO(loan.due_date), 'dd MMMM yyyy', { locale: id as any }) : '-'}
                 </p>
               </div>
             </div>
-
-            {/* Loan Details */}
-            <div className="mt-4 space-y-2">
+            <div className="flex items-start">
+              <CreditCard className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
               <div>
-                <p className="text-xs text-gray-500">Tanggal</p>
+                <p className="text-xs text-gray-500">
+                  {loan.type === 'payable' ? 'Pemberi Pinjaman' : 'Peminjam'}
+                </p>
                 <p className="font-medium">
-                  {format(new Date(loan.date || loan.created_at || new Date()), 'dd MMMM yyyy', { locale: id })}
+                  {loan.type === 'payable' ? loan.lender : loan.borrower}
                 </p>
               </div>
+            </div>
+            <div className="flex items-start">
+              <Info className="h-4 w-4 text-gray-500 mt-0.5 mr-2" />
               <div>
                 <p className="text-xs text-gray-500">Catatan</p>
                 <p className="font-medium">{loan.description || '-'}</p>
+              </div>
               </div>
             </div>
 
@@ -150,25 +332,29 @@ const LoanDetail = () => {
           </div>
 
           {/* Payment History */}
-          <div>
-            <h3 className="font-medium mb-2">Riwayat Pembayaran</h3>
+        <div className="bg-white rounded-lg p-5 shadow-sm">
+          <h3 className="font-medium mb-4 flex items-center">
+            <Check className="h-4 w-4 mr-2 text-blue-500" />
+            Riwayat Pembayaran
+          </h3>
+          
             {payments.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">
-                Belum ada pembayaran
-              </p>
-            ) : (
-              <div className="space-y-2">
+            <div className="text-center py-6 border border-dashed rounded-lg">
+              <p className="text-gray-500">Belum ada pembayaran</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
                 {payments.map(payment => (
-                  <div key={payment.id} className="border rounded-lg p-3">
+                <div key={payment.id} className="border rounded-lg p-3 hover:bg-gray-50">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">{formatCurrency(payment.amount)}</p>
                         <p className="text-sm text-gray-500">
-                          {format(new Date(payment.payment_date), 'dd MMMM yyyy', { locale: id })}
+                          {format(new Date(payment.payment_date), 'dd MMMM yyyy', { locale: id as any })}
                         </p>
                       </div>
                       {payment.description && (
-                        <p className="text-sm text-gray-500">{payment.description}</p>
+                      <p className="text-sm text-gray-500 max-w-[50%] text-right">{payment.description}</p>
                       )}
                     </div>
                   </div>
@@ -177,8 +363,40 @@ const LoanDetail = () => {
             )}
           </div>
         </div>
-      </div>
-    </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+            <DialogDescription>
+              Apakah Anda yakin ingin menghapus {loan.type === 'payable' ? 'hutang' : 'piutang'} ini?
+              {payments.length > 0 && (
+                <p className="mt-2 text-red-500">
+                  Tindakan ini juga akan menghapus {payments.length} riwayat pembayaran terkait.
+                </p>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleting}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Menghapus...' : 'Hapus'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Layout>
   );
 };
 

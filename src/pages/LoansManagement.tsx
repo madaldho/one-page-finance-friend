@@ -3,8 +3,8 @@ import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Plus, Info, Calendar, CreditCard, FileText } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ArrowLeft, Plus, Info, Calendar, CreditCard, FileText, Edit, Trash } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Loan, Wallet } from "@/types";
@@ -16,6 +16,7 @@ import { formatCurrency } from "@/lib/utils";
 const LoansManagement = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [loans, setLoans] = useState<Loan[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -27,6 +28,8 @@ const LoansManagement = () => {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentWallet, setPaymentWallet] = useState("");
   const [markPaid, setMarkPaid] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [loanToEdit, setLoanToEdit] = useState<Loan | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -67,8 +70,8 @@ const LoansManagement = () => {
         setFeatureEnabled(settingsData.show_loans);
       }
 
-    } catch (error: any) {
-      console.error("Error fetching loans data:", error.message);
+    } catch (error) {
+      console.error("Error fetching loans data:", error instanceof Error ? error.message : String(error));
       toast({
         title: "Gagal memuat data",
         description: "Terjadi kesalahan saat mengambil data hutang dan piutang",
@@ -84,6 +87,18 @@ const LoansManagement = () => {
     setFeatureEnabled(newValue);
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Tidak Terautentikasi",
+          description: "Silakan login untuk mengubah pengaturan",
+          variant: "destructive"
+        });
+        setFeatureEnabled(!newValue); // Revert on error
+        return;
+      }
+      
       const { error } = await supabase
         .from("user_settings")
         .update({ show_loans: newValue })
@@ -97,14 +112,15 @@ const LoansManagement = () => {
           "Fitur hutang dan piutang sekarang aktif di halaman utama" : 
           "Fitur hutang dan piutang tidak akan ditampilkan di halaman utama",
       });
-    } catch (error: any) {
-      console.error("Error updating settings:", error);
+    } catch (error) {
+      console.error("Error updating settings:", error instanceof Error ? error.message : String(error));
       setFeatureEnabled(!newValue); // Revert state on error
       toast({
         title: "Gagal Mengubah Pengaturan",
-        description: error.message,
+        description: (error instanceof Error ? error.message : String(error)) || "Terjadi kesalahan saat mengubah pengaturan",
         variant: "destructive",
       });
+      fetchData();
     }
   };
 
@@ -137,13 +153,13 @@ const LoansManagement = () => {
 
   // Get total for hutang (debts)
   const totalHutang = loans
-    .filter(loan => loan.type === "payable" && loan.status !== "paid")
-    .reduce((sum, loan) => sum + (loan.remaining_amount || loan.amount), 0);
+    .filter(loan => loan.type === 'payable' && loan.status !== 'paid')
+    .reduce((sum, loan) => sum + (loan.amount - (loan.paid_amount || 0)), 0);
 
   // Get total for piutang (receivables)
   const totalPiutang = loans
-    .filter(loan => loan.type === "receivable" && loan.status !== "paid")
-    .reduce((sum, loan) => sum + (loan.remaining_amount || loan.amount), 0);
+    .filter(loan => loan.type === 'receivable' && loan.status !== 'paid')
+    .reduce((sum, loan) => sum + (loan.amount - (loan.paid_amount || 0)), 0);
 
   // Count items by status
   const countHutangItems = loans.filter(loan => loan.type === "payable" && loan.status !== "paid").length;
@@ -164,7 +180,7 @@ const LoansManagement = () => {
 
   const handleOpenPayment = (loan: Loan) => {
     setSelectedLoan(loan);
-    setPaymentAmount(String(loan.remaining_amount || loan.amount));
+    setPaymentAmount(String(loan.amount - (loan.paid_amount || 0)));
     setPaymentWallet("");
     setMarkPaid(false);
     setPaymentDialogOpen(true);
@@ -194,7 +210,7 @@ const LoansManagement = () => {
     }
 
     const amount = Number(paymentAmount);
-    const maxAmount = selectedLoan.remaining_amount || selectedLoan.amount;
+    const maxAmount = selectedLoan.amount - (selectedLoan.paid_amount || 0);
     
     if (amount > maxAmount) {
       toast({
@@ -209,19 +225,72 @@ const LoansManagement = () => {
       // TODO: Implement actual payment logic here
       toast({
         title: "Pembayaran Berhasil",
-        description: `Pembayaran ${formatCurrency(amount)} untuk ${selectedLoan.title} berhasil`,
+        description: `Pembayaran ${formatCurrency(amount)} untuk ${selectedLoan.description} berhasil`,
       });
       setPaymentDialogOpen(false);
       // Refresh data
       fetchData();
-    } catch (error: any) {
-      console.error("Error processing payment:", error.message);
+    } catch (error) {
+      console.error("Error processing payment:", error instanceof Error ? error.message : String(error));
       toast({
         title: "Gagal Memproses Pembayaran",
-        description: error.message || "Terjadi kesalahan saat memproses pembayaran",
+        description: (error instanceof Error ? error.message : String(error)) || "Terjadi kesalahan saat memproses pembayaran",
         variant: "destructive",
       });
     }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedLoan) return;
+    
+    try {
+      // Check if there are payments
+      const { data: payments, error: paymentsCheckError } = await supabase
+        .from("payments")
+        .select("id")
+        .eq("loan_id", selectedLoan.id);
+      
+      if (paymentsCheckError) throw paymentsCheckError;
+      
+      if (payments && payments.length > 0) {
+        // Delete all payments first
+        const { error: paymentsError } = await supabase
+          .from("payments")
+          .delete()
+          .eq("loan_id", selectedLoan.id);
+
+        if (paymentsError) throw paymentsError;
+      }
+
+      // Delete the loan
+      const { error } = await supabase
+        .from("loans")
+        .delete()
+        .eq("id", selectedLoan.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Berhasil",
+        description: `${selectedLoan.type === 'payable' ? 'Hutang' : 'Piutang'} telah dihapus`,
+      });
+
+      setDeleteDialogOpen(false);
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error("Error deleting loan:", error instanceof Error ? error.message : String(error));
+      toast({
+        title: "Gagal Menghapus",
+        description: (error instanceof Error ? error.message : String(error)) || "Terjadi kesalahan saat menghapus",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Fungsi untuk menangani klik pada item hutang/piutang
+  const handleBudgetClick = (loan: Loan) => {
+    // Toggle: jika mengklik item yang sama, tutup detail, jika tidak, tampilkan detail item baru
+    setLoanToEdit(loanToEdit?.id === loan.id ? null : loan);
   };
 
   return (
@@ -239,9 +308,13 @@ const LoansManagement = () => {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-semibold">Fitur Hutang & Piutang</h2>
-              <p className="text-sm text-gray-500">Aktif</p>
+              <p className="text-sm text-gray-500">{featureEnabled ? "Aktif" : "Nonaktif"}</p>
             </div>
-            <Switch checked={featureEnabled} onCheckedChange={handleToggleFeature} />
+            <Switch 
+              checked={featureEnabled} 
+              onCheckedChange={handleToggleFeature} 
+              aria-label="Toggle fitur hutang dan piutang"
+            />
           </div>
         </section>
 
@@ -312,57 +385,118 @@ const LoansManagement = () => {
                   return (
                     <div 
                       key={loan.id} 
-                      className={`bg-white rounded-lg p-4 border-l-4 ${
-                        isPaid ? "border-gray-300" : 
-                        isOverdue ? "border-red-500" : "border-red-300"
-                      }`}
+                      className="bg-white rounded-lg shadow-sm"
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      {/* Header loan item yang selalu terlihat */}
+                      <div onClick={() => handleBudgetClick(loan)} className="cursor-pointer">
+                        <div className="flex items-start p-3">
+                          <div className="w-1 self-stretch bg-red-500 rounded-l-lg mr-3"></div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-semibold">{loan.title}</h3>
-                          <div className="text-xs inline-flex items-center space-x-1">
-                            <span className={`px-2 py-0.5 rounded ${
-                              isPaid ? "bg-gray-100" : 
-                              isOverdue ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"
-                            }`}>
-                              {isPaid ? "Lunas" : isOverdue ? "Terlambat" : "Belum Lunas"}
-                            </span>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium text-gray-800">{loan.description}</h3>
+                                  {isPaid && (
+                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Lunas</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500">Jatuh tempo: {formatDate(loan.due_date)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-red-600">{formatCurrency(loan.amount)}</p>
+                                <p className="text-xs text-gray-500">{loan.paid_amount ? Math.round((loan.paid_amount / loan.amount) * 100) : 0}% terbayar</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">{formatCurrency(loan.amount)}</p>
-                          <p className="text-xs text-gray-500">
-                            {isPaid ? "Lunas" : 
-                              (loan.paid_amount && loan.paid_amount > 0) ? 
-                              `${Math.round((loan.paid_amount / loan.amount) * 100)}% terbayar` : 
-                              "0% terbayar"}
-                          </p>
+                      </div>
+
+                      {/* Detail hutang ketika diklik */}
+                      {loanToEdit?.id === loan.id && (
+                        <div className="p-4 border-t border-gray-100">
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Pemberi</p>
+                              <p className="font-medium">{loan.lender || "-"}</p>
+                            </div>
+                            
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Total Hutang</p>
+                              <p className="font-medium">Rp {loan.amount.toLocaleString()}</p>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Tanggal Dibuat</p>
+                              <p className="font-medium">{formatDate(loan.created_at)}</p>
+                            </div>
+                            
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Wallet</p>
+                              <p className="font-medium">{loan.wallet_name || "CASH"}</p>
+                            </div>
+                        </div>
+                          
+                          <div className="mb-4">
+                            <p className="text-xs text-gray-500 mb-1">Progress Pembayaran</p>
+                            <div className="flex items-center justify-between">
+                              <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full" 
+                                  style={{ width: `${loan.paid_amount ? Math.round((loan.paid_amount / loan.amount) * 100) : 0}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-medium">
+                                {loan.paid_amount ? Math.round((loan.paid_amount / loan.amount) * 100) : 0}%
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between text-sm mb-4">
+                            <div>
+                              <p className="text-gray-500">Terbayar: {formatCurrency(loan.paid_amount || 0)}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500">Sisa: {formatCurrency(loan.amount - (loan.paid_amount || 0))}</p>
                         </div>
                       </div>
 
-                      {loan.lender && (
-                        <div className="text-sm mb-2">
-                          <p className="text-gray-500">Pemberi: {loan.lender}</p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          <span>Jatuh tempo: {formatDate(loan.due_date)}</span>
-                        </div>
-                      </div>
-
+                          <div className="flex gap-2 justify-between">
                       {!isPaid && (
-                        <div>
                           <Button 
-                            variant="default" 
                             size="sm" 
-                            className="w-full"
-                            onClick={() => handleOpenPayment(loan)}
+                                className="flex-1"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  navigate(`/loans/${loan.id}/payment`);
+                                }}
                           >
                             Bayar
                           </Button>
+                            )}
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setSelectedLoan(loan);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              Hapus
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                navigate(`/loans/edit/${loan.id}`);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -407,57 +541,118 @@ const LoansManagement = () => {
                   return (
                     <div 
                       key={loan.id} 
-                      className={`bg-white rounded-lg p-4 border-l-4 ${
-                        isPaid ? "border-gray-300" : 
-                        isOverdue ? "border-yellow-500" : "border-green-300"
-                      }`}
+                      className="bg-white rounded-lg shadow-sm"
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      {/* Header loan item yang selalu terlihat */}
+                      <div onClick={() => handleBudgetClick(loan)} className="cursor-pointer">
+                        <div className="flex items-start p-3">
+                          <div className="w-1 self-stretch bg-green-500 rounded-l-lg mr-3"></div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-semibold">{loan.title}</h3>
-                          <div className="text-xs inline-flex items-center space-x-1">
-                            <span className={`px-2 py-0.5 rounded ${
-                              isPaid ? "bg-gray-100" : 
-                              isOverdue ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"
-                            }`}>
-                              {isPaid ? "Lunas" : isOverdue ? "Belum Lunas" : "Belum Lunas"}
-                            </span>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium text-gray-800">{loan.description}</h3>
+                                  {isPaid && (
+                                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Lunas</span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-500">Jatuh tempo: {formatDate(loan.due_date)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-green-600">{formatCurrency(loan.amount)}</p>
+                                <p className="text-xs text-gray-500">{loan.paid_amount ? Math.round((loan.paid_amount / loan.amount) * 100) : 0}% terbayar</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-medium">{formatCurrency(loan.amount)}</p>
-                          <p className="text-xs text-gray-500">
-                            {isPaid ? "Lunas" : 
-                              (loan.paid_amount && loan.paid_amount > 0) ? 
-                              `${Math.round((loan.paid_amount / loan.amount) * 100)}% terbayar` : 
-                              "0% terbayar"}
-                          </p>
+                      </div>
+
+                      {/* Detail piutang ketika diklik */}
+                      {loanToEdit?.id === loan.id && (
+                        <div className="p-4 border-t border-gray-100">
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Peminjam</p>
+                              <p className="font-medium">{loan.borrower || "-"}</p>
+                            </div>
+                            
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Total Piutang</p>
+                              <p className="font-medium">Rp {loan.amount.toLocaleString()}</p>
+                            </div>
+
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Tanggal Dibuat</p>
+                              <p className="font-medium">{formatDate(loan.created_at)}</p>
+                            </div>
+                            
+                            <div>
+                              <p className="text-xs text-gray-500 mb-1">Wallet</p>
+                              <p className="font-medium">{loan.wallet_name || "CASH"}</p>
+                            </div>
+                        </div>
+                          
+                          <div className="mb-4">
+                            <p className="text-xs text-gray-500 mb-1">Progress Pembayaran</p>
+                            <div className="flex items-center justify-between">
+                              <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
+                                <div 
+                                  className="bg-green-600 h-2 rounded-full" 
+                                  style={{ width: `${loan.paid_amount ? Math.round((loan.paid_amount / loan.amount) * 100) : 0}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-medium">
+                                {loan.paid_amount ? Math.round((loan.paid_amount / loan.amount) * 100) : 0}%
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between text-sm mb-4">
+                            <div>
+                              <p className="text-gray-500">Diterima: {formatCurrency(loan.paid_amount || 0)}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500">Sisa: {formatCurrency(loan.amount - (loan.paid_amount || 0))}</p>
                         </div>
                       </div>
 
-                      {loan.borrower && (
-                        <div className="text-sm mb-2">
-                          <p className="text-gray-500">Peminjam: {loan.borrower}</p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          <span>Jatuh tempo: {formatDate(loan.due_date)}</span>
-                        </div>
-                      </div>
-
+                          <div className="flex gap-2 justify-between">
                       {!isPaid && (
-                        <div>
+                              <Button 
+                                size="sm"
+                                className="flex-1 bg-green-600 hover:bg-green-700"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  navigate(`/loans/${loan.id}/payment`);
+                                }}
+                              >
+                                Terima
+                              </Button>
+                            )}
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setSelectedLoan(loan);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              Hapus
+                            </Button>
                           <Button 
-                            variant="default" 
                             size="sm" 
-                            className="w-full bg-green-600 hover:bg-green-700"
-                            onClick={() => handleOpenPayment(loan)}
-                          >
-                            Terima Pembayaran
+                              variant="outline"
+                              className="flex-1"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                navigate(`/loans/edit/${loan.id}`);
+                              }}
+                            >
+                              Edit
                           </Button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -529,7 +724,7 @@ const LoansManagement = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Sisa {selectedLoan?.type === "payable" ? "Hutang" : "Piutang"}</p>
-                  <p className="font-medium">{selectedLoan ? formatCurrency(selectedLoan.remaining_amount || selectedLoan.amount) : "-"}</p>
+                  <p className="font-medium">{selectedLoan ? formatCurrency(selectedLoan.amount - (selectedLoan.paid_amount || 0)) : "-"}</p>
                 </div>
               </div>
             </div>
@@ -541,11 +736,12 @@ const LoansManagement = () => {
                 value={paymentAmount}
                 onChange={(e) => setPaymentAmount(e.target.value)}
                 className="w-full rounded-md border border-gray-300 p-2"
-                max={selectedLoan?.remaining_amount || selectedLoan?.amount}
+                max={selectedLoan?.amount - (selectedLoan?.paid_amount || 0)}
                 required
+                aria-label="Jumlah Pembayaran"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Maksimal pembayaran: {selectedLoan ? formatCurrency(selectedLoan.remaining_amount || selectedLoan.amount) : "-"}
+                Maksimal pembayaran: {selectedLoan ? formatCurrency(selectedLoan.amount - (selectedLoan.paid_amount || 0)) : "-"}
               </p>
             </div>
 
@@ -558,6 +754,7 @@ const LoansManagement = () => {
                   onChange={(e) => setPaymentWallet(e.target.value)}
                   className="flex-1 border-0 focus:ring-0"
                   required
+                  aria-label="Pilih Sumber Dana"
                 >
                   <option value="">Pilih dompet</option>
                   {wallets.map(wallet => (
@@ -603,6 +800,32 @@ const LoansManagement = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+          </DialogHeader>
+          <p>
+            Apakah Anda yakin ingin menghapus {selectedLoan?.type === 'payable' ? 'hutang' : 'piutang'} "{selectedLoan?.description}"?
+          </p>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+            >
+              Hapus
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </Layout>

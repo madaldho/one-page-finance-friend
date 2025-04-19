@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -10,6 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Budget } from "@/types";
+import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface BudgetSource {
   id: string;
@@ -34,7 +35,31 @@ const BudgetManagement = () => {
   const [loading, setLoading] = useState(false);
   const [sources, setSources] = useState<BudgetSource[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [expiredBudgets, setExpiredBudgets] = useState<Budget[]>([]);
   const [budgetEnabled, setBudgetEnabled] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
+  const [sourceToEdit, setSourceToEdit] = useState<BudgetSource | null>(null);
+  const [showSourceMenu, setShowSourceMenu] = useState<string | null>(null);
+  const [editingSource, setEditingSource] = useState(false);
+  const [editSourceName, setEditSourceName] = useState("");
+  const [editSourceAmount, setEditSourceAmount] = useState("");
+  const [categories, setCategories] = useState<{id: string; name: string; color?: string}[]>([]);
+  
+  // State untuk Budget
+  const [budgetToEdit, setBudgetToEdit] = useState<Budget | null>(null);
+  const [showBudgetMenu, setShowBudgetMenu] = useState<string | null>(null);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [editBudgetAmount, setEditBudgetAmount] = useState("");
+  const [editBudgetCategory, setEditBudgetCategory] = useState("");
+  const [editBudgetPeriod, setEditBudgetPeriod] = useState<string>("");
+  const [editStartDate, setEditStartDate] = useState<Date | undefined>(undefined);
+  const [editEndDate, setEditEndDate] = useState<Date | undefined>(undefined);
+  
+  // State untuk konfirmasi hapus
+  const [showDeleteSourceDialog, setShowDeleteSourceDialog] = useState(false);
+  const [sourceToDelete, setSourceToDelete] = useState<BudgetSource | null>(null);
+  const [showDeleteBudgetDialog, setShowDeleteBudgetDialog] = useState(false);
+  const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -61,6 +86,15 @@ const BudgetManagement = () => {
         setBudgetEnabled(settingsData.show_budgeting);
       }
 
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
+
       // Fetch budget sources
       const { data: sourcesData, error: sourcesError } = await supabase
         .from("budget_sources")
@@ -71,7 +105,7 @@ const BudgetManagement = () => {
       if (sourcesError) throw sourcesError;
       setSources(sourcesData || []);
 
-      // Fetch budgets
+      // Fetch active budgets
       const { data: budgetsData, error: budgetsError } = await supabase
         .from("budgets")
         .select("*")
@@ -81,11 +115,23 @@ const BudgetManagement = () => {
 
       if (budgetsError) throw budgetsError;
       setBudgets(budgetsData || []);
-    } catch (error: any) {
+      
+      // Fetch expired budgets
+      const { data: expiredData, error: expiredError } = await supabase
+        .from("budgets")
+        .select("*")
+        .eq("user_id", user?.id)
+        .eq("active", false)
+        .order("end_date", { ascending: false });
+        
+      if (expiredError) throw expiredError;
+      setExpiredBudgets(expiredData || []);
+    } catch (error: unknown) {
       console.error("Error fetching budget data:", error);
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat mengambil data";
       toast({
         title: "Gagal Memuat Data",
-        description: error.message || "Terjadi kesalahan saat mengambil data",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -136,12 +182,13 @@ const BudgetManagement = () => {
           ? "Budget akan ditampilkan di halaman utama"
           : "Budget tidak akan ditampilkan di halaman utama",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating budget setting:", error);
       setBudgetEnabled(!budgetEnabled); // Revert optimistic update
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat menyimpan pengaturan";
       toast({
         title: "Gagal Mengubah Pengaturan",
-        description: error.message || "Terjadi kesalahan saat menyimpan pengaturan",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -159,7 +206,443 @@ const BudgetManagement = () => {
   };
 
   const formatPeriod = (period: string) => {
-    return period === "monthly" ? "Budget Bulanan" : "Budget Rentang Waktu";
+    if (period === "monthly") {
+      return "Budget Bulanan";
+    } else if (period === "weekly") {
+      return "Budget Mingguan";
+    } else if (period === "date_range" || period === "custom_range" || period === "custom") {
+      return "Budget Rentang Waktu";
+    } else {
+      return "Budget Rentang Waktu";
+    }
+  };
+
+  const displayPeriod = (budget: Budget) => {
+    if (budget.period_display) {
+      return `Budget ${budget.period_display}`;
+    }
+    return formatPeriod(budget.period);
+  };
+
+  const handleSourceOptions = (source: BudgetSource, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents event bubbling
+    
+    if (showSourceMenu === source.id) {
+      setShowSourceMenu(null);
+    } else {
+      setShowSourceMenu(source.id);
+    }
+  };
+
+  const handleSourceClick = (source: BudgetSource) => {
+    // Toggle source details
+    setSourceToEdit(sourceToEdit?.id === source.id ? null : source);
+  };
+
+  const handleEditSource = (source: BudgetSource) => {
+    setEditingSource(true);
+    setSourceToEdit(source);
+    setEditSourceName(source.name);
+    setEditSourceAmount(source.amount.toString());
+    setShowSourceMenu(null);
+  };
+
+  const cancelEditSource = () => {
+    setEditingSource(false);
+    setSourceToEdit(null);
+    setEditSourceName("");
+    setEditSourceAmount("");
+  };
+
+  const saveEditedSource = async () => {
+    if (!sourceToEdit) return;
+    
+    if (!editSourceName.trim()) {
+      toast({
+        title: "Nama Diperlukan",
+        description: "Masukkan nama sumber dana",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!editSourceAmount || isNaN(Number(editSourceAmount)) || Number(editSourceAmount) <= 0) {
+      toast({
+        title: "Jumlah Tidak Valid",
+        description: "Masukkan jumlah dana yang valid",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from("budget_sources")
+        .update({
+          name: editSourceName.trim(),
+          amount: Number(editSourceAmount),
+        })
+        .eq("id", sourceToEdit.id);
+        
+      if (error) throw error;
+      
+      // Update state
+      setSources(prevSources => 
+        prevSources.map(source => 
+          source.id === sourceToEdit.id 
+            ? { ...source, name: editSourceName.trim(), amount: Number(editSourceAmount) } 
+            : source
+        )
+      );
+      
+      toast({
+        title: "Sumber Dana Diperbarui",
+        description: "Sumber dana berhasil diperbarui",
+      });
+      
+      setEditingSource(false);
+      setSourceToEdit(null);
+      setEditSourceName("");
+      setEditSourceAmount("");
+      
+    } catch (error: unknown) {
+      console.error("Error mengedit sumber dana:", error);
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat mengedit sumber dana";
+      toast({
+        title: "Gagal Mengedit",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShowDeleteSourceDialog = (source: BudgetSource) => {
+    setSourceToDelete(source);
+    setShowDeleteSourceDialog(true);
+    setShowSourceMenu(null);
+  };
+
+  const handleCloseDeleteSourceDialog = () => {
+    setShowDeleteSourceDialog(false);
+    setSourceToDelete(null);
+  };
+
+  const handleDeleteSource = async () => {
+    if (!sourceToDelete) return;
+    
+    try {
+      setLoading(true);
+      
+      // Periksa apakah sumber dana digunakan dalam budget
+      const { data: relatedBudgets, error: checkError } = await supabase
+        .from("budgets")
+        .select("id")
+        .eq("source_id", sourceToDelete.id)
+        .limit(1);
+        
+      if (checkError) throw checkError;
+      
+      if (relatedBudgets && relatedBudgets.length > 0) {
+        toast({
+          title: "Tidak Dapat Menghapus",
+          description: "Sumber dana ini sedang digunakan dalam anggaran aktif",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Hapus sumber dana
+      const { error } = await supabase
+        .from("budget_sources")
+        .delete()
+        .eq("id", sourceToDelete.id);
+        
+      if (error) throw error;
+      
+      // Update state
+      setSources(prevSources => prevSources.filter(s => s.id !== sourceToDelete.id));
+      
+      toast({
+        title: "Sumber Dana Dihapus",
+        description: "Sumber dana berhasil dihapus",
+      });
+    } catch (error: unknown) {
+      console.error("Error menghapus sumber dana:", error);
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat menghapus sumber dana";
+      toast({
+        title: "Gagal Menghapus",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleHistory = () => {
+    setShowHistory(!showHistory);
+  };
+
+  const getCategoryName = (categoryId: string) => {
+    if (categoryId === "all") return "Semua Kategori";
+    const category = categories.find(cat => cat.id === categoryId);
+    return category ? category.name : categoryId;
+  };
+
+  const getCategoryColor = (categoryId: string) => {
+    if (categoryId === "all") return "#000000";
+    const category = categories.find(cat => cat.id === categoryId);
+    return category?.color || "#CCCCCC";
+  };
+
+  const handleBudgetOptions = (budget: Budget, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevents event bubbling
+    
+    if (showBudgetMenu === budget.id) {
+      setShowBudgetMenu(null);
+    } else {
+      setShowBudgetMenu(budget.id);
+    }
+  };
+
+  const handleBudgetClick = (budget: Budget) => {
+    // Toggle budget details
+    setBudgetToEdit(budgetToEdit?.id === budget.id ? null : budget);
+  };
+
+  const handleEditBudget = (budget: Budget) => {
+    setEditingBudget(true);
+    setBudgetToEdit(budget);
+    setEditBudgetAmount(budget.amount.toString());
+    setEditBudgetCategory(budget.category);
+    setEditBudgetPeriod(budget.period);
+    setEditStartDate(budget.start_date ? new Date(budget.start_date) : undefined);
+    setEditEndDate(budget.end_date ? new Date(budget.end_date) : undefined);
+    setShowBudgetMenu(null);
+  };
+
+  const cancelEditBudget = () => {
+    setEditingBudget(false);
+    setBudgetToEdit(null);
+    setEditBudgetAmount("");
+    setEditBudgetCategory("");
+    setEditBudgetPeriod("");
+    setEditStartDate(undefined);
+    setEditEndDate(undefined);
+  };
+
+  const saveEditedBudget = async () => {
+    if (!budgetToEdit) return;
+    
+    if (!editBudgetAmount || isNaN(Number(editBudgetAmount)) || Number(editBudgetAmount) <= 0) {
+      toast({
+        title: "Jumlah Tidak Valid",
+        description: "Masukkan jumlah anggaran yang valid",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!editStartDate) {
+      toast({
+        title: "Tanggal Mulai Diperlukan",
+        description: "Pilih tanggal mulai anggaran",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!editEndDate) {
+      toast({
+        title: "Tanggal Akhir Diperlukan",
+        description: "Pilih tanggal akhir anggaran",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setLoading(true);
+
+      const formattedStartDate = editStartDate.toISOString().split('T')[0];
+      const formattedEndDate = editEndDate.toISOString().split('T')[0];
+      
+      const { error } = await supabase
+        .from("budgets")
+        .update({
+          amount: Number(editBudgetAmount),
+          category: editBudgetCategory,
+          period: editBudgetPeriod,
+          start_date: formattedStartDate,
+          end_date: formattedEndDate
+        })
+        .eq("id", budgetToEdit.id);
+        
+      if (error) throw error;
+      
+      // Update state
+      setBudgets(prevBudgets => 
+        prevBudgets.map(budget => 
+          budget.id === budgetToEdit.id 
+            ? { 
+                ...budget, 
+                amount: Number(editBudgetAmount), 
+                category: editBudgetCategory,
+                period: editBudgetPeriod,
+                start_date: formattedStartDate,
+                end_date: formattedEndDate
+              } 
+            : budget
+        )
+      );
+      
+      toast({
+        title: "Anggaran Diperbarui",
+        description: "Anggaran berhasil diperbarui",
+      });
+      
+      setEditingBudget(false);
+      setBudgetToEdit(null);
+      setEditBudgetAmount("");
+      setEditBudgetCategory("");
+      setEditBudgetPeriod("");
+      setEditStartDate(undefined);
+      setEditEndDate(undefined);
+      
+    } catch (error: unknown) {
+      console.error("Error mengedit anggaran:", error);
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat mengedit anggaran";
+      toast({
+        title: "Gagal Mengedit",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleShowDeleteBudgetDialog = (budget: Budget) => {
+    setBudgetToDelete(budget);
+    setShowDeleteBudgetDialog(true);
+    setShowBudgetMenu(null);
+  };
+
+  const handleCloseDeleteBudgetDialog = () => {
+    setShowDeleteBudgetDialog(false);
+    setBudgetToDelete(null);
+  };
+
+  const handleDeleteBudget = async () => {
+    if (!budgetToDelete) return;
+    
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from("budgets")
+        .delete()
+        .eq("id", budgetToDelete.id);
+        
+      if (error) throw error;
+      
+      // Update state
+      setBudgets(prevBudgets => prevBudgets.filter(b => b.id !== budgetToDelete.id));
+      
+      toast({
+        title: "Anggaran Dihapus",
+        description: "Anggaran berhasil dihapus",
+      });
+    } catch (error: unknown) {
+      console.error("Error menghapus anggaran:", error);
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat menghapus anggaran";
+      toast({
+        title: "Gagal Menghapus",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getRemainingTime = (budget: Budget): string => {
+    if (!budget.end_date) return "Tidak ada batas waktu";
+    
+    const today = new Date();
+    const endDate = new Date(budget.end_date);
+    
+    // Jika sudah lewat tanggal akhir
+    if (today > endDate) return "Sudah berakhir";
+    
+    const diffTime = Math.abs(endDate.getTime() - today.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Berakhir hari ini";
+    if (diffDays === 1) return "Berakhir besok";
+    if (diffDays < 7) return `${diffDays} hari lagi`;
+    
+    // Tampilkan berdasarkan periode
+    if (budget.period === "weekly") {
+      return `${Math.ceil(diffDays / 7)} minggu lagi`;
+    } else if (budget.period === "monthly") {
+      const months = Math.ceil(diffDays / 30);
+      return months <= 1 ? "Bulan ini" : `${months} bulan lagi`;
+    } else if (budget.period === "yearly") {
+      const years = Math.ceil(diffDays / 365);
+      return years <= 1 ? "Tahun ini" : `${years} tahun lagi`;
+    } else {
+      // Untuk periode kustom atau lainnya
+      if (diffDays < 30) return `${Math.ceil(diffDays / 7)} minggu lagi`;
+      if (diffDays < 365) return `${Math.ceil(diffDays / 30)} bulan lagi`;
+      return `${Math.ceil(diffDays / 365)} tahun lagi`;
+    }
+  };
+
+  const handleEditBudgetPeriod = (value: string) => {
+    setEditBudgetPeriod(value);
+    
+    if (value !== 'date_range' && value !== 'custom_range' && editStartDate) {
+      // Hitung tanggal akhir berdasarkan periode
+      const endDate = new Date(editStartDate);
+      
+      if (value === 'weekly') {
+        endDate.setDate(endDate.getDate() + 6); // 7 hari dari mulai
+      } else if (value === 'monthly') {
+        endDate.setMonth(endDate.getMonth() + 1);
+        endDate.setDate(endDate.getDate() - 1); // Akhir bulan
+      } else if (value === 'yearly') {
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        endDate.setDate(endDate.getDate() - 1); // Akhir tahun
+      }
+      
+      setEditEndDate(endDate);
+    }
+  };
+
+  const handleEditStartDateChange = (date: Date | undefined) => {
+    setEditStartDate(date);
+    
+    if (date && editBudgetPeriod && editBudgetPeriod !== 'date_range' && editBudgetPeriod !== 'custom_range') {
+      // Update tanggal akhir sesuai periode
+      const endDate = new Date(date);
+      
+      if (editBudgetPeriod === 'weekly') {
+        endDate.setDate(endDate.getDate() + 6);
+      } else if (editBudgetPeriod === 'monthly') {
+        endDate.setMonth(endDate.getMonth() + 1);
+        endDate.setDate(endDate.getDate() - 1);
+      } else if (editBudgetPeriod === 'yearly') {
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        endDate.setDate(endDate.getDate() - 1);
+      }
+      
+      setEditEndDate(endDate);
+    }
   };
 
   return (
@@ -198,9 +681,10 @@ const BudgetManagement = () => {
 
           <div className="space-y-2">
             {sources.map((source) => (
+              <div key={source.id}>
               <div
-                key={source.id}
-                className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                  className={`flex items-center justify-between bg-gray-50 rounded-lg p-3 cursor-pointer ${sourceToEdit?.id === source.id ? 'bg-blue-50' : ''}`}
+                  onClick={() => handleSourceClick(source)}
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -209,9 +693,125 @@ const BudgetManagement = () => {
                   </div>
                   <p className="text-sm text-gray-500">Rp {source.amount.toLocaleString()}</p>
                 </div>
-                <button className="text-gray-500">
+                  <div className="relative">
+                    <button 
+                      className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"
+                      title="Menu sumber dana"
+                      aria-label="Menu sumber dana"
+                      onClick={(e) => handleSourceOptions(source, e)}
+                    >
                   <MoreVertical className="h-5 w-5" />
                 </button>
+                    
+                    {showSourceMenu === source.id && (
+                      <div className="absolute right-0 mt-1 w-36 bg-white shadow-lg rounded-md py-1 z-10">
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                          onClick={() => handleEditSource(source)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                          Edit
+                        </button>
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
+                          onClick={() => handleShowDeleteSourceDialog(source)}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                          Hapus
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {sourceToEdit?.id === source.id && (
+                  <div className="bg-blue-50 p-3 rounded-b-lg -mt-1 border-t border-blue-100">
+                    {editingSource ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Nama Sumber</label>
+                          <input 
+                            type="text" 
+                            value={editSourceName} 
+                            onChange={e => setEditSourceName(e.target.value)}
+                            className="w-full p-2 border rounded-md text-sm"
+                            placeholder="Nama sumber dana"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Jumlah (Rp)</label>
+                          <CurrencyInput
+                            showPrefix={true}
+                            value={Number(editSourceAmount)}
+                            onChange={(value) => setEditSourceAmount(value.toString())}
+                            placeholder="Jumlah sumber dana"
+                            className="text-sm"
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button 
+                            className="px-3 py-1 bg-white border rounded-md text-sm"
+                            onClick={cancelEditSource}
+                          >
+                            Batal
+                          </button>
+                          <button 
+                            className="px-3 py-1 bg-blue-500 text-white rounded-md text-sm"
+                            onClick={saveEditedSource}
+                          >
+                            Simpan
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-sm font-medium mb-4">Detail Sumber Dana</p>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white p-3 rounded-lg">
+                              <p className="text-xs text-gray-500">Total Dana</p>
+                              <p className="font-medium">Rp {source.amount.toLocaleString()}</p>
+                            </div>
+                            
+                            <div className="bg-white p-3 rounded-lg">
+                              <p className="text-xs text-gray-500">Digunakan</p>
+                              <p className="font-medium">
+                                Rp {(budgets
+                                  .filter(b => b.source_id === source.id)
+                                  .reduce((sum, b) => sum + b.amount, 0)).toLocaleString()}
+                                </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {budgets.filter(b => b.source_id === source.id).length > 0 && (
+                          <div>
+                            <p className="text-xs text-gray-500 mb-2">Digunakan di anggaran:</p>
+                            <div className="space-y-2">
+                              {budgets
+                                .filter(b => b.source_id === source.id)
+                                .map(budget => (
+                                  <div key={budget.id} className="bg-white p-2 rounded-md text-sm flex items-center justify-between">
+                                    <span>{budget.category}</span>
+                                    <span className="text-gray-500">Rp {budget.amount.toLocaleString()}</span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
 
@@ -240,24 +840,224 @@ const BudgetManagement = () => {
             {budgets.map((budget) => {
               const progress = calculateProgress(budget);
               return (
-                <div key={budget.id} className="bg-gray-50 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium">{budget.category}</h3>
+                <div key={budget.id}>
+                  <div
+                    className={`flex items-center justify-between bg-gray-50 rounded-lg p-3 cursor-pointer ${budgetToEdit?.id === budget.id ? 'bg-blue-50' : ''}`}
+                    onClick={() => handleBudgetClick(budget)}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className={`w-2 h-2 rounded-full`}
+                            style={{ backgroundColor: getCategoryColor(budget.category) }}
+                          ></div>
+                          <h3 className="font-medium">{getCategoryName(budget.category)}</h3>
+                        </div>
                     <span className="text-sm">
                       Rp {budget.spent?.toLocaleString() || 0} / Rp {budget.amount.toLocaleString()}
                     </span>
                   </div>
+                      <div className="flex items-center justify-between gap-2 mt-1">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${
-                      budget.period === "monthly" ? "bg-blue-500" : "bg-purple-500"
-                    }`}></div>
-                    <span className="text-xs text-gray-500">{formatPeriod(budget.period)}</span>
+                          <span className="text-xs text-gray-500">{displayPeriod(budget)}</span>
+                          <span className="text-xs text-orange-500">• {getRemainingTime(budget)}</span>
+                        </div>
+                        <span className="text-xs font-medium">
+                          {Math.min(Math.round(progress), 100)}%
+                        </span>
                   </div>
                   <Progress 
                     value={progress} 
-                    className="h-2" 
+                        className="h-2 mt-1" 
                     indicatorClassName={getProgressColor(progress)}
                   />
+                    </div>
+                    <div className="relative">
+                      <button 
+                        className="text-gray-500 hover:bg-gray-100 p-2 rounded-full"
+                        title="Menu anggaran"
+                        aria-label="Menu anggaran"
+                        onClick={(e) => handleBudgetOptions(budget, e)}
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </button>
+                      
+                      {showBudgetMenu === budget.id && (
+                        <div className="absolute right-0 mt-1 w-36 bg-white shadow-lg rounded-md py-1 z-10">
+                          <button
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => handleEditBudget(budget)}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Edit
+                          </button>
+                          <button
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
+                            onClick={() => handleShowDeleteBudgetDialog(budget)}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18"></path>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                            Hapus
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {budgetToEdit?.id === budget.id && (
+                    <div className="bg-blue-50 p-3 rounded-b-lg -mt-1 border-t border-blue-100">
+                      {editingBudget ? (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Kategori</label>
+                            <select 
+                              value={editBudgetCategory} 
+                              onChange={e => setEditBudgetCategory(e.target.value)}
+                              className="w-full p-2 border rounded-md text-sm"
+                              title="Pilih kategori anggaran"
+                              aria-label="Pilih kategori anggaran"
+                            >
+                              <option value="all">Semua Kategori</option>
+                              {categories.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Jumlah (Rp)</label>
+                            <CurrencyInput
+                              showPrefix={true}
+                              value={Number(editBudgetAmount)}
+                              onChange={(value) => setEditBudgetAmount(value.toString())}
+                              placeholder="Jumlah anggaran"
+                              className="text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block">Periode</label>
+                            <select 
+                              value={editBudgetPeriod} 
+                              onChange={e => handleEditBudgetPeriod(e.target.value)}
+                              className="w-full p-2 border rounded-md text-sm"
+                              title="Pilih periode anggaran"
+                              aria-label="Pilih periode anggaran"
+                            >
+                              <option value="weekly">Mingguan</option>
+                              <option value="monthly">Bulanan</option>
+                              <option value="yearly">Tahunan</option>
+                              <option value="date_range">Rentang Waktu Kustom</option>
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Tanggal Mulai</label>
+                              <div className="relative">
+                                <input 
+                                  type="date" 
+                                  value={editStartDate ? editStartDate.toISOString().split('T')[0] : ''} 
+                                  onChange={e => handleEditStartDateChange(e.target.value ? new Date(e.target.value) : undefined)}
+                                  className="w-full p-2 border rounded-md text-sm"
+                                  title="Tanggal mulai anggaran"
+                                  aria-label="Tanggal mulai anggaran"
+                                  placeholder="Pilih tanggal mulai"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block">Tanggal Akhir</label>
+                              <div className="relative">
+                                <input 
+                                  type="date" 
+                                  value={editEndDate ? editEndDate.toISOString().split('T')[0] : ''} 
+                                  onChange={e => setEditEndDate(e.target.value ? new Date(e.target.value) : undefined)}
+                                  className={`w-full p-2 border rounded-md text-sm ${editBudgetPeriod !== 'date_range' && editBudgetPeriod !== 'custom_range' ? 'bg-gray-100' : ''}`}
+                                  disabled={editBudgetPeriod !== 'date_range' && editBudgetPeriod !== 'custom_range'}
+                                  min={editStartDate ? editStartDate.toISOString().split('T')[0] : ''}
+                                  title="Tanggal akhir anggaran"
+                                  aria-label="Tanggal akhir anggaran"
+                                  placeholder="Pilih tanggal akhir"
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 justify-end">
+                            <button 
+                              className="px-3 py-1 bg-white border rounded-md text-sm"
+                              onClick={cancelEditBudget}
+                            >
+                              Batal
+                            </button>
+                            <button 
+                              className="px-3 py-1 bg-blue-500 text-white rounded-md text-sm"
+                              onClick={saveEditedBudget}
+                            >
+                              Simpan
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div>
+                            <p className="text-sm font-medium mb-4">Detail Anggaran</p>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="bg-white p-3 rounded-lg">
+                                <p className="text-xs text-gray-500">Total Anggaran</p>
+                                <p className="font-medium">Rp {budget.amount.toLocaleString()}</p>
+                              </div>
+                              
+                              <div className="bg-white p-3 rounded-lg">
+                                <p className="text-xs text-gray-500">Sisa Waktu</p>
+                                <p className="font-medium">
+                                  {getRemainingTime(budget)}
+                                </p>
+                              </div>
+
+                              <div className="bg-white p-3 rounded-lg">
+                                <p className="text-xs text-gray-500">Sisa Anggaran</p>
+                                <p className={`font-medium ${budget.amount - (budget.spent || 0) < 0 ? 'text-red-500' : ''}`}>
+                                  Rp {Math.max(0, budget.amount - (budget.spent || 0)).toLocaleString()}
+                                </p>
+                              </div>
+
+                              <div className="bg-white p-3 rounded-lg">
+                                <p className="text-xs text-gray-500">Periode</p>
+                                <p className="font-medium">
+                                  {displayPeriod(budget)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {budget.source_id && (
+                            <div>
+                              <p className="text-xs text-gray-500 mb-2">Sumber Dana:</p>
+                              {sources.filter(s => s.id === budget.source_id).map(source => (
+                                <div key={source.id} className="bg-white p-2 rounded-md text-sm flex items-center justify-between">
+                                  <span>{source.name}</span>
+                                  <span className="text-gray-500">
+                                    {budget.source_percentage}% (Rp {((source.amount * (budget.source_percentage || 0)) / 100).toLocaleString()})
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -275,11 +1075,64 @@ const BudgetManagement = () => {
         <div className="bg-white rounded-lg p-4 mb-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-medium">Riwayat Anggaran</h2>
-            <button className="text-sm text-gray-500">Tampilkan</button>
+            <button 
+              className="text-sm text-gray-500"
+              onClick={toggleHistory}
+            >
+              {showHistory ? "Sembunyikan" : "Tampilkan"}
+            </button>
           </div>
+          
+          {!showHistory ? (
           <p className="text-sm text-gray-500 text-center py-2">
-            {budgets.length} anggaran yang telah berakhir
-          </p>
+              {expiredBudgets.length} anggaran yang telah berakhir
+            </p>
+          ) : (
+            <div className="space-y-3 mt-4">
+              {expiredBudgets.map((budget) => {
+                const progress = calculateProgress(budget);
+                return (
+                  <div key={budget.id} className="bg-gray-50 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{getCategoryName(budget.category)}</h3>
+                      <span className="text-sm">
+                        Rp {budget.spent?.toLocaleString() || 0} / Rp {budget.amount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-2 h-2 rounded-full`}
+                          style={{ backgroundColor: getCategoryColor(budget.category) }}
+                        ></div>
+                        <span className="text-xs text-gray-500">{displayPeriod(budget)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">
+                          {budget.end_date ? new Date(budget.end_date).toLocaleDateString('id-ID') : ''}
+                        </span>
+                        <span className="text-xs font-medium">
+                          {Math.min(Math.round(progress), 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    <Progress 
+                      value={progress} 
+                      className="h-2" 
+                      indicatorClassName={getProgressColor(progress)}
+                    />
+                  </div>
+                );
+              })}
+              
+              {expiredBudgets.length === 0 && (
+                <div className="text-center py-4 text-gray-500">
+                  <p>Belum ada riwayat anggaran</p>
+                  <p className="text-sm">Anggaran yang telah berakhir akan muncul di sini</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Budget Tips */}
@@ -293,6 +1146,25 @@ const BudgetManagement = () => {
           </ul>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialogs */}
+      <DeleteConfirmationDialog
+        isOpen={showDeleteSourceDialog}
+        onClose={handleCloseDeleteSourceDialog}
+        onConfirm={handleDeleteSource}
+        title="Hapus Sumber Dana"
+        description="Apakah Anda yakin ingin menghapus sumber dana"
+        itemName={sourceToDelete?.name}
+      />
+      
+      <DeleteConfirmationDialog
+        isOpen={showDeleteBudgetDialog}
+        onClose={handleCloseDeleteBudgetDialog}
+        onConfirm={handleDeleteBudget}
+        title="Hapus Anggaran"
+        description="Apakah Anda yakin ingin menghapus anggaran"
+        itemName={budgetToDelete ? getCategoryName(budgetToDelete.category) : ""}
+      />
     </Layout>
   );
 };

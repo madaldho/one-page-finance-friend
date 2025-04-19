@@ -1,4 +1,3 @@
-
 import React from "react";
 import FeatureToggle from "@/components/FeatureToggle";
 import { DollarSign, PiggyBank, CreditCard } from "lucide-react";
@@ -18,6 +17,11 @@ const FeaturesSection = ({
   toggleLoading, 
   onToggleChange 
 }: FeaturesSectionProps) => {
+  const handleToggleClick = (setting: 'show_budgeting' | 'show_savings' | 'show_loans') => {
+    // Memanggil fungsi toggle dari parent
+    onToggleChange(setting);
+  };
+
   return (
     <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
       <h2 className="font-semibold p-4 border-b border-gray-100">Fitur</h2>
@@ -27,7 +31,7 @@ const FeaturesSection = ({
         title="Budgeting"
         description="Atur dan pantau anggaran keuangan kamu"
         checked={settings.show_budgeting}
-        onToggle={() => onToggleChange('show_budgeting')}
+        onToggle={() => handleToggleClick('show_budgeting')}
         managementLink="/budgets"
         loading={toggleLoading.show_budgeting}
       />
@@ -37,7 +41,7 @@ const FeaturesSection = ({
         title="Tabungan"
         description="Atur target dan pantau tabungan kamu"
         checked={settings.show_savings}
-        onToggle={() => onToggleChange('show_savings')}
+        onToggle={() => handleToggleClick('show_savings')}
         managementLink="/savings"
         loading={toggleLoading.show_savings}
       />
@@ -47,7 +51,7 @@ const FeaturesSection = ({
         title="Hutang & Piutang"
         description="Kelola data hutang dan piutang"
         checked={settings.show_loans}
-        onToggle={() => onToggleChange('show_loans')}
+        onToggle={() => handleToggleClick('show_loans')}
         managementLink="/loans"
         loading={toggleLoading.show_loans}
       />

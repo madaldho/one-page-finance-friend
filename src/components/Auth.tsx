@@ -63,7 +63,7 @@ const Auth = () => {
     <div className="flex flex-col items-center justify-center h-[80vh] p-4">
       <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
         <h1 className="text-2xl font-bold text-center mb-6">
-          {isSignUp ? "Daftar" : "Masuk"} DompetKu
+          {isSignUp ? "Daftar" : "Masuk"} Keuangan Pribadi
         </h1>
         
         <form onSubmit={handleAuth} className="space-y-4">

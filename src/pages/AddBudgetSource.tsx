@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -9,6 +8,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 const AddBudgetSource = () => {
   const { toast } = useToast();
@@ -92,12 +92,11 @@ const AddBudgetSource = () => {
 
           <div className="space-y-2">
             <Label htmlFor="amount">Jumlah (Rp)</Label>
-            <Input
+            <CurrencyInput
               id="amount"
-              type="number"
               placeholder="2000000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              value={Number(amount)}
+              onChange={(value) => setAmount(value.toString())}
               disabled={loading}
             />
           </div>

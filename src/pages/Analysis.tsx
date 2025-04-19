@@ -7,7 +7,6 @@ import { format, subDays, subMonths, isAfter, isBefore, startOfDay, endOfDay } f
 import { Transaction, Category, Wallet } from "@/types";
 import { AnalysisHeader } from "@/components/analysis/AnalysisHeader";
 import { AnalysisFilters } from "@/components/analysis/AnalysisFilters";
-import { StatisticCards } from "@/components/analysis/StatisticCards";
 import FinancialSummary from "@/components/FinancialSummary";
 
 interface TransactionWithNames extends Transaction {
@@ -236,13 +235,7 @@ const Analysis = () => {
           transactionCount={filteredTransactions.length}
         />
 
-        <StatisticCards
-          totalIncome={totalIncome}
-          totalExpense={totalExpense}
-          savingsRate={savingsRate}
-          incomeTransactions={incomeTransactions}
-          expenseTransactions={expenseTransactions}
-        />
+    
 
         <FinancialSummary
           transactions={filteredTransactions}

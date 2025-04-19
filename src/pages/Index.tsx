@@ -69,7 +69,6 @@ const Index = () => {
     show_loans: true,
   });
   
-  const [showWalletForm, setShowWalletForm] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   
   useEffect(() => {
@@ -275,6 +274,14 @@ const Index = () => {
     // Implement date filtering
   };
   
+  const handleAddWallet = () => {
+    navigate('/wallet/add');
+  };
+  
+  const handleEditWallet = (wallet: Wallet) => {
+    navigate(`/wallet/edit/${wallet.id}`);
+  };
+  
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50">
@@ -283,14 +290,11 @@ const Index = () => {
       <main className="container mx-auto px-4 pb-32 pt-2">
         {/* Wallet Section */}
         <section className="mb-5">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Saldo Dompet dan Rekening</h2>
-                <Button 
-                  size="sm" 
-                onClick={() => {
-                  setSelectedWallet(null);
-                  setShowWalletForm(true);
-                }}
+              <Button 
+                size="sm" 
+                onClick={handleAddWallet}
                 className="bg-black text-white hover:bg-gray-800 transition-colors"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -298,16 +302,13 @@ const Index = () => {
               </Button>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
               {wallets.length === 0 ? (
                 <Card className="col-span-full flex flex-col items-center justify-center py-8 text-center">
                   <WalletIcon className="w-8 h-8 text-gray-400 mb-2" />
                   <p className="text-gray-500 mb-2">Belum ada dompet</p>
                   <Button 
-                    onClick={() => {
-                      setSelectedWallet(null);
-                      setShowWalletForm(true);
-                    }}
+                    onClick={handleAddWallet}
                     className="bg-black text-white hover:bg-gray-800 transition-colors"
                   >
                     <Plus className="w-4 h-4 mr-2" /> Tambah Dompet
@@ -319,35 +320,32 @@ const Index = () => {
                   <WalletCard 
                     key={wallet.id} 
                     wallet={wallet} 
-                      onEdit={(wallet) => {
-                        setSelectedWallet(wallet);
-                        setShowWalletForm(true);
-                      }}
-                      onDelete={async (id) => {
-                        try {
-                          const { error } = await supabase
-                            .from('wallets')
-                            .delete()
-                            .eq('id', id);
-                            
-                          if (error) throw error;
+                    onEdit={handleEditWallet}
+                    onDelete={async (id) => {
+                      try {
+                        const { error } = await supabase
+                          .from('wallets')
+                          .delete()
+                          .eq('id', id);
                           
-                          toast({
-                            title: "Dompet berhasil dihapus",
-                            description: "Data dompet telah dihapus dari sistem"
-                          });
-                          
-                          fetchData();
-                        } catch (error) {
-                          console.error('Error deleting wallet:', error);
-                          toast({
-                            variant: "destructive",
-                            title: "Gagal menghapus dompet",
-                            description: "Terjadi kesalahan saat menghapus dompet"
-                          });
-                        }
-                      }}
-                      onSuccess={fetchData}
+                        if (error) throw error;
+                        
+                        toast({
+                          title: "Dompet berhasil dihapus",
+                          description: "Data dompet telah dihapus dari sistem"
+                        });
+                        
+                        fetchData();
+                      } catch (error) {
+                        console.error('Error deleting wallet:', error);
+                        toast({
+                          variant: "destructive",
+                          title: "Gagal menghapus dompet",
+                          description: "Terjadi kesalahan saat menghapus dompet"
+                        });
+                      }
+                    }}
+                    onSuccess={fetchData}
                   />
                 ))}
               </>
@@ -535,27 +533,6 @@ const Index = () => {
           </Button>
         </div>
       </div>
-
-        {/* Add Dialog for Wallet Form */}
-        <Dialog open={showWalletForm} onOpenChange={(open) => {
-          setShowWalletForm(open);
-          if (!open) setSelectedWallet(null);
-        }}>
-          <DialogContent className="sm:max-w-[425px] p-0">
-            <WalletForm 
-              wallet={selectedWallet}
-              onSuccess={() => {
-                setShowWalletForm(false);
-                setSelectedWallet(null);
-                fetchData();
-              }}
-              onClose={() => {
-                setShowWalletForm(false);
-                setSelectedWallet(null);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
     </div>
     </Layout>
   );

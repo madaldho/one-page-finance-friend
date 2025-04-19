@@ -48,6 +48,7 @@ import { Card } from '@/components/ui/card';
 import TransactionList from '@/components/TransactionList';
 import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from '@/components/DateRangePicker';
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 
 interface Transaction {
   id: string;
@@ -97,24 +98,26 @@ const WalletDetail = () => {
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchWalletAndTransactions();
   }, [id]);
 
-    const fetchWalletAndTransactions = async () => {
+  const fetchWalletAndTransactions = async () => {
     try {
       setLoading(true);
       
       // Fetch wallet
-        const { data: walletData, error: walletError } = await supabase
-          .from('wallets')
-          .select('*')
-          .eq('id', id)
-          .single();
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('id', id)
+        .single();
 
       if (walletError) throw walletError;
-        setWallet(walletData);
+      setWallet(walletData);
 
       // Fetch categories
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -127,10 +130,10 @@ const WalletDetail = () => {
 
       // Fetch transactions
       let query = supabase
-          .from('transactions')
-          .select('*')
+        .from('transactions')
+        .select('*')
         .eq('wallet_id', id)
-          .order('date', { ascending: false });
+        .order('date', { ascending: false });
 
       if (filterType !== 'all') {
         query = query.eq('type', filterType);
@@ -156,39 +159,66 @@ const WalletDetail = () => {
       }) || [];
       
       setTransactions(transactionsWithCategories);
-      } catch (error) {
-      console.error('Error fetching data:', error);
-        toast({
-          title: "Error",
-        description: "Gagal memuat data wallet",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-  const handleDeleteTransaction = async (transactionId: string) => {
-    try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', transactionId);
-
-      if (error) throw error;
-
-      setTransactions(prev => prev.filter(t => t.id !== transactionId));
-      toast({
-        title: "Berhasil",
-        description: "Transaksi berhasil dihapus",
-      });
     } catch (error) {
-      console.error('Error deleting transaction:', error);
+      console.error('Error fetching data:', error);
       toast({
         title: "Error",
-        description: "Gagal menghapus transaksi",
+        description: "Gagal memuat data wallet",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteWallet = async () => {
+    try {
+      setIsDeleting(true);
+      
+      // Check if there are transactions
+      const { count, error: countError } = await supabase
+        .from('transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('wallet_id', id);
+        
+      if (countError) throw countError;
+      
+      if (count && count > 0) {
+        toast({
+          title: "Tidak dapat menghapus",
+          description: "Dompet ini masih memiliki transaksi. Hapus atau pindahkan transaksi terlebih dahulu.",
+          variant: "destructive"
+        });
+        setIsDeleting(false);
+        setShowDeleteDialog(false);
+        return;
+      }
+      
+      // Delete wallet
+      const { error } = await supabase
+        .from('wallets')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Berhasil",
+        description: "Dompet berhasil dihapus",
+      });
+      
+      // Navigate back to home
+      navigate('/home');
+    } catch (error) {
+      console.error('Error deleting wallet:', error);
+      toast({
+        title: "Error",
+        description: "Gagal menghapus dompet",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -313,13 +343,35 @@ const WalletDetail = () => {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">{wallet.name}</h2>
-              <Button
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-                onClick={() => navigate(`/wallet/${wallet.id}/edit`)}
-              >
-                Edit
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="text-white hover:bg-white/20"
+                    size="icon"
+                    aria-label="Menu dompet"
+                  >
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => navigate(`/wallet/edit/${wallet.id}`)}
+                    className="cursor-pointer"
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Dompet
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setShowDeleteDialog(true)}
+                    className="cursor-pointer text-red-600 focus:text-red-600"
+                    disabled={wallet.is_default}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Hapus Dompet
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <p className="text-sm opacity-90">
               {wallet.type === "bank"
@@ -331,41 +383,23 @@ const WalletDetail = () => {
             <div className="mt-4">
               <p className="text-sm opacity-90">Saldo Saat Ini</p>
               <p className="text-3xl font-bold">{formatCurrency(wallet.balance)}</p>
-        </div>
-      </div>
-        </Card>
-        
-        {/* Actions */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Button
-            className="bg-green-500 hover:bg-green-600"
-            onClick={() => navigate(`/transaction/income?wallet=${wallet.id}`)}
-          >
-            <ArrowDownRight className="w-4 h-4 mr-2" />
-            Tambah Pemasukan
-          </Button>
-          <Button
-            className="bg-red-500 hover:bg-red-600"
-            onClick={() => navigate(`/transaction/expense?wallet=${wallet.id}`)}
-          >
-            <ArrowUpRight className="w-4 h-4 mr-2" />
-            Tambah Pengeluaran
-          </Button>
+            </div>
           </div>
+        </Card>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter Transaksi" />
-              </SelectTrigger>
-              <SelectContent>
+            </SelectTrigger>
+            <SelectContent>
               <SelectItem value="all">Semua Transaksi</SelectItem>
-                <SelectItem value="income">Pemasukan</SelectItem>
-                <SelectItem value="expense">Pengeluaran</SelectItem>
-                <SelectItem value="transfer">Transfer</SelectItem>
-              </SelectContent>
-            </Select>
+              <SelectItem value="income">Pemasukan</SelectItem>
+              <SelectItem value="expense">Pengeluaran</SelectItem>
+              <SelectItem value="transfer">Transfer</SelectItem>
+            </SelectContent>
+          </Select>
             
           <DateRangePicker
             value={dateRange}
@@ -407,7 +441,17 @@ const WalletDetail = () => {
               navigate(`/transaction/${transaction.type}/${transaction.id}`);
             }}
           />
-                </Card>
+        </Card>
+        
+        {/* Delete Confirmation Dialog */}
+        <DeleteConfirmationDialog
+          isOpen={showDeleteDialog}
+          onClose={() => setShowDeleteDialog(false)}
+          onConfirm={handleDeleteWallet}
+          title="Hapus Dompet"
+          description="Apakah Anda yakin ingin menghapus dompet"
+          itemName={wallet.name}
+        />
       </div>
     </Layout>
   );

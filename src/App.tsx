@@ -15,12 +15,22 @@ import AddBudgetSource from './pages/AddBudgetSource';
 import AddBudget from './pages/AddBudget';
 import SavingsManagement from './pages/SavingsManagement';
 import AddSavingsTarget from './pages/AddSavingsTarget';
+import SavingsDeposit from './pages/SavingsDeposit';
+import SavingsWithdraw from './pages/SavingsWithdraw';
+import SavingsEdit from './pages/SavingsEdit';
 import LoansManagement from './pages/LoansManagement';
 import LoanDetail from './pages/LoanDetail';
 import { useAuth } from './contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Categories from "@/pages/Categories";
 import Transactions from "@/pages/Transactions";
+import WalletForm from "@/components/WalletForm";
+import TestSavingsTransactions from "./pages/TestSavingsTransactions";
+import LoanPaymentPage from './pages/LoanPaymentPage';
+import AddDebtPage from './pages/AddDebtPage';
+import AddReceivablePage from './pages/AddReceivablePage';
+import EditLoanPage from './pages/EditLoanPage';
+import { CategoryForm } from './components/CategoryForm';
 
 // Create a wrapper component to handle auth redirects
 const AuthRedirect = () => {
@@ -105,6 +115,16 @@ function App() {
               <WalletDetail />
             </ProtectedRoute>
           } />
+          <Route path="/wallet/add" element={
+            <ProtectedRoute>
+              <WalletForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/wallet/edit/:id" element={
+            <ProtectedRoute>
+              <WalletForm />
+            </ProtectedRoute>
+          } />
           <Route path="/transaction/:type" element={
             <ProtectedRoute>
               <TransactionPage />
@@ -140,19 +160,60 @@ function App() {
               <AddSavingsTarget />
             </ProtectedRoute>
           } />
+          <Route path="/savings/deposit/:id" element={
+            <ProtectedRoute>
+              <SavingsDeposit />
+            </ProtectedRoute>
+          } />
+          <Route path="/savings/withdraw/:id" element={
+            <ProtectedRoute>
+              <SavingsWithdraw />
+            </ProtectedRoute>
+          } />
+          <Route path="/savings/edit/:id" element={
+            <ProtectedRoute>
+              <SavingsEdit />
+            </ProtectedRoute>
+          } />
+          <Route path="/savings/test" element={<TestSavingsTransactions />} />
           <Route path="/loans" element={
             <ProtectedRoute>
               <LoansManagement />
             </ProtectedRoute>
           } />
-          <Route path="/loans/:id" element={
+          <Route path="/loans/add-debt" element={
             <ProtectedRoute>
-              <LoanDetail />
+              <AddDebtPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/loans/add-receivable" element={
+            <ProtectedRoute>
+              <AddReceivablePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/loans/edit/:id" element={
+            <ProtectedRoute>
+              <EditLoanPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/loans/:id/payment" element={
+            <ProtectedRoute>
+              <LoanPaymentPage />
             </ProtectedRoute>
           } />
           <Route path="/categories" element={
             <ProtectedRoute>
               <Categories />
+            </ProtectedRoute>
+          } />
+          <Route path="/categories/add" element={
+            <ProtectedRoute>
+              <CategoryForm />
+            </ProtectedRoute>
+          } />
+          <Route path="/categories/edit/:id" element={
+            <ProtectedRoute>
+              <CategoryForm />
             </ProtectedRoute>
           } />
           <Route path="/transactions" element={

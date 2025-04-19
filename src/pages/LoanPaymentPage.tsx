@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loan, Payment, Wallet } from '@/types';
+import { Loan, Payment, Wallet, Category } from '@/types';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/utils';
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
+import { format } from 'date-fns';
+import Layout from '@/components/Layout';
+import { CurrencyInput } from '@/components/ui/currency-input';
 
 interface PaymentFormData {
   amount: number;
@@ -30,6 +33,7 @@ const LoanPaymentPage = () => {
   const [loading, setLoading] = useState(false);
   const [loan, setLoan] = useState<Loan | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<PaymentFormData>({
     defaultValues: {
@@ -65,10 +69,19 @@ const LoanPaymentPage = () => {
 
       if (walletsError) throw walletsError;
       setWallets(walletsData || []);
+      
+      // Fetch categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user?.id);
+        
+      if (categoriesError) throw categoriesError;
+      setCategories(categoriesData || []);
 
       // Set default amount to remaining amount
       if (loanData) {
-        setValue('amount', loanData.remaining_amount || loanData.amount);
+        setValue('amount', loanData.amount - (loanData.paid_amount || 0));
       }
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -111,14 +124,13 @@ const LoanPaymentPage = () => {
       if (paymentError) throw paymentError;
 
       // Update loan status and remaining amount
-      const newRemainingAmount = (loan.remaining_amount || loan.amount) - data.amount;
-      const newStatus = data.mark_as_paid || newRemainingAmount <= 0 ? 'paid' : 
-                       newRemainingAmount < loan.amount ? 'partial' : 'unpaid';
+      const remainingAmount = loan.amount - (loan.paid_amount || 0);
+      const newStatus = data.mark_as_paid || remainingAmount - data.amount <= 0 ? 'paid' : 
+                       remainingAmount - data.amount < loan.amount ? 'partial' : 'unpaid';
 
       const { error: loanError } = await supabase
         .from('loans')
         .update({
-          remaining_amount: newRemainingAmount,
           status: newStatus,
           paid_amount: (loan.paid_amount || 0) + data.amount
         })
@@ -137,6 +149,34 @@ const LoanPaymentPage = () => {
         .eq('id', data.wallet_id);
 
       if (walletError) throw walletError;
+      
+      // Cari kategori yang sesuai atau gunakan default jika tidak ditemukan
+      let categoryId = null;
+      if (loan.type === 'payable') {
+        const debtPaymentCategory = categories.find(cat => cat.name.toLowerCase() === 'pembayaran hutang');
+        categoryId = debtPaymentCategory?.id;
+      } else {
+        const receivablePaymentCategory = categories.find(cat => cat.name.toLowerCase() === 'penerimaan piutang');
+        categoryId = receivablePaymentCategory?.id;
+      }
+      
+      // Catat transaksi
+      const transactionData = {
+        user_id: user.id,
+        title: loan.type === 'payable' ? 'Bayar Hutang' : 'Terima Pembayaran Piutang',
+        amount: data.amount,
+        type: loan.type === 'payable' ? 'expense' : 'income',
+        date: data.payment_date.from ? format(data.payment_date.from, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        category_id: categoryId,
+        wallet_id: data.wallet_id,
+        description: `${loan.type === 'payable' ? 'Pembayaran hutang' : 'Penerimaan piutang'} untuk ${loan.description || ''}${data.description ? ': ' + data.description : ''}`
+      };
+      
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert(transactionData);
+        
+      if (transactionError) throw transactionError;
 
       toast({
         title: 'Pembayaran Berhasil',
@@ -159,121 +199,113 @@ const LoanPaymentPage = () => {
   if (!loan) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex flex-col z-50">
-      <div className="bg-white rounded-t-xl flex-1 overflow-y-auto">
-        <div className="sticky top-0 bg-white z-10 flex items-center justify-between border-b p-4">
-          <button onClick={() => navigate(-1)} className="p-1" title="Kembali">
+    <Layout>
+      <div className="container mx-auto p-4 max-w-xl pb-24">
+        <div className="flex items-center mb-6">
+          <button onClick={() => navigate(-1)} className="mr-2" title="Kembali">
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <h2 className="font-semibold">
+          <h1 className="text-xl font-bold">
             {loan.type === 'payable' ? 'Pembayaran Hutang' : 'Terima Pembayaran Piutang'}
-          </h2>
-          <div className="w-6"></div>
+            {loan.description && `: ${loan.description}`}
+          </h1>
         </div>
 
-        <div className="p-4">
-          <div className="bg-blue-50 p-4 rounded-lg mb-4">
-            <h3 className="font-medium">Detail {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</h3>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <div>
-                <p className="text-xs text-gray-500">Total {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
-                <p className="font-medium">{formatCurrency(loan.amount)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Sisa {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
-                <p className="font-medium">{formatCurrency(loan.remaining_amount || loan.amount)}</p>
-              </div>
+        <div className="bg-blue-50 p-4 rounded-lg mb-6">
+          <h3 className="font-medium">Detail {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</h3>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div>
+              <p className="text-xs text-gray-500">Total {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
+              <p className="font-medium">{formatCurrency(loan.amount)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Sisa {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
+              <p className="font-medium">{formatCurrency(loan.amount - (loan.paid_amount || 0))}</p>
             </div>
           </div>
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Tanggal Pembayaran</label>
-              <DateRangePicker
-                onChange={(date) => setValue('payment_date', date)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Jumlah Pembayaran</label>
-              <Input
-                type="number"
-                {...register('amount', {
-                  required: 'Jumlah pembayaran harus diisi',
-                  min: { value: 1, message: 'Jumlah harus lebih dari 0' },
-                  max: { 
-                    value: loan.remaining_amount || loan.amount,
-                    message: `Maksimal pembayaran ${formatCurrency(loan.remaining_amount || loan.amount)}`
-                  }
-                })}
-                placeholder="0"
-                error={errors.amount?.message}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Maksimal pembayaran: {formatCurrency(loan.remaining_amount || loan.amount)}
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Pilih Sumber Dana</label>
-              <Select 
-                onValueChange={(value) => setValue('wallet_id', value)}
-                {...register('wallet_id', { required: 'Pilih wallet untuk pembayaran' })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih wallet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {wallets.map(wallet => (
-                    <SelectItem key={wallet.id} value={wallet.id}>
-                      {wallet.name} ({formatCurrency(wallet.balance)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.wallet_id && (
-                <p className="text-sm text-red-500 mt-1">{errors.wallet_id.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Catatan (Opsional)</label>
-              <Input
-                {...register('description')}
-                placeholder="Tambahkan catatan pembayaran"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="mark-paid"
-                {...register('mark_as_paid')}
-              />
-              <label htmlFor="mark-paid" className="text-sm">
-                Tandai sebagai lunas meskipun pembayaran parsial
-              </label>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate(-1)}
-              >
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading}
-                className={loan.type === 'payable' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-green-500 hover:bg-green-600'}
-              >
-                {loading ? 'Memproses...' : loan.type === 'payable' ? 'Bayar' : 'Terima Pembayaran'}
-              </Button>
-            </div>
-          </form>
         </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mb-24">
+          <div>
+            <label className="block text-sm font-medium mb-1">Tanggal Pembayaran</label>
+            <DateRangePicker
+              onChange={(date) => setValue('payment_date', date)}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Jumlah Pembayaran</label>
+            <CurrencyInput
+              showPrefix={true}
+              value={watch('amount')}
+              onChange={(value) => setValue('amount', value)}
+              placeholder="0"
+              error={errors.amount?.message}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Maksimal pembayaran: {formatCurrency(loan.amount - (loan.paid_amount || 0))}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Pilih Sumber Dana</label>
+            <Select 
+              onValueChange={(value) => setValue('wallet_id', value)}
+              {...register('wallet_id', { required: 'Pilih wallet untuk pembayaran' })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih wallet" />
+              </SelectTrigger>
+              <SelectContent>
+                {wallets.map(wallet => (
+                  <SelectItem key={wallet.id} value={wallet.id}>
+                    {wallet.name} ({formatCurrency(wallet.balance)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.wallet_id && (
+              <p className="text-sm text-red-500 mt-1">{errors.wallet_id.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Catatan (Opsional)</label>
+            <Input
+              {...register('description')}
+              placeholder="Tambahkan catatan pembayaran"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="mark-paid"
+              {...register('mark_as_paid')}
+            />
+            <label htmlFor="mark-paid" className="text-sm">
+              Tandai sebagai lunas meskipun pembayaran parsial
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate(-1)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className={loan.type === 'payable' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-green-500 hover:bg-green-600'}
+            >
+              {loading ? 'Memproses...' : loan.type === 'payable' ? 'Bayar' : 'Terima Pembayaran'}
+            </Button>
+          </div>
+        </form>
       </div>
-    </div>
+    </Layout>
   );
 };
 

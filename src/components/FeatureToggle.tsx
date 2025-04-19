@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -46,9 +45,19 @@ const FeatureToggle = ({
           onCheckedChange={onToggle}
           disabled={disabled || loading}
           aria-label={`Toggle ${title}`}
+          className={loading ? "opacity-50 cursor-not-allowed" : ""}
         />
-        {managementLink && checked && (
-          <Link to={managementLink} className="text-gray-500 hover:text-gray-700 transition-colors" aria-label={`Manage ${title}`}>
+        {managementLink && (
+          <Link 
+            to={managementLink} 
+            className={`transition-colors ${
+              checked 
+                ? "text-gray-500 hover:text-gray-700" 
+                : "text-gray-300 pointer-events-none"
+            }`} 
+            aria-label={`Manage ${title}`}
+            tabIndex={checked ? 0 : -1}
+          >
             <ChevronRight className="w-5 h-5" />
           </Link>
         )}

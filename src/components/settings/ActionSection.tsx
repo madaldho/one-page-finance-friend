@@ -4,9 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import {
   FileDown,
-  User,
-  Shield,
-  FileText,
   HelpCircle,
   LogOut
 } from "lucide-react";
@@ -55,51 +52,6 @@ const ActionSection = ({ loading, handleExportData }: ActionSectionProps) => {
             <FileDown className="w-4 h-4 text-gray-600" />
           </div>
           <span>Export Data</span>
-        </div>
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-        onClick={() => navigate("/profile")}
-      >
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-            <User className="w-4 h-4 text-gray-600" />
-          </div>
-          <span>Profil</span>
-        </div>
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-        onClick={() => toast({ 
-          title: "Coming Soon", 
-          description: "Fitur ini akan segera tersedia" 
-        })}
-      >
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-            <Shield className="w-4 h-4 text-gray-600" />
-          </div>
-          <span>Privasi & Keamanan</span>
-        </div>
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-        onClick={() => toast({ 
-          title: "Coming Soon", 
-          description: "Fitur ini akan segera tersedia" 
-        })}
-      >
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-            <FileText className="w-4 h-4 text-gray-600" />
-          </div>
-          <span>Syarat dan Ketentuan</span>
         </div>
       </Button>
       
