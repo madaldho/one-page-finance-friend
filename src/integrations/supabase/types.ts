@@ -135,9 +135,14 @@ export type Database = {
           amount: number
           category: string
           created_at: string | null
+          end_date: string | null
           id: string
           period: string
+          period_display: string | null
+          source_id: string | null
+          source_percentage: number | null
           spent: number | null
+          start_date: string | null
           updated_at: string | null
           user_id: string
         }
@@ -146,9 +151,14 @@ export type Database = {
           amount: number
           category: string
           created_at?: string | null
+          end_date?: string | null
           id?: string
           period: string
+          period_display?: string | null
+          source_id?: string | null
+          source_percentage?: number | null
           spent?: number | null
+          start_date?: string | null
           updated_at?: string | null
           user_id: string
         }
@@ -157,13 +167,26 @@ export type Database = {
           amount?: number
           category?: string
           created_at?: string | null
+          end_date?: string | null
           id?: string
           period?: string
+          period_display?: string | null
+          source_id?: string | null
+          source_percentage?: number | null
           spent?: number | null
+          start_date?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "budgets_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "budget_sources"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -409,6 +432,7 @@ export type Database = {
           description: string
           due_date: string | null
           id: string
+          lender: string | null
           paid_amount: number | null
           status: string
           type: string
@@ -422,6 +446,7 @@ export type Database = {
           description: string
           due_date?: string | null
           id?: string
+          lender?: string | null
           paid_amount?: number | null
           status?: string
           type: string
@@ -435,6 +460,7 @@ export type Database = {
           description?: string
           due_date?: string | null
           id?: string
+          lender?: string | null
           paid_amount?: number | null
           status?: string
           type?: string
@@ -442,6 +468,57 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          loan_id: string
+          payment_date: string
+          updated_at: string | null
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          loan_id: string
+          payment_date: string
+          updated_at?: string | null
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          loan_id?: string
+          payment_date?: string
+          updated_at?: string | null
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -547,57 +624,57 @@ export type Database = {
       }
       savings_transactions: {
         Row: {
+          amount: number
           created_at: string | null
-          deskripsi: string | null
+          date: string
           id: string
-          jenistransaksi: string | null
-          kategori: string | null
-          pemasukan: string | null
-          pengeluaran: string | null
-          savings_id: string | null
-          savings_name: string | null
-          status: string | null
-          tanggal: string | null
-          transaction_description: string | null
-          transaction_type: string | null
+          notes: string | null
+          savings_id: string
+          type: string
           updated_at: string | null
-          user_id: string | null
+          user_id: string
+          wallet_id: string
         }
         Insert: {
+          amount: number
           created_at?: string | null
-          deskripsi?: string | null
-          id: string
-          jenistransaksi?: string | null
-          kategori?: string | null
-          pemasukan?: string | null
-          pengeluaran?: string | null
-          savings_id?: string | null
-          savings_name?: string | null
-          status?: string | null
-          tanggal?: string | null
-          transaction_description?: string | null
-          transaction_type?: string | null
+          date: string
+          id?: string
+          notes?: string | null
+          savings_id: string
+          type: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
+          wallet_id: string
         }
         Update: {
+          amount?: number
           created_at?: string | null
-          deskripsi?: string | null
+          date?: string
           id?: string
-          jenistransaksi?: string | null
-          kategori?: string | null
-          pemasukan?: string | null
-          pengeluaran?: string | null
-          savings_id?: string | null
-          savings_name?: string | null
-          status?: string | null
-          tanggal?: string | null
-          transaction_description?: string | null
-          transaction_type?: string | null
+          notes?: string | null
+          savings_id?: string
+          type?: string
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
+          wallet_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "savings_transactions_savings_id_fkey"
+            columns: ["savings_id"]
+            isOneToOne: false
+            referencedRelation: "savings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "savings_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
