@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ChevronRight, Blocks, Home, CreditCard } from "lucide-react";
+import { Loader2,  ChevronRight, Blocks } from "lucide-react";
 import ProfileSection from "@/components/settings/ProfileSection";
 import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
@@ -270,50 +269,6 @@ const Settings = () => {
                   <h3 className="font-medium">Kategori</h3>
                   <p className="text-xs text-gray-500 mt-0.5">
                     Kelola kategori untuk transaksi pemasukan dan pengeluaran
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="border-b border-gray-100 hover:bg-gray-50">
-            <div 
-              className="flex items-center justify-between p-4 cursor-pointer"
-              onClick={() => navigate('/loans')}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Hutang Piutang</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Kelola daftar hutang dan piutang Anda
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              </div>
-            </div>
-          </div>
-
-          <div className="hover:bg-gray-50">
-            <div 
-              className="flex items-center justify-between p-4 cursor-pointer"
-              onClick={() => navigate('/assets')}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                  <Home className="w-4 h-4 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Aset</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Kelola dan pantau nilai aset kekayaan Anda
                   </p>
                 </div>
               </div>
