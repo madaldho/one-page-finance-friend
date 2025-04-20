@@ -30,6 +30,7 @@ import AddDebtPage from './pages/AddDebtPage';
 import AddReceivablePage from './pages/AddReceivablePage';
 import EditLoanPage from './pages/EditLoanPage';
 import { CategoryForm } from './components/CategoryForm';
+import AssetsPage from './pages/AssetsPage';
 
 // Create a wrapper component to handle auth redirects
 const AuthRedirect = () => {
@@ -217,6 +218,11 @@ function App() {
           <Route path="/transactions" element={
             <ProtectedRoute>
               <Transactions />
+            </ProtectedRoute>
+          } />
+          <Route path="/assets" element={
+            <ProtectedRoute>
+              <AssetsPage />
             </ProtectedRoute>
           } />
           <Route path="*" element={<NotFound />} />

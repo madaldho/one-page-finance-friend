@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2,  ChevronRight, Blocks } from "lucide-react";
+import { Loader2,  ChevronRight, Blocks, House } from "lucide-react";
 import ProfileSection from "@/components/settings/ProfileSection";
 import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
@@ -140,7 +140,7 @@ const Settings = () => {
             user_id: session.user.id,
             show_budgeting: setting === 'show_budgeting' ? !settings.show_budgeting : settings.show_budgeting,
             show_savings: setting === 'show_savings' ? !settings.show_savings : settings.show_savings,
-            show_loans: setting === 'show_loans' ? !settings.show_loans : settings.show_loans,
+            show_loans: setting === 'show_loans' ? !settings.show_savings : settings.show_savings,
           });
           
         if (insertError) throw insertError;
@@ -256,6 +256,28 @@ const Settings = () => {
         <section className="mb-6 bg-white rounded-lg shadow-sm overflow-hidden">
           <h2 className="font-semibold p-4 border-b border-gray-100">Konfigurasi</h2>
           
+          <div className="border-b border-gray-100 hover:bg-gray-50">
+            <div 
+              className="flex items-center justify-between p-4 cursor-pointer"
+              onClick={() => navigate('/assets')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                  <House className="w-4 h-4 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Aset</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Kelola aset dan pantau nilai kekayaan Anda
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </div>
+          </div>
+
           <div className="border-b border-gray-100 hover:bg-gray-50">
             <div 
               className="flex items-center justify-between p-4 cursor-pointer"
