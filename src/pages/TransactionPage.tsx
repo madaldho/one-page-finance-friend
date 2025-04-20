@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { ChevronLeft, Calendar, X, ArrowLeftCircle, Wallet, Tag, MessageSquareText } from "lucide-react";
+import { ChevronLeft, Calendar, X, ArrowLeftCircle, Wallet, Tag, MessageSquareText, PlusCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,9 +29,52 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-const incomeCategories = ["Gaji", "Bonus", "Investasi", "Lainnya"];
-const expenseCategories = ["Belanja", "Makanan", "Transport", "Lainnya"];
+// Placeholder fallback categories jika database kosong
+const fallbackIncomeCategories = ["Gaji", "Bonus", "Investasi", "Lainnya"];
+const fallbackExpenseCategories = ["Belanja", "Makanan", "Transport", "Lainnya"];
+
+interface Category {
+  id: string;
+  name: string;
+  type: string;
+  color: string;
+  user_id: string;
+}
+
+interface Wallet {
+  id: string;
+  name: string;
+  balance: number;
+  user_id: string;
+  description?: string;
+}
+
+interface Transaction {
+  id: string;
+  title: string;
+  amount: number;
+  type: string;
+  date: string;
+  category: string;
+  description?: string;
+  user_id: string;
+  wallet_id: string;
+  destination_wallet_id?: string;
+  fee?: number;
+  created_at?: string;
+}
 
 interface TransactionFormData {
   title: string;
@@ -47,14 +90,19 @@ interface TransactionFormData {
 }
 
 const TransactionPage = () => {
-  const { type } = useParams<{ type: string }>();
+  const { type, id } = useParams<{ type: string; id?: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [wallets, setWallets] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [transaction, setTransaction] = useState<any>(null);
+  const [transaction, setTransaction] = useState<Transaction | null>(null);
+  const [showCategoryAlert, setShowCategoryAlert] = useState(false);
+  const [showWalletAlert, setShowWalletAlert] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const form = useForm<TransactionFormData>({
     defaultValues: {
@@ -69,6 +117,7 @@ const TransactionPage = () => {
       source_fee: 0,
       destination_fee: 0,
     },
+    mode: "onChange"
   });
 
   const watchAmount = form.watch("amount");
@@ -79,14 +128,74 @@ const TransactionPage = () => {
   const watchSourceFee = form.watch("source_fee");
   const watchDestFee = form.watch("destination_fee");
 
+  // Fetch transaction data for editing
+  const fetchTransactionData = async () => {
+    if (!id || !user) return;
+    
+    setFetchingData(true);
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        setTransaction(data);
+        setIsEditMode(true);
+        
+        // Populate form with transaction data
+        form.setValue('title', data.title || '');
+        form.setValue('amount', data.amount || 0);
+        form.setValue('date', data.date || new Date().toISOString().split('T')[0]);
+        form.setValue('description', data.description || '');
+        
+        if (data.type === 'transfer') {
+          form.setValue('source_wallet', data.wallet_id || '');
+          form.setValue('destination_wallet', data.destination_wallet_id || '');
+          
+          // Try to get fee data if available
+          if (data.fee) {
+            // For simplicity, assume half the fee is for source and half for destination
+            const halfFee = data.fee / 2;
+            form.setValue('source_fee', halfFee);
+            form.setValue('destination_fee', halfFee);
+          }
+        } else {
+          form.setValue('category', data.category || '');
+          form.setValue('wallet_id', data.wallet_id || '');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching transaction:', error);
+      toast({
+        title: 'Error',
+        description: 'Gagal memuat data transaksi',
+        variant: 'destructive',
+      });
+    } finally {
+      setFetchingData(false);
+    }
+  };
+
   useEffect(() => {
-    fetchWallets();
+    if (user) {
+      fetchWallets();
+      fetchCategories();
+      
+      // If we have an ID, fetch the transaction data
+      if (id) {
+        fetchTransactionData();
+      }
+    }
     
     // Play bell sound on component mount to preload
-    const audio = new Audio("/bell-sound.mp3");
+    const audio = new Audio("/bellbike.MP3");
     audio.volume = 0.5;
     audio.load();
-  }, []);
+  }, [user, id]);
 
   const fetchWallets = async () => {
     if (!user) return;
@@ -99,8 +208,35 @@ const TransactionPage = () => {
         
       if (error) throw error;
       setWallets(data || []);
+      
+      // Jika tidak ada wallet, tampilkan alert
+      if (data?.length === 0) {
+        setShowWalletAlert(true);
+      }
     } catch (error) {
       console.error("Error fetching wallets:", error);
+    }
+  };
+  
+  const fetchCategories = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("type", type === "income" ? "income" : "expense");
+        
+      if (error) throw error;
+      setCategories(data || []);
+      
+      // Jika tidak ada kategori, tampilkan alert
+      if (type !== "transfer" && data?.length === 0) {
+        setShowCategoryAlert(true);
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
     }
   };
 
@@ -155,13 +291,50 @@ const TransactionPage = () => {
         return "✓";
     }
   };
+  
+  const createCategory = () => {
+    navigate(type === "income" ? "/categories/add?type=income" : "/categories/add?type=expense");
+  };
+  
+  const createWallet = () => {
+    navigate("/wallet/add");
+  };
 
   const onSubmit = async (data: TransactionFormData) => {
     if (!user) return;
+    
+    // Tambahkan validasi untuk field wajib
+    if (type !== "transfer" && !data.category) {
+      toast({
+        title: "Error",
+        description: "Kategori wajib diisi",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (type !== "transfer" && !data.wallet_id) {
+      toast({
+        title: "Error",
+        description: "Wallet wajib dipilih",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (data.amount <= 0) {
+      toast({
+        title: "Error",
+        description: "Nominal harus lebih dari 0",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
-      let transactionData: any = {};
+      let transactionData: Transaction;
 
       if (type === "transfer") {
         // Handle transfer transaction
@@ -178,56 +351,122 @@ const TransactionPage = () => {
           return;
         }
         
-        if (sourceWallet.balance < data.amount) {
-          toast({
-            title: "Saldo Tidak Cukup",
-            description: "Saldo di wallet sumber tidak mencukupi",
-            variant: "destructive"
-          });
-          setLoading(false);
-          return;
-        }
-        
         // Calculate total fees
         const totalFees = (data.source_fee || 0) + (data.destination_fee || 0);
         
-        // Create transfer transaction
-        const { data: transferData, error: transferError } = await supabase
+        try {
+          console.log("Memproses transfer antar wallet...");
+          
+          // 1. Create expense transaction from source wallet for the transfer amount
+          const { data: expenseData, error: expenseError } = await supabase
           .from("transactions")
           .insert({
-          title: data.title || `Transfer dari ${sourceWallet.name} ke ${destWallet.name}`,
-          amount: data.amount,
-          type: "transfer",
-          date: data.date,
-          category: "Transfer",
-          description: data.description,
-          user_id: user.id,
-            wallet_id: sourceWallet.id,
-            destination_wallet_id: destWallet.id,
-            fee: totalFees
+              title: data.title || `Transfer ke ${destWallet.name}`,
+              amount: data.amount,
+              type: "expense",
+              date: data.date,
+              category: "Transfer",
+              description: data.description,
+              user_id: user.id,
+              wallet_id: sourceWallet.id
           })
             .select()
             .single();
           
-          if (transferError) throw transferError;
+          if (expenseError) {
+            console.error("Expense transaction error:", expenseError);
+            throw expenseError;
+          }
+          
+          console.log("Transaksi expense transfer berhasil dibuat:", expenseData);
+          
+          // 2. Create income transaction to destination wallet
+          const { data: incomeData, error: incomeError } = await supabase
+            .from("transactions")
+            .insert({
+              title: data.title || `Transfer dari ${sourceWallet.name}`,
+              amount: data.amount,
+              type: "income",
+              date: data.date,
+              category: "Transfer",
+              description: data.description,
+              user_id: user.id,
+              wallet_id: destWallet.id
+            })
+            .select()
+            .single();
+            
+          if (incomeError) {
+            console.error("Income transaction error:", incomeError);
+            throw incomeError;
+          }
+          
+          console.log("Transaksi income berhasil dibuat:", incomeData);
+          
+          // 3. If there's a fee, create a separate expense transaction for it
+          if (totalFees > 0) {
+            const { data: feeData, error: feeError } = await supabase
+              .from("transactions")
+              .insert({
+                title: `Biaya Admin Transfer`,
+                amount: totalFees,
+                type: "expense",
+                date: data.date,
+                category: "Biaya Admin",
+                description: `Biaya admin untuk transfer ${sourceWallet.name} ke ${destWallet.name}`,
+                user_id: user.id,
+                wallet_id: sourceWallet.id
+              })
+              .select()
+              .single();
+              
+            if (feeError) {
+              console.error("Fee transaction error:", feeError);
+              throw feeError;
+            }
+            
+            console.log("Transaksi biaya admin berhasil dibuat:", feeData);
+          }
         
-        // Update source wallet (deduct)
-          await supabase
+          // Update source wallet (deduct transfer amount + fee)
+          const { error: sourceWalletError } = await supabase
             .from("wallets")
             .update({ 
-              balance: sourceWallet.balance - data.amount 
+              balance: sourceWallet.balance - data.amount - totalFees 
             })
             .eq("id", sourceWallet.id);
           
-        // Update destination wallet (add)
-          await supabase
+          if (sourceWalletError) {
+            console.error("Source wallet update error:", sourceWalletError);
+            throw sourceWalletError;
+          }
+          
+          // Update destination wallet (add transfer amount only)
+          const { error: destWalletError } = await supabase
             .from("wallets")
             .update({ 
-              balance: destWallet.balance + (data.amount - totalFees)
+              balance: destWallet.balance + data.amount
             })
             .eq("id", destWallet.id);
           
-        transactionData = transferData;
+          if (destWalletError) {
+            console.error("Destination wallet update error:", destWalletError);
+            throw destWalletError;
+          }
+          
+          // Use the expense transaction as the main one to display
+          transactionData = {
+            ...expenseData,
+            destination_wallet_id: destWallet.id, // Tambahkan info dompet tujuan untuk UI
+            fee: totalFees
+          } as Transaction;
+          
+          console.log("Transfer selesai, data transaksi:", transactionData);
+          
+        } catch (error: unknown) {
+          console.error("Transfer transaction error:", error);
+          throw error; // Re-throw untuk ditangkap di catch block utama
+        }
       } else {
         // Handle income or expense transaction
         const wallet = wallets.find(w => w.id === data.wallet_id);
@@ -242,6 +481,95 @@ const TransactionPage = () => {
           return;
         }
         
+        // Persiapkan data transaksi
+        const transactionPayload = {
+          title: data.title || (type === "income" ? "Pemasukan" : "Pengeluaran"),
+          amount: data.amount,
+          type: type,
+          date: data.date,
+          category: data.category,
+          description: data.description,
+          user_id: user.id,
+          wallet_id: data.wallet_id
+        };
+        
+        if (isEditMode && id) {
+          // Jika edit mode, update transaksi yang ada
+          
+          // 1. Ambil data transaksi lama untuk perbandingan
+          const { data: oldTransactionData, error: oldTransactionError } = await supabase
+            .from("transactions")
+            .select("*")
+            .eq("id", id)
+            .single();
+          
+          if (oldTransactionError) throw oldTransactionError;
+          const oldTransaction = oldTransactionData as Transaction;
+          
+          // 2. Update transaksi ke database
+          const { data: updatedData, error: updateError } = await supabase
+            .from("transactions")
+            .update(transactionPayload)
+            .eq("id", id)
+            .select()
+            .single();
+            
+          if (updateError) throw updateError;
+          
+          // 3. Jika jumlah atau wallet berubah, perlu update saldo wallet
+          if (oldTransaction.amount !== data.amount || oldTransaction.wallet_id !== data.wallet_id) {
+            
+            // 3a. Kembalikan dulu saldo wallet lama ke kondisi semula
+            const oldWallet = wallets.find(w => w.id === oldTransaction.wallet_id);
+            if (oldWallet) {
+              const oldWalletNewBalance = oldTransaction.type === "income" 
+                ? oldWallet.balance - oldTransaction.amount 
+                : oldWallet.balance + oldTransaction.amount;
+              
+              await supabase
+                .from("wallets")
+                .update({ balance: oldWalletNewBalance })
+                .eq("id", oldWallet.id);
+            }
+            
+            // 3b. Lalu update saldo wallet baru
+            if (oldTransaction.wallet_id === data.wallet_id) {
+              // Jika wallet sama, cukup update selisihnya
+              const newBalance = type === "income" 
+                ? wallet.balance + data.amount 
+                : wallet.balance - data.amount;
+              
+              await supabase
+                .from("wallets")
+                .update({ balance: newBalance })
+                .eq("id", wallet.id);
+            } else {
+              // Jika wallet berbeda, update wallet baru
+              const newBalance = type === "income" 
+                ? wallet.balance + data.amount 
+                : wallet.balance - data.amount;
+              
+              // For expense, check if balance is sufficient
+              if (type === "expense" && wallet.balance < data.amount) {
+                toast({
+                  title: "Saldo Tidak Cukup",
+                  description: "Saldo tidak mencukupi",
+                  variant: "destructive"
+                });
+                setLoading(false);
+                return;
+              }
+              
+              await supabase
+                .from("wallets")
+                .update({ balance: newBalance })
+                .eq("id", wallet.id);
+            }
+          }
+          
+          transactionData = updatedData as Transaction;
+        } else {
+          // Jika buat baru
         // For expense, check if balance is sufficient
         if (type === "expense" && wallet.balance < data.amount) {
           toast({
@@ -256,16 +584,7 @@ const TransactionPage = () => {
         // Create income/expense transaction
         const { data: txData, error: txError } = await supabase
           .from("transactions")
-          .insert({
-          title: data.title || (type === "income" ? "Pemasukan" : "Pengeluaran"),
-          amount: data.amount,
-          type: type,
-          date: data.date,
-          category: data.category,
-          description: data.description,
-          user_id: user.id,
-            wallet_id: data.wallet_id
-          })
+            .insert(transactionPayload)
             .select()
             .single();
           
@@ -281,11 +600,12 @@ const TransactionPage = () => {
             .update({ balance: newBalance })
             .eq("id", wallet.id);
           
-          transactionData = txData;
+          transactionData = txData as Transaction;
+        }
       }
       
       // Play success sound
-      const audio = new Audio("/bell-sound.mp3");
+      const audio = new Audio("/bellbike.MP3");
       audio.volume = 0.5;
       audio.play();
       
@@ -293,11 +613,11 @@ const TransactionPage = () => {
       setTransaction(transactionData);
       setShowSuccess(true);
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving transaction:", error);
       toast({
         title: "Gagal Menyimpan",
-        description: error.message || "Terjadi kesalahan saat menyimpan transaksi",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan saat menyimpan transaksi",
         variant: "destructive"
       });
     } finally {
@@ -314,6 +634,13 @@ const TransactionPage = () => {
     const date = new Date();
     const formattedDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}, ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
     
+    // Temukan nama kategori berdasarkan ID
+    const getCategoryName = (categoryId: string) => {
+      if (categoryId === "Transfer") return "Transfer";
+      const category = categories.find(c => c.id === categoryId);
+      return category ? category.name : categoryId;
+    };
+
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <Card className="w-full max-w-md overflow-hidden bg-white">
@@ -341,7 +668,7 @@ const TransactionPage = () => {
             
             <div className="flex justify-between py-2">
               <span className="text-gray-500">Kategori</span>
-              <span className="font-medium">{transaction.category}</span>
+              <span className="font-medium">{getCategoryName(transaction.category)}</span>
             </div>
             
             <div className="flex justify-between py-2">
@@ -378,6 +705,18 @@ const TransactionPage = () => {
     );
   }
 
+  // Di bagian awal render, tambahkan loading state
+  if (fetchingData) {
+    return (
+      <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
+          <p className="text-gray-500">Memuat data transaksi...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col">
       {/* Header dengan gradien */}
@@ -394,10 +733,42 @@ const TransactionPage = () => {
           >
             <X className="h-4 w-4" />
           </button>
-          <h2 className="font-semibold">{getPageTitle()}</h2>
+          <h2 className="font-semibold">{isEditMode ? `Edit ${getPageTitle().replace('Tambah ', '')}` : getPageTitle()}</h2>
           <div className="w-8"></div> {/* Spacer for centering */}
         </div>
       </div>
+
+      {/* Alert Dialog untuk Kategori */}
+      <AlertDialog open={showCategoryAlert} onOpenChange={setShowCategoryAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Belum Ada Kategori</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda belum memiliki kategori {type === "income" ? "pemasukan" : "pengeluaran"}. Buat kategori baru terlebih dahulu.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => navigate("/home")}>Kembali</AlertDialogCancel>
+            <AlertDialogAction onClick={createCategory}>Buat Kategori</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Alert Dialog untuk Wallet */}
+      <AlertDialog open={showWalletAlert} onOpenChange={setShowWalletAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Belum Ada Wallet</AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda belum memiliki wallet. Buat wallet baru terlebih dahulu.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => navigate("/home")}>Kembali</AlertDialogCancel>
+            <AlertDialogAction onClick={createWallet}>Buat Wallet</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-xl mx-auto p-4 pb-24 w-full">
@@ -418,7 +789,7 @@ const TransactionPage = () => {
                         "bg-blue-50/50"
                       ) : ""
                     )}>
-                      <FormLabel className="text-gray-500 text-sm">Nominal</FormLabel>
+                      <FormLabel className="text-gray-500 text-sm">Nominal <span className="text-red-500">*</span></FormLabel>
                     <FormControl>
                         <div className="relative">
                           <span className="absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold ml-4">
@@ -469,29 +840,51 @@ const TransactionPage = () => {
                       <FormItem>
                         <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-200">
                           <Tag className="h-4 w-4 text-gray-500" />
-                        <Select
-                          onValueChange={field.onChange}
-                            defaultValue={field.value}
-                        >
-                            <FormControl>
-                              <SelectTrigger className="border-0 p-0 h-auto focus:ring-0">
-                            <SelectValue placeholder="Pilih kategori" />
-                          </SelectTrigger>
-                            </FormControl>
-                          <SelectContent>
-                              {(type === "income" ? incomeCategories : expenseCategories).map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
+                          <div className="flex-1 flex items-center justify-between">
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="border-0 p-0 h-auto focus:ring-0 flex-1">
+                                  <SelectValue placeholder="Pilih kategori *" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {categories.length > 0 ? (
+                                  categories.map((category) => (
+                                    <SelectItem key={category.id} value={category.id}>
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }}></div>
+                                        <span>{category.name}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  (type === "income" ? fallbackIncomeCategories : fallbackExpenseCategories).map((category) => (
+                                    <SelectItem key={category} value={category}>
+                                      {category}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              className="ml-1 p-0 h-6 w-6" 
+                              onClick={createCategory}
+                            >
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </div>
 
               {/* Wallet selection */}
@@ -504,30 +897,41 @@ const TransactionPage = () => {
                       <div className="flex items-start gap-3 p-3 rounded-xl border border-gray-200">
                         <Wallet className="h-4 w-4 text-gray-500 mt-2" />
                         <div className="flex-1">
-                          <FormLabel className="text-xs text-gray-500">Wallet</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                    <FormControl>
-                              <SelectTrigger className="border-0 p-0 h-auto mt-1 focus:ring-0">
-                                <SelectValue placeholder="Pilih Wallet" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {wallets.map((wallet) => (
-                                <SelectItem key={wallet.id} value={wallet.id}>
-                                  {wallet.name} ({formatCurrency(wallet.balance)})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <FormLabel className="text-xs text-gray-500">Wallet <span className="text-red-500">*</span></FormLabel>
+                          <div className="flex items-center">
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="border-0 p-0 h-auto mt-1 focus:ring-0">
+                                  <SelectValue placeholder="Pilih Wallet" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {wallets.map((wallet) => (
+                                  <SelectItem key={wallet.id} value={wallet.id}>
+                                    {wallet.name} ({formatCurrency(wallet.balance)})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              className="ml-1 p-0 h-6 w-6" 
+                              onClick={createWallet}
+                            >
+                              <PlusCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               ) : (
                 // Transfer wallets (source and destination)
                 <div className="space-y-4">
@@ -540,23 +944,34 @@ const TransactionPage = () => {
                           <Wallet className="h-4 w-4 text-gray-500 mt-2" />
                           <div className="flex-1">
                             <FormLabel className="text-xs text-gray-500">Wallet Sumber</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                              defaultValue={field.value}
-                          >
-                              <FormControl>
-                                <SelectTrigger className="border-0 p-0 h-auto mt-1 focus:ring-0">
-                                  <SelectValue placeholder="Pilih wallet sumber" />
-                            </SelectTrigger>
-                              </FormControl>
-                            <SelectContent>
-                                {wallets.map((wallet) => (
-                                <SelectItem key={wallet.id} value={wallet.id}>
-                                  {wallet.name} ({formatCurrency(wallet.balance)})
-                                </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
+                            <div className="flex items-center">
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="border-0 p-0 h-auto mt-1 focus:ring-0">
+                                    <SelectValue placeholder="Pilih wallet sumber" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {wallets.map((wallet) => (
+                                    <SelectItem key={wallet.id} value={wallet.id}>
+                                      {wallet.name} ({formatCurrency(wallet.balance)})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                className="ml-1 p-0 h-6 w-6" 
+                                onClick={createWallet}
+                              >
+                                <PlusCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                         <FormMessage />
@@ -579,26 +994,37 @@ const TransactionPage = () => {
                           <Wallet className="h-4 w-4 text-gray-500 mt-2" />
                           <div className="flex-1">
                             <FormLabel className="text-xs text-gray-500">Wallet Tujuan</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="border-0 p-0 h-auto mt-1 focus:ring-0">
-                                  <SelectValue placeholder="Pilih wallet tujuan" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {wallets
-                                  .filter(wallet => wallet.id !== watchSourceWallet)
-                                  .map((wallet) => (
-                                    <SelectItem key={wallet.id} value={wallet.id}>
-                                      {wallet.name} ({formatCurrency(wallet.balance)})
-                                    </SelectItem>
-                                  ))
-                                }
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center">
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="border-0 p-0 h-auto mt-1 focus:ring-0">
+                                    <SelectValue placeholder="Pilih wallet tujuan" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {wallets
+                                    .filter(wallet => wallet.id !== watchSourceWallet)
+                                    .map((wallet) => (
+                                      <SelectItem key={wallet.id} value={wallet.id}>
+                                        {wallet.name} ({formatCurrency(wallet.balance)})
+                                      </SelectItem>
+                                    ))
+                                  }
+                                </SelectContent>
+                              </Select>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                className="ml-1 p-0 h-6 w-6" 
+                                onClick={createWallet}
+                              >
+                                <PlusCircle className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                         <FormMessage />
@@ -607,6 +1033,30 @@ const TransactionPage = () => {
                   />
                 </div>
               )}
+            
+              {/* Deskripsi - dipindah ke atas title */}
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <div className="flex items-start gap-3 p-3 rounded-xl border border-gray-200">
+                      <MessageSquareText className="h-4 w-4 text-gray-500 mt-2" />
+                      <div className="flex-1">
+                        <FormLabel className="text-xs text-gray-500">Catatan</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Catatan transaksi (opsional)" 
+                            {...field}
+                            className="border-0 p-0 h-auto mt-1 min-h-[60px] resize-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                        </FormControl>
+                      </div>
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             
               {/* Judul transaksi */}
               <FormField
@@ -617,36 +1067,12 @@ const TransactionPage = () => {
                     <div className="flex items-start gap-3 p-3 rounded-xl border border-gray-200">
                       <MessageSquareText className="h-4 w-4 text-gray-500 mt-2" />
                       <div className="flex-1">
-                        <FormLabel className="text-xs text-gray-500">Judul Transaksi</FormLabel>
+                        <FormLabel className="text-xs text-gray-500">Judul Transaksi <span className="text-gray-400">(opsional)</span></FormLabel>
                         <FormControl>
                           <Input
                             placeholder={type === "income" ? "Contoh: Gaji Bulanan" : type === "expense" ? "Contoh: Belanja Bulanan" : "Contoh: Transfer ke BCA"}
                             {...field}
                             className="border-0 p-0 h-auto mt-1 focus-visible:ring-0 focus-visible:ring-offset-0"
-                          />
-                        </FormControl>
-                      </div>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            
-              {/* Deskripsi */}
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-start gap-3 p-3 rounded-xl border border-gray-200">
-                      <MessageSquareText className="h-4 w-4 text-gray-500 mt-2" />
-                      <div className="flex-1">
-                        <FormLabel className="text-xs text-gray-500">Deskripsi</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Deskripsi transaksi (opsional)" 
-                            {...field}
-                            className="border-0 p-0 h-auto mt-1 min-h-[40px] resize-none focus-visible:ring-0 focus-visible:ring-offset-0"
                           />
                         </FormControl>
                       </div>
@@ -718,12 +1144,12 @@ const TransactionPage = () => {
                     </div>
                     <div className="flex justify-between">
                       <span>Biaya Admin:</span>
-                      <span className="font-medium">- {formatCurrency((watchSourceFee || 0) + (watchDestFee || 0))}</span>
+                      <span className="font-medium">+ {formatCurrency((watchSourceFee || 0) + (watchDestFee || 0))}</span>
                     </div>
                     <div className="border-t border-blue-200 my-2 pt-2"></div>
                     <div className="flex justify-between font-medium">
-                      <span>Total Diterima:</span>
-                      <span className="font-medium">{formatCurrency(watchAmount - (watchSourceFee || 0) - (watchDestFee || 0))}</span>
+                      <span>Total Dikeluarkan:</span>
+                      <span className="font-medium">{formatCurrency(watchAmount + (watchSourceFee || 0) + (watchDestFee || 0))}</span>
                     </div>
                   </div>
                 </div>
@@ -748,7 +1174,7 @@ const TransactionPage = () => {
             className={cn("flex-1 rounded-xl", getButtonColor())}
             disabled={loading}
           >
-            {loading ? "Menyimpan..." : type === "transfer" ? "Transfer" : "Simpan"}
+            {loading ? "Menyimpan..." : isEditMode ? "Simpan Perubahan" : type === "transfer" ? "Transfer" : "Simpan"}
               </Button>
             </div>
       </div>

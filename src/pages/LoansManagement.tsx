@@ -370,14 +370,14 @@ const LoansManagement = () => {
             <div className="text-center py-8">
               <p>Memuat data hutang...</p>
             </div>
-          ) : loans.filter(loan => loan.type === "payable").length === 0 ? (
+          ) : filteredLoans().filter(loan => loan.type === "payable").length === 0 ? (
             <div className="text-center py-8 bg-white rounded-lg">
               <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
               <p>Tidak ada hutang yang ditemukan.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {loans
+              {filteredLoans()
                 .filter(loan => loan.type === "payable")
                 .map((loan) => {
                   const isOverdue = new Date(loan.due_date) < new Date() && loan.status !== "paid";
@@ -398,6 +398,9 @@ const LoansManagement = () => {
                                   <h3 className="font-medium text-gray-800">{loan.description}</h3>
                                   {isPaid && (
                                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Lunas</span>
+                                  )}
+                                  {isOverdue && !isPaid && (
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full">Terlambat</span>
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-500">Jatuh tempo: {formatDate(loan.due_date)}</p>
@@ -526,14 +529,14 @@ const LoansManagement = () => {
             <div className="text-center py-8">
               <p>Memuat data piutang...</p>
             </div>
-          ) : loans.filter(loan => loan.type === "receivable").length === 0 ? (
+          ) : filteredLoans().filter(loan => loan.type === "receivable").length === 0 ? (
             <div className="text-center py-8 bg-white rounded-lg">
               <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
               <p>Tidak ada piutang yang ditemukan.</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {loans
+              {filteredLoans()
                 .filter(loan => loan.type === "receivable")
                 .map((loan) => {
                   const isOverdue = new Date(loan.due_date) < new Date() && loan.status !== "paid";
@@ -554,6 +557,9 @@ const LoansManagement = () => {
                                   <h3 className="font-medium text-gray-800">{loan.description}</h3>
                                   {isPaid && (
                                     <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">Lunas</span>
+                                  )}
+                                  {isOverdue && !isPaid && (
+                                    <span className="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full">Terlambat</span>
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-500">Jatuh tempo: {formatDate(loan.due_date)}</p>
@@ -779,22 +785,21 @@ const LoansManagement = () => {
               </label>
             </div>
 
-            <div className="flex space-x-2 pt-4">
+            <div className="grid grid-cols-2 gap-4 pt-4">
               <Button 
                 type="button" 
                 variant="outline" 
-                className="flex-1"
                 onClick={() => setPaymentDialogOpen(false)}
               >
                 Batal
               </Button>
               <Button 
                 type="submit" 
-                className={`flex-1 ${
+                className={
                   selectedLoan?.type === "payable" ? 
                   "bg-blue-600 hover:bg-blue-700" : 
                   "bg-green-600 hover:bg-green-700"
-                }`}
+                }
               >
                 {selectedLoan?.type === "payable" ? "Bayar Sekarang" : "Terima Pembayaran"}
               </Button>
@@ -812,7 +817,7 @@ const LoansManagement = () => {
           <p>
             Apakah Anda yakin ingin menghapus {selectedLoan?.type === 'payable' ? 'hutang' : 'piutang'} "{selectedLoan?.description}"?
           </p>
-          <div className="flex justify-end space-x-2 mt-4">
+          <div className="grid grid-cols-2 gap-4 mt-4">
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}

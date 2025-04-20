@@ -19,6 +19,8 @@ interface LoansCardProps {
 const LoansCard = ({ loans = [], loading = false, onViewAll }: LoansCardProps) => {
   const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  const [showListModal, setShowListModal] = useState(false);
+  const [activeListType, setActiveListType] = useState<'payable' | 'receivable' | null>(null);
 
   // Group loans by type and filter out paid ones
   const activeDebts = loans.filter(loan => loan.type === "payable" && loan.status !== "paid");
@@ -42,6 +44,16 @@ const LoansCard = ({ loans = [], loading = false, onViewAll }: LoansCardProps) =
   const handleCloseDetail = () => {
     setShowDetail(false);
     setTimeout(() => setSelectedLoan(null), 300);
+  };
+
+  const handleShowList = (type: 'payable' | 'receivable') => {
+    setActiveListType(type);
+    setShowListModal(true);
+  };
+
+  const handleCloseListModal = () => {
+    setShowListModal(false);
+    setActiveListType(null);
   };
 
   const getPaymentProgress = (loan: Loan) => {
@@ -85,138 +97,161 @@ const LoansCard = ({ loans = [], loading = false, onViewAll }: LoansCardProps) =
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-              {/* Summary */}
-              <div className="flex justify-between mb-3 text-sm">
-                <div>
-                  <p className="text-gray-500">Total Hutang</p>
-                  <p className="font-semibold text-red-600">{formatCurrency(totalDebts)}</p>
+          <div>
+            {/* Split card layout */}
+            <div className="flex gap-2">
+              {/* Hutang Section */}
+              <div 
+                className="flex-1 bg-red-50 p-3 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+                onClick={() => handleShowList('payable')}
+              >
+                <div className="mb-2">
+                  <p className="text-xs text-gray-500">Total Hutang</p>
+                  <p className="font-bold text-red-600">{formatCurrency(totalDebts)}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-gray-500">Total Piutang</p>
-                  <p className="font-semibold text-green-600">{formatCurrency(totalReceivables)}</p>
+                <div className="flex justify-between items-center">
+                  <p className="text-xs text-gray-600">Hutang ({activeDebts.length})</p>
+                  <ChevronRight className="h-3 w-3 text-gray-400" />
                 </div>
               </div>
 
-              {/* Debts */}
-            {activeDebts.length > 0 && (
-              <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">Hutang ({activeDebts.length})</h3>
-                    {activeDebts.length > 1 && (
-                      <Link to="/loans" className="text-xs text-blue-600">
-                        Lihat Semua
-                      </Link>
-                    )}
-                  </div>
-                  
-                  <div className="border rounded-lg overflow-hidden">
-                    {activeDebts.slice(0, 2).map((debt) => (
-                      <a 
-                        href="#" 
-                        key={debt.id}
-                        className="block border-b last:border-b-0 p-2.5 hover:bg-gray-50"
-                        onClick={(e) => handleLoanClick(debt, e)}
-                      >
-                    <div className="flex items-center justify-between">
-                          <div className="flex-1 mr-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{debt.description}</span>
-                              {isOverdue(debt.due_date) && (
-                                <Badge variant="destructive" className="text-[9px] py-0 px-1.5">Terlambat</Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {debt.due_date && (
-                                <span>Jatuh tempo: {format(parseISO(debt.due_date), "d MMM yyyy", { locale: id })}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="text-red-600 font-medium text-sm">
-                              {formatCurrency(debt.amount - (debt.paid_amount || 0))}
-                            </span>
-                            <ArrowRight className="h-3.5 w-3.5 ml-1.5 text-gray-400" />
-                          </div>
-                      </div>
-                        
-                        {debt.paid_amount > 0 && (
-                          <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5">
-                            <div 
-                              className="bg-red-500 h-1 rounded-full" 
-                              style={{ width: `${Math.min(100, Math.round((debt.paid_amount / debt.amount) * 100))}%` }}
-                            ></div>
-                      </div>
-                        )}
-                    </a>
-                    ))}
-                    </div>
-                    </div>
-              )}
-
-              {/* Receivables */}
-              {activeReceivables.length > 0 && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium text-gray-700">Piutang ({activeReceivables.length})</h3>
-                    {activeReceivables.length > 1 && (
-                      <Link to="/loans" className="text-xs text-blue-600">
-                        Lihat Semua
-                  </Link>
-                    )}
-                  </div>
-                  
-                  <div className="border rounded-lg overflow-hidden">
-                    {activeReceivables.slice(0, 2).map((receivable) => (
-                      <a 
-                        href="#" 
-                        key={receivable.id}
-                        className="block border-b last:border-b-0 p-2.5 hover:bg-gray-50"
-                        onClick={(e) => handleLoanClick(receivable, e)}
-                      >
-                      <div className="flex items-center justify-between">
-                          <div className="flex-1 mr-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{receivable.description}</span>
-                              {isOverdue(receivable.due_date) && (
-                                <Badge variant="warning" className="text-[9px] py-0 px-1.5 bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Terlambat</Badge>
-                              )}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {receivable.due_date && (
-                                <span>Jatuh tempo: {format(parseISO(receivable.due_date), "d MMM yyyy", { locale: id })}</span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="text-green-600 font-medium text-sm">
-                              {formatCurrency(receivable.amount - (receivable.paid_amount || 0))}
-                            </span>
-                            <ArrowRight className="h-3.5 w-3.5 ml-1.5 text-gray-400" />
-                          </div>
-                      </div>
-                        
-                        {receivable.paid_amount > 0 && (
-                          <div className="w-full bg-gray-200 rounded-full h-1 mt-1.5">
-                            <div 
-                              className="bg-green-500 h-1 rounded-full" 
-                              style={{ width: `${Math.min(100, Math.round((receivable.paid_amount / receivable.amount) * 100))}%` }}
-                            ></div>
-                      </div>
-                        )}
-                    </a>
-                    ))}
-                  </div>
+              {/* Piutang Section */}
+              <div 
+                className="flex-1 bg-green-50 p-3 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                onClick={() => handleShowList('receivable')}
+              >
+                <div className="mb-2 text-right">
+                  <p className="text-xs text-gray-500">Total Piutang</p>
+                  <p className="font-bold text-green-600">{formatCurrency(totalReceivables)}</p>
                 </div>
-              )}
+                <div className="flex justify-between items-center">
+                  <ChevronRight className="h-3 w-3 text-gray-400" />
+                  <p className="text-xs text-gray-600">Piutang ({activeReceivables.length})</p>
+                </div>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+      
+      {/* List Preview Modal */}
+      {showListModal && activeListType && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={handleCloseListModal}>
+          <div 
+            className="bg-white rounded-t-xl sm:rounded-xl p-5 w-full max-w-md max-h-[90vh] overflow-auto animate-in slide-in-from-bottom sm:slide-in-from-center duration-300" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-xl font-bold">
+                {activeListType === 'payable' ? 'Daftar Hutang' : 'Daftar Piutang'}
+              </h3>
+              <button 
+                onClick={handleCloseListModal} 
+                className="text-gray-500 hover:bg-gray-100 p-2 rounded-full transition-colors"
+                title="Tutup"
+                aria-label="Tutup"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                <p className="text-sm text-gray-600 mb-1">Total {activeListType === 'payable' ? 'Hutang' : 'Piutang'}</p>
+                <p className="text-xl font-bold">
+                  {formatCurrency(activeListType === 'payable' ? totalDebts : totalReceivables)}
+                </p>
+              </div>
+              
+              {activeListType === 'payable' ? (
+                activeDebts.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500">Tidak ada hutang aktif</p>
+                  </div>
+                ) : (
+                  activeDebts.map((debt) => (
+                    <div 
+                      key={debt.id}
+                      className="border rounded-lg p-3 cursor-pointer hover:bg-gray-50"
+                      onClick={(e) => {
+                        handleCloseListModal();
+                        handleLoanClick(debt, e);
+                      }}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">{debt.description}</span>
+                            {isOverdue(debt.due_date) && (
+                              <Badge variant="destructive" className="text-[9px] py-0 px-1.5">Terlambat</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Jatuh tempo: {debt.due_date ? format(parseISO(debt.due_date), "dd MMM yyyy", { locale: id }) : "-"}
+                          </p>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="text-red-600 font-medium">{formatCurrency(debt.amount - (debt.paid_amount || 0))}</span>
+                          <ChevronRight className="h-4 w-4 ml-1 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : (
+                activeReceivables.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500">Tidak ada piutang aktif</p>
+                  </div>
+                ) : (
+                  activeReceivables.map((receivable) => (
+                    <div 
+                      key={receivable.id}
+                      className="border rounded-lg p-3 cursor-pointer hover:bg-gray-50"
+                      onClick={(e) => {
+                        handleCloseListModal();
+                        handleLoanClick(receivable, e);
+                      }}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-medium">{receivable.description}</span>
+                            {isOverdue(receivable.due_date) && (
+                              <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-yellow-100 text-yellow-800 hover:bg-yellow-100 border-yellow-200">Terlambat</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Jatuh tempo: {receivable.due_date ? format(parseISO(receivable.due_date), "dd MMM yyyy", { locale: id }) : "-"}
+                          </p>
+                        </div>
+                        <div className="flex items-center">
+                          <span className="text-green-600 font-medium">{formatCurrency(receivable.amount - (receivable.paid_amount || 0))}</span>
+                          <ChevronRight className="h-4 w-4 ml-1 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )
+              )}
+              
+              <div className="pt-4 flex justify-center">
+                <Link 
+                  to="/loans" 
+                  className="text-blue-600 hover:bg-blue-50 transition-colors rounded-md py-2 px-4 text-sm font-medium inline-block"
+                >
+                  Kelola {activeListType === 'payable' ? 'Hutang' : 'Piutang'}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Loan Detail Modal */}
       {showDetail && selectedLoan && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={handleCloseDetail}>
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={handleCloseDetail}>
           <div 
             className="bg-white rounded-t-xl sm:rounded-xl p-5 w-full max-w-md max-h-[90vh] overflow-auto animate-in slide-in-from-bottom sm:slide-in-from-center duration-300" 
             onClick={(e) => e.stopPropagation()}

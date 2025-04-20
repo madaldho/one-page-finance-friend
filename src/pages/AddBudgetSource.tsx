@@ -101,9 +101,24 @@ const AddBudgetSource = () => {
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Menyimpan..." : "Simpan Sumber Dana"}
-          </Button>
+          <div className="grid grid-cols-2 gap-4 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => navigate("/budgets")}
+              disabled={loading}
+              className="w-full"
+            >
+              Batal
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="w-full bg-blue-500 hover:bg-blue-600"
+            >
+              {loading ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </div>
         </form>
       </div>
     </Layout>

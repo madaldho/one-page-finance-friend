@@ -141,7 +141,7 @@ const Categories = () => {
   );
 
   return (
-   
+    <Layout>
       <div className="container mx-auto p-4 pb-24 max-w-3xl">
         {/* Header */}
         <header className="sticky top-0 z-10  pt-2 pb-4">
@@ -150,7 +150,7 @@ const Categories = () => {
               variant="ghost" 
               size="icon" 
               className="h-9 w-9 rounded-full mr-2" 
-              onClick={() => navigate(-1)}
+              onClick={() => navigate("/settings")}
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -364,7 +364,7 @@ const Categories = () => {
           }
         `}} />
       </div>
-    
+    </Layout>
   );
 };
 

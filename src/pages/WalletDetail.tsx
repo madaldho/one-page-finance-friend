@@ -105,6 +105,13 @@ const WalletDetail = () => {
     fetchWalletAndTransactions();
   }, [id]);
 
+  // Tambahkan useEffect untuk memanggil fetch saat filter diubah
+  useEffect(() => {
+    if (wallet) {
+      fetchWalletAndTransactions();
+    }
+  }, [filterType, dateRange]);
+
   const fetchWalletAndTransactions = async () => {
     try {
       setLoading(true);
@@ -324,7 +331,7 @@ const WalletDetail = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-6">
+      <div className="container mxauto px-4 py-6 pb-24">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <Button 
@@ -389,7 +396,7 @@ const WalletDetail = () => {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
+          <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense' | 'transfer') => setFilterType(value)}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter Transaksi" />
             </SelectTrigger>
@@ -401,24 +408,50 @@ const WalletDetail = () => {
             </SelectContent>
           </Select>
             
-          <DateRangePicker
-            value={dateRange}
-            onChange={setDateRange}
-            className="w-full sm:w-auto"
-          />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Input
+              type="date"
+              value={dateRange?.from?.toISOString().split('T')[0] || ''}
+              onChange={(e) => {
+                const fromDate = e.target.value ? new Date(e.target.value) : undefined;
+                setDateRange(prev => ({ 
+                  from: fromDate, 
+                  to: prev?.to 
+                }));
+              }}
+              className="w-full"
+              placeholder="Dari tanggal"
+            />
+            <span className="text-gray-500">-</span>
+            <Input
+              type="date"
+              value={dateRange?.to?.toISOString().split('T')[0] || ''}
+              onChange={(e) => {
+                const toDate = e.target.value ? new Date(e.target.value) : undefined;
+                setDateRange(prev => ({ 
+                  from: prev?.from, 
+                  to: toDate 
+                }));
+              }}
+              className="w-full"
+              placeholder="Sampai tanggal"
+            />
+          </div>
         </div>
 
         {/* Transactions */}
-        <Card>
+        <Card className="mb-24">
           <TransactionList
             transactions={transactions}
             isLoading={loading}
+            onFilter={(query) => setSearchTerm(query)}
+            onDateRangeChange={(range) => setDateRange(range)}
             onDelete={async (id) => {
               try {
                 const { error } = await supabase
                   .from("transactions")
                   .delete()
-                  .eq("id", id);
+                  .eq("id", id[0]);
 
                 if (error) throw error;
 
@@ -445,12 +478,14 @@ const WalletDetail = () => {
         
         {/* Delete Confirmation Dialog */}
         <DeleteConfirmationDialog
-          isOpen={showDeleteDialog}
-          onClose={() => setShowDeleteDialog(false)}
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
           onConfirm={handleDeleteWallet}
           title="Hapus Dompet"
           description="Apakah Anda yakin ingin menghapus dompet"
           itemName={wallet.name}
+          confirmLabel="Hapus"
+          cancelLabel="Batal"
         />
       </div>
     </Layout>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, FormEvent } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -322,14 +321,7 @@ const SavingsWithdraw = () => {
                   />
                 </div>
                 
-                <div className="pt-4 space-y-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={submitting}
-                  >
-                    {submitting ? "Memproses..." : "Tarik Dana"}
-                  </Button>
+                <div className="grid grid-cols-2 gap-4 pt-4">
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -338,6 +330,13 @@ const SavingsWithdraw = () => {
                     disabled={submitting}
                   >
                     Batal
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    disabled={submitting}
+                  >
+                    {submitting ? "Memproses..." : "Tarik Dana"}
                   </Button>
                 </div>
               </form>

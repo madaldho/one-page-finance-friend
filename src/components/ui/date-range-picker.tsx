@@ -1,21 +1,12 @@
-
 import * as React from "react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { id } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 interface DateRangePickerProps {
-  date?: DateRange;
-  onChange?: (range: DateRange | undefined) => void;
+  date?: { from?: Date; to?: Date };
+  onChange?: (range: { from?: Date; to?: Date } | undefined) => void;
   className?: string;
 }
 
@@ -24,7 +15,7 @@ export function DateRangePicker({
   onChange,
   className,
 }: DateRangePickerProps) {
-  const [selectedDateRange, setSelectedDateRange] = React.useState<DateRange | undefined>(date);
+  const [selectedDateRange, setSelectedDateRange] = React.useState<{ from?: Date; to?: Date } | undefined>(date);
 
   React.useEffect(() => {
     if (date) {
@@ -32,53 +23,84 @@ export function DateRangePicker({
     }
   }, [date]);
 
-  const handleDateSelect = (range: DateRange | undefined) => {
-    setSelectedDateRange(range);
+  // Format tanggal untuk input HTML
+  const formatDateForInput = (date?: Date) => {
+    if (!date) return "";
+    return format(date, "yyyy-MM-dd");
+  };
+
+  // Format tanggal untuk tampilan tooltip
+  const formatDateForDisplay = (date?: Date) => {
+    if (!date) return "";
+    return format(date, "dd MMMM yyyy", { locale: id });
+  };
+
+  // Handler untuk perubahan tanggal awal
+  const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fromDate = e.target.value 
+      ? parse(e.target.value, "yyyy-MM-dd", new Date()) 
+      : undefined;
+    
+    const newRange = {
+      from: fromDate,
+      to: selectedDateRange?.to
+    };
+    
+    setSelectedDateRange(newRange);
+    
     if (onChange) {
-      onChange(range);
+      onChange(newRange);
+    }
+  };
+
+  // Handler untuk perubahan tanggal akhir
+  const handleToDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const toDate = e.target.value 
+      ? parse(e.target.value, "yyyy-MM-dd", new Date()) 
+      : undefined;
+    
+    const newRange = {
+      from: selectedDateRange?.from,
+      to: toDate
+    };
+    
+    setSelectedDateRange(newRange);
+    
+    if (onChange) {
+      onChange(newRange);
     }
   };
 
   return (
-    <div className={cn("grid gap-2", className)}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            id="date"
-            variant={"outline"}
-            className={cn(
-              "w-full justify-start text-left font-normal bg-white/90",
-              !date && "text-muted-foreground"
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {selectedDateRange?.from ? (
-              selectedDateRange.to ? (
-                <>
-                  {format(selectedDateRange.from, "dd MMM yyyy", { locale: id })} -{" "}
-                  {format(selectedDateRange.to, "dd MMM yyyy", { locale: id })}
-                </>
-              ) : (
-                format(selectedDateRange.from, "dd MMM yyyy", { locale: id })
-              )
-            ) : (
-              <span>Pilih tanggal</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={selectedDateRange?.from}
-            selected={selectedDateRange}
-            onSelect={handleDateSelect}
-            numberOfMonths={2}
-            locale={id}
-            className="pointer-events-auto"
-          />
-        </PopoverContent>
-      </Popover>
+    <div className={cn("flex gap-2 items-center", className)}>
+      <div className="flex-1 relative">
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+          <CalendarIcon className="h-4 w-4" />
+        </div>
+        <input
+          type="date"
+          value={formatDateForInput(selectedDateRange?.from)}
+          onChange={handleFromDateChange}
+          className="w-full rounded-md border border-input bg-white/90 px-8 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          placeholder="Tanggal mulai"
+          title={selectedDateRange?.from ? formatDateForDisplay(selectedDateRange.from) : "Pilih tanggal mulai"}
+        />
+      </div>
+      <div className="flex-none text-gray-400">-</div>
+      <div className="flex-1 relative">
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+          <CalendarIcon className="h-4 w-4" />
+        </div>
+        <input
+          type="date"
+          value={formatDateForInput(selectedDateRange?.to)}
+          onChange={handleToDateChange}
+          className="w-full rounded-md border border-input bg-white/90 px-8 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          placeholder="Tanggal akhir"
+          min={formatDateForInput(selectedDateRange?.from)}
+          title={selectedDateRange?.to ? formatDateForDisplay(selectedDateRange.to) : "Pilih tanggal akhir"}
+        />
+      </div>
     </div>
   );
 }

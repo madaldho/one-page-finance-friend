@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Transaction } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronDown, MoreVertical, Trash2, Edit2, Calendar } from "lucide-react";
+import { Search, ChevronDown, MoreVertical, Trash2, Edit2, Calendar, CheckCircle2, Check, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
@@ -28,12 +28,21 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DateRange } from "react-day-picker";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { DateRange } from "react-day-picker";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useNavigate } from "react-router-dom";
+import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 
 interface Category {
   id: string;
@@ -63,6 +72,7 @@ interface TransactionListProps {
   onEdit: (transaction: Transaction) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
   hideHeader?: boolean;
+  isLoading?: boolean;
 }
 
 const TransactionList = ({ 
@@ -71,19 +81,27 @@ const TransactionList = ({
   onDelete,
   onEdit,
   onDateRangeChange,
-  hideHeader = false
+  hideHeader = false,
+  isLoading = false
 }: TransactionListProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{
     key: keyof Transaction;
     direction: 'asc' | 'desc';
-  }>({ key: 'date', direction: 'desc' });
+  }>({ key: 'created_at', direction: 'desc' });
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [wallets, setWallets] = useState<Record<string, Wallet>>({});
   const [expandedTransaction, setExpandedTransaction] = useState<string | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const { toast } = useToast();
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartTimeRef = useRef<number>(0);
+  const navigate = useNavigate();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<string[]>([]);
 
   // Fetch categories and wallets
   useEffect(() => {
@@ -136,6 +154,17 @@ const TransactionList = ({
   const sortedTransactions = [...transactions].sort((a, b) => {
     const aValue = a[sortConfig.key];
     const bValue = b[sortConfig.key];
+    
+    // Special case for created_at which might be undefined
+    if (sortConfig.key === 'created_at') {
+      // Fallback to date if created_at is not available
+      const aCreatedAt = a.created_at ? new Date(a.created_at).getTime() : new Date(a.date).getTime();
+      const bCreatedAt = b.created_at ? new Date(b.created_at).getTime() : new Date(b.date).getTime();
+      
+      return sortConfig.direction === 'asc' 
+        ? aCreatedAt - bCreatedAt
+        : bCreatedAt - aCreatedAt;
+    }
     
     if (typeof aValue === 'string' && typeof bValue === 'string') {
       return sortConfig.direction === 'asc' 
@@ -208,12 +237,86 @@ const TransactionList = ({
     return {};
   };
 
+  const handleToggleSelect = (id: string, selected: boolean) => {
+    setSelectedIds(prev => 
+      selected ? [...prev, id] : prev.filter(itemId => itemId !== id)
+    );
+    
+    if (selected && !selectionMode) {
+      setSelectionMode(true);
+    }
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedIds(sortedTransactions.map(t => t.id));
+    } else {
+      setSelectedIds([]);
+    }
+    setSelectionMode(selected);
+  };
+
+  const handleLongPress = (id: string) => {
+    handleToggleSelect(id, !selectedIds.includes(id));
+  };
+
+  const handleTouchStart = (id: string) => {
+    touchStartTimeRef.current = Date.now();
+    longPressTimeoutRef.current = setTimeout(() => {
+      handleLongPress(id);
+    }, 500); // 500ms for long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length > 0) {
+      setTransactionToDelete(selectedIds);
+      setShowDeleteDialog(true);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (transactionToDelete.length > 0) {
+      await onDelete(transactionToDelete);
+      setSelectedIds([]);
+      setSelectionMode(false);
+      setTransactionToDelete([]);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const exitSelectionMode = () => {
+    setSelectedIds([]);
+    setSelectionMode(false);
+  };
+
   // Desktop view
   const DesktopView = () => (
     <div className="rounded-lg border bg-card">
     <Table>
       <TableHeader>
           <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[40px]">
+              <div 
+                className={cn(
+                  "flex h-5 w-5 items-center justify-center rounded-full border cursor-pointer transition-all",
+                  sortedTransactions.length > 0 && selectedIds.length === sortedTransactions.length
+                    ? "border-primary bg-primary text-primary-foreground" 
+                    : "border-muted-foreground/30 hover:border-primary"
+                )}
+                onClick={() => handleSelectAll(!(sortedTransactions.length > 0 && selectedIds.length === sortedTransactions.length))}
+              >
+                {sortedTransactions.length > 0 && selectedIds.length === sortedTransactions.length && (
+                  <Check className="h-3 w-3" />
+                )}
+              </div>
+            </TableHead>
             <TableHead onClick={() => handleSort('date')} className="cursor-pointer font-medium">
               Tanggal {sortConfig.key === 'date' && 
                 <ChevronDown className={cn(
@@ -253,9 +356,31 @@ const TransactionList = ({
       <TableBody>
           {sortedTransactions.map((transaction) => {
             const wallet = wallets[transaction.wallet_id];
+            const isSelected = selectedIds.includes(transaction.id);
             
             return (
-              <TableRow key={transaction.id} className="group hover:bg-muted/50">
+              <TableRow 
+                key={transaction.id} 
+                className={cn(
+                  "group hover:bg-muted/50",
+                  isSelected && "bg-primary/5"
+                )}
+              >
+                <TableCell className="p-2 w-[40px]">
+                  <div 
+                    className={cn(
+                      "flex h-5 w-5 items-center justify-center rounded-full border transition-all cursor-pointer",
+                      isSelected 
+                        ? "border-primary bg-primary text-primary-foreground" 
+                        : "border-muted-foreground/30 hover:border-primary"
+                    )}
+                    onClick={() => handleToggleSelect(transaction.id, !isSelected)}
+                  >
+                    {isSelected && (
+                      <Check className="h-3 w-3" />
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">
                   {format(new Date(transaction.date), "dd/MM/yyyy", { locale: id })}
                 </TableCell>
@@ -310,7 +435,11 @@ const TransactionList = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => onDelete([transaction.id])}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTransactionToDelete([transaction.id]);
+                        setShowDeleteDialog(true);
+                      }}
                       className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -328,19 +457,172 @@ const TransactionList = ({
   // Mobile view
   const MobileView = () => (
     <div className="space-y-2">
+      {!selectionMode && (
+        <div className="flex justify-end mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            className="flex items-center gap-1"
+          >
+            <ArrowUpDown className="h-3.5 w-3.5" />
+            <span>Urut</span>
+            {sortConfig && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {sortConfig.key === 'created_at' ? 'Waktu Input' : 
+                 sortConfig.key === 'date' ? 'Tanggal' : 
+                 sortConfig.key === 'amount' ? 'Nominal' : 
+                 sortConfig.key === 'category' ? 'Kategori' : 
+                 sortConfig.key === 'wallet_id' ? 'Dompet' : 
+                 sortConfig.key}
+                {' '}
+                {sortConfig.direction === 'asc' ? '↑' : '↓'}
+              </Badge>
+            )}
+          </Button>
+          
+          {showSortMenu && (
+            <div className="absolute z-50 mt-8 w-56 rounded-md border bg-popover shadow-md animate-in fade-in-80">
+              <div className="p-2">
+                <h4 className="font-medium text-sm mb-1 px-2">Urut Berdasarkan</h4>
+                <div className="space-y-1">
+                  <Button 
+                    variant={sortConfig.key === 'created_at' ? "secondary" : "ghost"} 
+                    className="w-full justify-between text-xs h-8"
+                    onClick={() => {
+                      setSortConfig({ 
+                        key: 'created_at', 
+                        direction: sortConfig.key === 'created_at' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
+                      });
+                      setShowSortMenu(false);
+                    }}
+                  >
+                    <span>Waktu Input</span>
+                    {sortConfig.key === 'created_at' && (
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        sortConfig.direction === 'desc' && "rotate-180"
+                      )} />
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant={sortConfig.key === 'date' ? "secondary" : "ghost"} 
+                    className="w-full justify-between text-xs h-8"
+                    onClick={() => {
+                      setSortConfig({ 
+                        key: 'date', 
+                        direction: sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
+                      });
+                      setShowSortMenu(false);
+                    }}
+                  >
+                    <span>Tanggal Transaksi</span>
+                    {sortConfig.key === 'date' && (
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        sortConfig.direction === 'desc' && "rotate-180"
+                      )} />
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant={sortConfig.key === 'amount' ? "secondary" : "ghost"} 
+                    className="w-full justify-between text-xs h-8"
+                    onClick={() => {
+                      setSortConfig({ 
+                        key: 'amount', 
+                        direction: sortConfig.key === 'amount' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
+                      });
+                      setShowSortMenu(false);
+                    }}
+                  >
+                    <span>Nominal</span>
+                    {sortConfig.key === 'amount' && (
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        sortConfig.direction === 'desc' && "rotate-180"
+                      )} />
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant={sortConfig.key === 'category' ? "secondary" : "ghost"} 
+                    className="w-full justify-between text-xs h-8"
+                    onClick={() => {
+                      setSortConfig({ 
+                        key: 'category', 
+                        direction: sortConfig.key === 'category' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
+                      });
+                      setShowSortMenu(false);
+                    }}
+                  >
+                    <span>Kategori</span>
+                    {sortConfig.key === 'category' && (
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        sortConfig.direction === 'desc' && "rotate-180"
+                      )} />
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    variant={sortConfig.key === 'wallet_id' ? "secondary" : "ghost"} 
+                    className="w-full justify-between text-xs h-8"
+                    onClick={() => {
+                      setSortConfig({ 
+                        key: 'wallet_id', 
+                        direction: sortConfig.key === 'wallet_id' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
+                      });
+                      setShowSortMenu(false);
+                    }}
+                  >
+                    <span>Dompet</span>
+                    {sortConfig.key === 'wallet_id' && (
+                      <ChevronDown className={cn(
+                        "h-4 w-4 transition-transform",
+                        sortConfig.direction === 'desc' && "rotate-180"
+                      )} />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
       {sortedTransactions.map((transaction) => {
         const isExpanded = expandedTransaction === transaction.id;
         const wallet = wallets[transaction.wallet_id];
+        const isSelected = selectedIds.includes(transaction.id);
 
         return (
         <div
           key={transaction.id}
-            className="bg-card rounded-lg border overflow-hidden transition-all duration-200"
+            className={cn(
+              "bg-card rounded-lg border overflow-hidden transition-all duration-200",
+              isSelected && "bg-primary/5 border-primary/30"
+            )}
+            onTouchStart={() => handleTouchStart(transaction.id)}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
           >
             <div 
-              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => setExpandedTransaction(isExpanded ? null : transaction.id)}
-        >
+              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors relative"
+              onClick={() => {
+                if (selectionMode) {
+                  handleToggleSelect(transaction.id, !isSelected);
+                } else {
+                  setExpandedTransaction(isExpanded ? null : transaction.id);
+                }
+              }}
+            >
+              {isSelected && (
+                <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+                  <Check className="h-3 w-3" />
+                </div>
+              )}
           <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <Badge 
@@ -416,7 +698,8 @@ const TransactionList = ({
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDelete([transaction.id]);
+                      setTransactionToDelete([transaction.id]);
+                      setShowDeleteDialog(true);
                     }}
                     className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
                     >
@@ -446,18 +729,57 @@ const TransactionList = ({
             className="pl-10 w-full"
           />
         </div>
+          
+          {selectionMode && (
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <DateRangePicker
-            onChange={onDateRangeChange}
-            className="w-full md:w-auto"
-          />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exitSelectionMode}
+                className="h-9 rounded-full"
+              >
+                Batal
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                className="h-9 rounded-full"
+                disabled={selectedIds.length === 0}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}
+              </Button>
+            </div>
+          )}
           </div>
+      )}
+
+      {selectionMode && (
+        <div className="bg-primary/5 p-3 rounded-lg border border-primary/20">
+          <p className="text-sm text-muted-foreground">
+            {isDesktop ? 
+              'Pilih transaksi yang ingin dihapus.' : 
+              'Ketuk untuk memilih. Tekan lama untuk memilih banyak transaksi sekaligus.'
+            }
+          </p>
         </div>
       )}
 
       {isDesktop ? <DesktopView /> : <MobileView />}
+
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={confirmDelete}
+        title="Hapus Transaksi"
+        description={`Apakah Anda yakin ingin menghapus ${transactionToDelete.length > 1 ? `${transactionToDelete.length} transaksi` : 'transaksi ini'}?`}
+        confirmLabel="Hapus"
+        cancelLabel="Batal"
+      />
     </div>
   );
 };
 
 export default TransactionList;
+

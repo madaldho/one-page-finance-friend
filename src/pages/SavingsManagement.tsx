@@ -625,9 +625,6 @@ const SavingsManagement = () => {
             </Link>
             <h1 className="text-xl font-bold">Tabungan/Celengan</h1>
           </div>
-          <Link to="/savings/test" className="text-sm text-blue-600 hover:underline">
-            Uji Transaksi
-          </Link>
         </div>
 
         {/* Feature Toggle Section */}
@@ -1021,29 +1018,6 @@ const SavingsManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Form Delete Button for Mobile */}
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          className="w-full md:hidden" 
-          onClick={() => {
-            if (selectedSaving) {
-              setDeleteDialogOpen(true);
-            } else {
-              toast({
-                title: "Pilih Tabungan",
-                description: "Pilih tabungan yang ingin dihapus terlebih dahulu",
-                variant: "destructive",
-              });
-            }
-          }}
-          title="Hapus tabungan"
-          aria-label="Hapus tabungan"
-        >
-          <Trash className="w-4 h-4 mr-2" />
-          Hapus
-        </Button>
-        
         {/* Delete Confirmation Dialog */}
         <DeleteConfirmationDialog
           open={deleteDialogOpen}
@@ -1121,10 +1095,37 @@ const SavingsManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Main Form */}
-        <form onSubmit={handleSubmit} className="space-y-6" title="Form tabungan">
-          {/* Add form fields here */}
-        </form>
+        {/* Tombol aksi */}
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => navigate("/home")}
+            aria-label="Kembali ke beranda"
+          >
+            Kembali
+          </Button>
+          <Button 
+            variant="destructive" 
+            className="w-full" 
+            onClick={() => {
+              if (selectedSaving) {
+                setDeleteDialogOpen(true);
+              } else {
+                toast({
+                  title: "Pilih Tabungan",
+                  description: "Pilih tabungan yang ingin dihapus terlebih dahulu",
+                  variant: "destructive",
+                });
+              }
+            }}
+            title="Hapus tabungan"
+            aria-label="Hapus tabungan"
+          >
+            <Trash className="w-4 h-4 mr-2" />
+            Hapus
+          </Button>
+        </div>
       </div>
     </Layout>
   );

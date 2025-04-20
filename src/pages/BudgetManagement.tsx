@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Budget } from "@/types";
 import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface BudgetSource {
   id: string;
@@ -67,6 +68,53 @@ const BudgetManagement = () => {
     }
   }, [user]);
 
+  // Fungsi untuk memeriksa dan memperbarui anggaran yang sudah berakhir
+  const checkExpiredBudgets = async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset waktu ke awal hari
+      
+      // Filter anggaran aktif yang sudah melewati tanggal akhir
+      const expiredBudgetsToUpdate = budgets.filter(budget => {
+        if (!budget.end_date) return false;
+        const endDate = new Date(budget.end_date);
+        endDate.setHours(23, 59, 59, 999); // Set waktu ke akhir hari
+        return today > endDate;
+      });
+      
+      if (expiredBudgetsToUpdate.length > 0) {
+        // Perbarui status anggaran menjadi tidak aktif
+        for (const budget of expiredBudgetsToUpdate) {
+          const { error } = await supabase
+            .from("budgets")
+            .update({ active: false, updated_at: new Date().toISOString() })
+            .eq("id", budget.id);
+            
+          if (error) {
+            console.error(`Error updating budget ${budget.id}:`, error);
+          }
+        }
+        
+        // Muat ulang data anggaran
+        fetchData();
+        
+        toast({
+          title: "Anggaran Diperbarui",
+          description: `${expiredBudgetsToUpdate.length} anggaran telah dipindahkan ke riwayat karena sudah berakhir`,
+        });
+      }
+    } catch (error) {
+      console.error("Error checking expired budgets:", error);
+    }
+  };
+  
+  // Panggil fungsi pemeriksaan anggaran setelah data dimuat
+  useEffect(() => {
+    if (budgets.length > 0) {
+      checkExpiredBudgets();
+    }
+  }, [budgets]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -90,10 +138,12 @@ const BudgetManagement = () => {
       const { data: categoriesData, error: categoriesError } = await supabase
         .from("categories")
         .select("*")
+        .eq("user_id", user?.id)
+        .eq("type", "expense")
         .order("name");
 
       if (categoriesError) throw categoriesError;
-      setCategories(categoriesData || []);
+      setCategories([{ id: "all", name: "Semua Kategori", color: "#000000" }, ...(categoriesData || [])]);
 
       // Fetch budget sources
       const { data: sourcesData, error: sourcesError } = await supabase
@@ -399,6 +449,30 @@ const BudgetManagement = () => {
     return category?.color || "#CCCCCC";
   };
 
+  const getSourceColor = (sourceId: string) => {
+    // Warna-warna untuk sumber dana
+    const colors = [
+      "#4CAF50", // Green
+      "#2196F3", // Blue
+      "#9C27B0", // Purple
+      "#FFC107", // Amber
+      "#FF5722", // Deep Orange
+      "#009688", // Teal
+      "#673AB7", // Deep Purple
+      "#3F51B5"  // Indigo
+    ];
+    
+    // Menghasilkan indeks berdasarkan ID sumber
+    let hash = 0;
+    for (let i = 0; i < sourceId.length; i++) {
+      hash = sourceId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Mengambil warna dari array berdasarkan hash
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
   const handleBudgetOptions = (budget: Budget, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevents event bubbling
     
@@ -436,93 +510,81 @@ const BudgetManagement = () => {
   };
 
   const saveEditedBudget = async () => {
-    if (!budgetToEdit) return;
-    
-    if (!editBudgetAmount || isNaN(Number(editBudgetAmount)) || Number(editBudgetAmount) <= 0) {
-      toast({
-        title: "Jumlah Tidak Valid",
-        description: "Masukkan jumlah anggaran yang valid",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!editStartDate) {
-      toast({
-        title: "Tanggal Mulai Diperlukan",
-        description: "Pilih tanggal mulai anggaran",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!editEndDate) {
-      toast({
-        title: "Tanggal Akhir Diperlukan",
-        description: "Pilih tanggal akhir anggaran",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     try {
-      setLoading(true);
-
-      const formattedStartDate = editStartDate.toISOString().split('T')[0];
-      const formattedEndDate = editEndDate.toISOString().split('T')[0];
+      if (!budgetToEdit) return;
+      
+      if (!editBudgetAmount || isNaN(Number(editBudgetAmount)) || Number(editBudgetAmount) <= 0) {
+        toast({
+          title: "Jumlah Tidak Valid",
+          description: "Masukkan jumlah anggaran yang valid",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      const startDate = editStartDate ? new Date(editStartDate) : undefined;
+      const endDate = editEndDate ? new Date(editEndDate) : undefined;
+      
+      // Periksa apakah anggaran sudah berakhir (end_date sudah lewat)
+      let isActive = true;
+      if (endDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset waktu ke awal hari
+        endDate.setHours(23, 59, 59, 999); // Set waktu ke akhir hari
+        isActive = today <= endDate;
+      }
+      
+      const updateData = {
+        amount: Number(editBudgetAmount),
+        period: editBudgetPeriod,
+        start_date: startDate ? startDate.toISOString().split('T')[0] : null,
+        end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+        active: isActive, // Set status aktif berdasarkan tanggal akhir
+        updated_at: new Date().toISOString(),
+      };
       
       const { error } = await supabase
         .from("budgets")
-        .update({
-          amount: Number(editBudgetAmount),
-          category: editBudgetCategory,
-          period: editBudgetPeriod,
-          start_date: formattedStartDate,
-          end_date: formattedEndDate
-        })
+        .update(updateData)
         .eq("id", budgetToEdit.id);
-        
+      
       if (error) throw error;
       
-      // Update state
-      setBudgets(prevBudgets => 
-        prevBudgets.map(budget => 
-          budget.id === budgetToEdit.id 
-            ? { 
-                ...budget, 
-                amount: Number(editBudgetAmount), 
-                category: editBudgetCategory,
-                period: editBudgetPeriod,
-                start_date: formattedStartDate,
-                end_date: formattedEndDate
-              } 
-            : budget
-        )
+      // Perbarui state
+      setBudgets(prev => 
+        isActive 
+          ? prev.map(b => b.id === budgetToEdit.id ? { ...b, ...updateData } : b)
+          : prev.filter(b => b.id !== budgetToEdit.id) // Hapus dari daftar aktif jika tidak aktif
       );
       
-      toast({
-        title: "Anggaran Diperbarui",
-        description: "Anggaran berhasil diperbarui",
-      });
+      // Jika tidak aktif, tambahkan ke daftar expired
+      if (!isActive) {
+        setExpiredBudgets(prev => [{ ...budgetToEdit, ...updateData }, ...prev]);
+        
+        toast({
+          title: "Anggaran Dipindahkan",
+          description: "Anggaran telah dipindahkan ke riwayat karena sudah berakhir",
+        });
+      } else {
+        toast({
+          title: "Anggaran Diperbarui",
+          description: "Anggaran berhasil diperbarui",
+        });
+      }
       
-      setEditingBudget(false);
+      // Reset state
       setBudgetToEdit(null);
-      setEditBudgetAmount("");
-      setEditBudgetCategory("");
-      setEditBudgetPeriod("");
-      setEditStartDate(undefined);
-      setEditEndDate(undefined);
+      setEditingBudget(false);
+      setShowBudgetMenu(null);
       
     } catch (error: unknown) {
-      console.error("Error mengedit anggaran:", error);
-      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat mengedit anggaran";
+      console.error("Error updating budget:", error);
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat menyimpan anggaran";
       toast({
-        title: "Gagal Mengedit",
+        title: "Gagal Memperbarui Anggaran",
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -688,7 +750,7 @@ const BudgetManagement = () => {
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                    <div className="w-4 h-4 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: getSourceColor(source.id) }}></div>
                     <p className="font-medium">{source.name}</p>
                   </div>
                   <p className="text-sm text-gray-500">Rp {source.amount.toLocaleString()}</p>
@@ -793,6 +855,42 @@ const BudgetManagement = () => {
                           </div>
                         </div>
                         
+                        {/* Visualisasi Penggunaan Persentase */}
+                        <div>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span>Alokasi Dana</span>
+                            <span>
+                              {Math.min(
+                                (budgets
+                                  .filter(b => b.source_id === source.id)
+                                  .reduce((sum, b) => sum + b.amount, 0) / source.amount) * 100,
+                                100
+                              ).toFixed(0)}% digunakan
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-500"
+                              style={{ 
+                                width: `${Math.min(
+                                  (budgets
+                                    .filter(b => b.source_id === source.id)
+                                    .reduce((sum, b) => sum + b.amount, 0) / source.amount) * 100,
+                                  100
+                                )}%` 
+                              }}
+                            ></div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {Math.max(
+                              100 - (budgets
+                                .filter(b => b.source_id === source.id)
+                                .reduce((sum, b) => sum + b.amount, 0) / source.amount) * 100,
+                              0
+                            ).toFixed(0)}% tersedia untuk anggaran baru
+                          </p>
+                        </div>
+                        
                         {budgets.filter(b => b.source_id === source.id).length > 0 && (
                           <div>
                             <p className="text-xs text-gray-500 mb-2">Digunakan di anggaran:</p>
@@ -801,8 +899,19 @@ const BudgetManagement = () => {
                                 .filter(b => b.source_id === source.id)
                                 .map(budget => (
                                   <div key={budget.id} className="bg-white p-2 rounded-md text-sm flex items-center justify-between">
-                                    <span>{budget.category}</span>
-                                    <span className="text-gray-500">Rp {budget.amount.toLocaleString()}</span>
+                                    <div className="flex items-center gap-2">
+                                      <div 
+                                        className="w-3 h-3 rounded-full" 
+                                        style={{ backgroundColor: getCategoryColor(budget.category) }}
+                                      ></div>
+                                      <span>{getCategoryName(budget.category)}</span>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="text-gray-500">Rp {budget.amount.toLocaleString()}</span>
+                                      {budget.source_percentage && (
+                                        <p className="text-xs text-gray-400">{budget.source_percentage}%</p>
+                                      )}
+                                    </div>
                                   </div>
                                 ))}
                             </div>
@@ -849,7 +958,7 @@ const BudgetManagement = () => {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <div 
-                            className={`w-2 h-2 rounded-full`}
+                            className={`w-4 h-4 rounded-full border border-gray-200 shadow-sm flex-shrink-0`}
                             style={{ backgroundColor: getCategoryColor(budget.category) }}
                           ></div>
                           <h3 className="font-medium">{getCategoryName(budget.category)}</h3>
@@ -918,18 +1027,26 @@ const BudgetManagement = () => {
                         <div className="space-y-3">
                           <div>
                             <label className="text-xs text-gray-500 mb-1 block">Kategori</label>
-                            <select 
-                              value={editBudgetCategory} 
-                              onChange={e => setEditBudgetCategory(e.target.value)}
-                              className="w-full p-2 border rounded-md text-sm"
-                              title="Pilih kategori anggaran"
-                              aria-label="Pilih kategori anggaran"
-                            >
-                              <option value="all">Semua Kategori</option>
+                            <div className="relative">
+                              <Select value={editBudgetCategory} onValueChange={setEditBudgetCategory}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Pilih kategori anggaran" />
+                                </SelectTrigger>
+                                <SelectContent>
                               {categories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.name}</option>
-                              ))}
-                            </select>
+                                    <SelectItem key={cat.id} value={cat.id}>
+                                      <div className="flex items-center gap-2">
+                                        <div 
+                                          className="w-3 h-3 rounded-full border border-gray-200"
+                                          style={{ backgroundColor: cat.color || "#CCCCCC" }}
+                                        ></div>
+                                        <span>{cat.name}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                           <div>
                             <label className="text-xs text-gray-500 mb-1 block">Jumlah (Rp)</label>
@@ -1014,15 +1131,19 @@ const BudgetManagement = () => {
                             
                             <div className="grid grid-cols-2 gap-3">
                               <div className="bg-white p-3 rounded-lg">
-                                <p className="text-xs text-gray-500">Total Anggaran</p>
-                                <p className="font-medium">Rp {budget.amount.toLocaleString()}</p>
+                                <p className="text-xs text-gray-500">Kategori</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <div 
+                                    className="w-3 h-3 rounded-full border border-gray-200"
+                                    style={{ backgroundColor: getCategoryColor(budget.category) }}
+                                  ></div>
+                                  <p className="font-medium">{getCategoryName(budget.category)}</p>
+                                </div>
                               </div>
                               
                               <div className="bg-white p-3 rounded-lg">
-                                <p className="text-xs text-gray-500">Sisa Waktu</p>
-                                <p className="font-medium">
-                                  {getRemainingTime(budget)}
-                                </p>
+                                <p className="text-xs text-gray-500">Total Anggaran</p>
+                                <p className="font-medium">Rp {budget.amount.toLocaleString()}</p>
                               </div>
 
                               <div className="bg-white p-3 rounded-lg">
@@ -1033,6 +1154,13 @@ const BudgetManagement = () => {
                               </div>
 
                               <div className="bg-white p-3 rounded-lg">
+                                <p className="text-xs text-gray-500">Sisa Waktu</p>
+                                <p className="font-medium">
+                                  {getRemainingTime(budget)}
+                                </p>
+                              </div>
+                              
+                              <div className="bg-white p-3 rounded-lg col-span-2">
                                 <p className="text-xs text-gray-500">Periode</p>
                                 <p className="font-medium">
                                   {displayPeriod(budget)}
@@ -1095,14 +1223,44 @@ const BudgetManagement = () => {
                   <div key={budget.id} className="bg-gray-50 rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium">{getCategoryName(budget.category)}</h3>
-                      <span className="text-sm">
-                        Rp {budget.spent?.toLocaleString() || 0} / Rp {budget.amount.toLocaleString()}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">
+                          Rp {budget.spent?.toLocaleString() || 0} / Rp {budget.amount.toLocaleString()}
+                        </span>
+                        <div className="relative">
+                          <button 
+                            className="text-gray-500 hover:bg-gray-100 p-1 rounded-full"
+                            title="Menu anggaran"
+                            aria-label="Menu anggaran"
+                            onClick={(e) => handleBudgetOptions(budget, e)}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                          
+                          {showBudgetMenu === budget.id && (
+                            <div className="absolute right-0 mt-1 w-36 bg-white shadow-lg rounded-md py-1 z-10">
+                              
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
+                                onClick={() => handleShowDeleteBudgetDialog(budget)}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 6h18"></path>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                  <line x1="10" y1="11" x2="10" y2="17"></line>
+                                  <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                                Hapus
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-2 h-2 rounded-full`}
+                          className={`w-4 h-4 rounded-full border border-gray-200 shadow-sm flex-shrink-0`}
                           style={{ backgroundColor: getCategoryColor(budget.category) }}
                         ></div>
                         <span className="text-xs text-gray-500">{displayPeriod(budget)}</span>

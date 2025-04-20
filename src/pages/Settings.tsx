@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2,  ChevronRight, Blocks } from "lucide-react";
 import ProfileSection from "@/components/settings/ProfileSection";
 import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
@@ -253,26 +253,31 @@ const Settings = () => {
           onToggleChange={handleToggleChange} 
         />
         
-        <div className="mb-6 bg-white p-4 rounded-lg shadow-sm">
-          <h2 className="text-lg font-medium mb-4">Konfigurasi</h2>
+        <section className="mb-6 bg-white rounded-lg shadow-sm overflow-hidden">
+          <h2 className="font-semibold p-4 border-b border-gray-100">Konfigurasi</h2>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium">Kategori</h3>
-                <p className="text-sm text-muted-foreground">
-                  Kelola kategori untuk transaksi pemasukan dan pengeluaran
-                </p>
+          <div className="border-b border-gray-100 hover:bg-gray-50">
+            <div 
+              className="flex items-center justify-between p-4 cursor-pointer"
+              onClick={() => navigate('/categories')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Blocks className="w-4 h-4 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Kategori</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Kelola kategori untuk transaksi pemasukan dan pengeluaran
+                  </p>
+                </div>
               </div>
-              <Button 
-                variant="ghost" 
-                onClick={() => navigate('/categories')}
-              >
-                Kelola
-              </Button>
+              <div className="flex items-center">
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
             </div>
           </div>
-        </div>
+        </section>
         
         <ActionSection handleExportData={handleExportData} loading={loading} />
         

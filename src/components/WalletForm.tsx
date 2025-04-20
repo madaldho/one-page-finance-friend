@@ -9,6 +9,7 @@ import {
   CreditCard, 
   PiggyBank, 
   Banknote,
+  Landmark,
   ChevronLeft
 } from 'lucide-react';
 import {
@@ -225,7 +226,7 @@ export default function WalletForm() {
       case 'cash':
         return <Banknote className="h-4 w-4" />;
       case 'bank':
-        return <CreditCard className="h-4 w-4" />;
+        return <Landmark className="h-4 w-4" />;
       case 'ewallet':
         return <CreditCard className="h-4 w-4" />;
       case 'savings':
@@ -348,7 +349,7 @@ export default function WalletForm() {
                         </SelectItem>
                           <SelectItem value="bank" className="text-sm">
                           <div className="flex items-center gap-2">
-                            <CreditCard className="h-4 w-4" />
+                            <Landmark className="h-4 w-4" />
                             <span>Rekening Bank</span>
                           </div>
                         </SelectItem>

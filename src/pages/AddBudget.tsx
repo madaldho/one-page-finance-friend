@@ -31,6 +31,20 @@ interface BudgetSource {
   user_id: string;
 }
 
+interface Budget {
+  id: string;
+  category: string;
+  amount: number;
+  spent?: number;
+  period: string;
+  source_id?: string;
+  source_percentage?: number;
+  user_id: string;
+  start_date?: string;
+  end_date?: string;
+  active?: boolean;
+}
+
 // Nilai-nilai yang diterima oleh database Supabase - sekarang kita bisa menggunakan semua nilai valid
 type Period = "monthly" | "weekly" | "custom" | "date_range" | "custom_range";
 
@@ -41,6 +55,7 @@ const AddBudget = () => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sources, setSources] = useState<BudgetSource[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]); // Menggunakan tipe Budget[]
   
   // Form state
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -80,10 +95,12 @@ const AddBudget = () => {
     try {
       setLoading(true);
 
-      // Fetch categories
+      // Fetch categories - hanya kategori pengeluaran milik user saat ini
       const { data: categoriesData, error: categoriesError } = await supabase
         .from("categories")
         .select("id, name, color")
+        .eq("user_id", user?.id)
+        .eq("type", "expense")
         .order("name");
 
       if (categoriesError) throw categoriesError;
@@ -102,6 +119,17 @@ const AddBudget = () => {
       if (sourcesData && sourcesData.length > 0) {
         setSelectedSource(sourcesData[0].id);
       }
+      
+      // Fetch active budgets
+      const { data: budgetsData, error: budgetsError } = await supabase
+        .from("budgets")
+        .select("*")
+        .eq("user_id", user?.id)
+        .eq("active", true);
+        
+      if (budgetsError) throw budgetsError;
+      setBudgets(budgetsData || []);
+      
     } catch (error: unknown) {
       console.error("Error fetching data:", error);
       toast({
@@ -137,6 +165,40 @@ const AddBudget = () => {
         setAmount(calculatedAmount);
       }
     }
+  };
+
+  // Fungsi untuk menghitung persentase berdasarkan nominal
+  const handleAmountChange = (value: number) => {
+    setAmount(value);
+    
+    // Hanya hitung persentase jika sumber dana dipilih dan dalam mode persentase
+    if (selectedSource && budgetType === "percentage") {
+      const source = sources.find(s => s.id === selectedSource);
+      if (source && source.amount > 0) {
+        const calculatedPercentage = (value / source.amount) * 100;
+        setPercentage(Math.min(calculatedPercentage, 100).toFixed(2));
+      }
+    }
+  };
+
+  // Fungsi untuk mendapatkan persentase budget yang sudah digunakan dari sumber dana
+  const getUsedPercentage = (sourceId: string) => {
+    if (!sourceId) return 0;
+    
+    const source = sources.find(s => s.id === sourceId);
+    if (!source || source.amount <= 0) return 0;
+    
+    // Hitung total anggaran yang menggunakan sumber dana ini
+    const totalBudgeted = budgets
+      .filter(b => b.source_id === sourceId)
+      .reduce((sum, b) => sum + b.amount, 0);
+      
+    return Math.min((totalBudgeted / source.amount) * 100, 100);
+  };
+
+  // Fungsi untuk mendapatkan persentase budget yang masih tersedia dari sumber dana
+  const getAvailablePercentage = (sourceId: string) => {
+    return Math.max(100 - getUsedPercentage(sourceId), 0);
   };
 
   const handlePeriodChange = (value: string) => {
@@ -207,6 +269,21 @@ const AddBudget = () => {
       });
       return;
     }
+    
+    // Cek apakah ada sumber dana yang dipilih dan apakah masih cukup tersedia
+    if (budgetType === "percentage" && selectedSource) {
+      const availablePercentage = getAvailablePercentage(selectedSource);
+      const requestedPercentage = Number(percentage);
+      
+      if (requestedPercentage > availablePercentage) {
+        toast({
+          title: "Persentase Melebihi Batas",
+          description: `Maksimal tersedia ${availablePercentage.toFixed(0)}% dari sumber dana ini`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     try {
       setLoading(true);
@@ -226,26 +303,40 @@ const AddBudget = () => {
       // Mengubah periode custom_range menjadi date_range untuk database
       const dbPeriod = period === 'custom_range' ? 'date_range' : period;
 
-      console.log('Budget data:', {
+      // Data dasar untuk budget
+      const budgetData: {
+        category: string;
+        amount: number;
+        period: string;
+        start_date: string | null;
+        end_date: string | null;
+        user_id: string | undefined;
+        active: boolean;
+        spent: number;
+        source_id?: string;
+        source_percentage?: number;
+      } = {
         category: selectedCategory,
         amount,
         period: dbPeriod,
         start_date: formattedStartDate?.toISOString().split('T')[0],
         end_date: formattedEndDate ? formattedEndDate.toISOString().split('T')[0] : null,
-      });
+        user_id: user?.id,
+        active: true,
+        spent: 0
+      };
+      
+      // Tambahkan informasi sumber dana jika menggunakan persentase
+      if (budgetType === "percentage" && selectedSource && percentage) {
+        budgetData.source_id = selectedSource;
+        budgetData.source_percentage = Number(percentage);
+      }
+
+      console.log('Budget data:', budgetData);
 
       const { data: budget, error } = await supabase
         .from('budgets')
-        .insert({
-          category: selectedCategory,
-          amount,
-          period: dbPeriod,
-          start_date: formattedStartDate?.toISOString().split('T')[0],
-          end_date: formattedEndDate ? formattedEndDate.toISOString().split('T')[0] : null,
-          user_id: user?.id,
-          active: true,
-          spent: 0
-        })
+        .insert(budgetData)
         .select();
       
       if (error) {
@@ -325,8 +416,8 @@ const AddBudget = () => {
 
           {budgetType === "percentage" && (
             <>
-              <div className="space-y-2">
-                <Label htmlFor="source">Sumber Dana</Label>
+              <div className="space-y-3">
+                <Label htmlFor="source" className="text-base">Sumber Dana</Label>
                 <Select 
                   value={selectedSource} 
                   onValueChange={setSelectedSource} 
@@ -336,11 +427,13 @@ const AddBudget = () => {
                     <SelectValue placeholder="Pilih sumber dana" />
                   </SelectTrigger>
                   <SelectContent>
-                    {sources.map(source => (
-                      <SelectItem key={source.id} value={source.id}>
-                        {source.name} - Rp {source.amount.toLocaleString()}
-                      </SelectItem>
-                    ))}
+                    {sources.map(source => {
+                      return (
+                        <SelectItem key={source.id} value={source.id}>
+                          {source.name}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 {sources.length === 0 && (
@@ -348,34 +441,96 @@ const AddBudget = () => {
                     Tambahkan sumber dana terlebih dahulu di halaman Budget
                   </p>
                 )}
+                
+                {selectedSource && (
+                  <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <h4 className="font-medium text-sm mb-2">Informasi Sumber Dana</h4>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span>Total Dana:</span>
+                      <span className="font-medium">Rp {sources.find(s => s.id === selectedSource)?.amount.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span>Status Penggunaan:</span>
+                      <span className="font-medium">{getUsedPercentage(selectedSource).toFixed(0)}% digunakan</span>
+                    </div>
+                    <div className="mb-2">
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500"
+                          style={{ width: `${getUsedPercentage(selectedSource)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div className="text-sm flex gap-1 items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-gray-500 text-xs">Terpakai</span>
+                      <div className="w-2 h-2 bg-gray-200 rounded-full ml-2"></div>
+                      <span className="text-gray-500 text-xs">Tersedia ({getAvailablePercentage(selectedSource).toFixed(0)}%)</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="percentage">Persentase (%)</Label>
-                <Input
-                  id="percentage"
-                  type="number"
-                  placeholder="0-100"
-                  min="0"
-                  max="100"
-                  value={percentage}
-                  onChange={(e) => handlePercentageChange(e.target.value)}
-                  disabled={loading || !selectedSource}
-                />
+              <div className="space-y-2 pt-2 border-t border-gray-100 mt-4">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="percentage" className="text-base">Alokasi Anggaran</Label>
+                  {selectedSource && (
+                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                      Maksimal: {getAvailablePercentage(selectedSource).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="percentage" className="text-sm mb-1 block">Persentase (%)</Label>
+                    <Input
+                      id="percentage"
+                      type="number"
+                      placeholder="0-100"
+                      min="0"
+                      max="100"
+                      value={percentage}
+                      onChange={(e) => handlePercentageChange(e.target.value)}
+                      disabled={loading || !selectedSource}
+                      className="mt-0"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="amount" className="text-sm mb-1 block">Jumlah (Rp)</Label>
+                    <CurrencyInput
+                      id="amount"
+                      placeholder="100000"
+                      value={amount}
+                      onChange={handleAmountChange}
+                      disabled={loading || !selectedSource}
+                      className="mt-0"
+                    />
+                  </div>
+                </div>
+                
+                {selectedSource && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Maksimal dana tersedia: Rp {((sources.find(s => s.id === selectedSource)?.amount || 0) * getAvailablePercentage(selectedSource) / 100).toLocaleString()}
+                  </p>
+                )}
               </div>
             </>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="amount">Jumlah Anggaran (Rp)</Label>
-            <CurrencyInput
-              id="amount"
-              placeholder="500000"
-              value={amount}
-              onChange={(value) => setAmount(value)}
-              disabled={loading || (budgetType === "percentage" && !!percentage)}
-            />
-          </div>
+          {budgetType !== "percentage" && (
+            <div className="space-y-2">
+              <Label htmlFor="amount">Jumlah Anggaran (Rp)</Label>
+              <CurrencyInput
+                id="amount"
+                placeholder="500000"
+                value={amount}
+                onChange={handleAmountChange}
+                disabled={loading}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="period">Periode</Label>
@@ -401,45 +556,29 @@ const AddBudget = () => {
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Tanggal Mulai</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={(date) => {
-                          setStartDate(date);
-                          if (date) {
-                            setEndDate(calculateEndDate(date, period));
-                          }
-                        }}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Input
+                    type="date"
+                    id="startDate"
+                    value={startDate ? startDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => {
+                      const date = e.target.value ? new Date(e.target.value) : undefined;
+                      setStartDate(date);
+                      if (date) {
+                        setEndDate(calculateEndDate(date, period));
+                      }
+                    }}
+                    className="w-full"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="endDate">Tanggal Berakhir (Otomatis)</Label>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal bg-gray-100"
-                    )}
+                  <Input
+                    type="date"
+                    id="endDate"
+                    value={endDate ? endDate.toISOString().split('T')[0] : ''}
+                    className="w-full bg-gray-100"
                     disabled
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP", { locale: id }) : <span>Otomatis</span>}
-                  </Button>
+                  />
                 </div>
               </div>
             </div>
@@ -449,61 +588,34 @@ const AddBudget = () => {
             <div className="space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Tanggal Mulai</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="startDateCustom">Tanggal Mulai</Label>
+                  <Input
+                    type="date"
+                    id="startDateCustom"
+                    value={startDate ? startDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => {
+                      const date = e.target.value ? new Date(e.target.value) : undefined;
+                      setStartDate(date);
+                    }}
+                    className="w-full"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">Tanggal Berakhir</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant={"outline"}
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP", { locale: id }) : <span>Pilih tanggal</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                        disabled={(date) => {
-                          // Disable dates before start date
-                          return startDate ? date < startDate : false;
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="endDateCustom">Tanggal Berakhir</Label>
+                  <Input
+                    type="date"
+                    id="endDateCustom"
+                    value={endDate ? endDate.toISOString().split('T')[0] : ''}
+                    onChange={(e) => {
+                      const date = e.target.value ? new Date(e.target.value) : undefined;
+                      setEndDate(date);
+                    }}
+                    className="w-full"
+                    min={startDate ? startDate.toISOString().split('T')[0] : ''}
+                  />
                 </div>
               </div>
-          </div>
+            </div>
           )}
 
           <div className="grid grid-cols-2 gap-4 pt-4">
@@ -516,7 +628,7 @@ const AddBudget = () => {
             >
               Batal
             </Button>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full  bg-blue-500 hover:bg-blue-600" disabled={loading}>
             {loading ? "Menyimpan..." : "Simpan Anggaran"}
           </Button>
           </div>

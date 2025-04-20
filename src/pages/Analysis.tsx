@@ -142,6 +142,14 @@ const Analysis = () => {
         startDate = subDays(now, 30);
       }
     }
+    
+    const event = new CustomEvent("globalDateRangeChanged", {
+      detail: {
+        from: startDate,
+        to: endDate,
+      },
+    });
+    window.dispatchEvent(event);
       
     let filtered = transactions.filter(t => {
       const txDate = new Date(t.date);
@@ -242,6 +250,7 @@ const Analysis = () => {
           categories={categories}
           wallets={wallets}
           showWalletData={true}
+          dateRange={dateRange}
         />
       </div>
     </Layout>

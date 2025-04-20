@@ -25,8 +25,10 @@ const FeatureToggle = ({
   disabled = false,
   loading = false
 }: FeatureToggleProps) => {
-  return (
-    <div className="flex items-center justify-between p-4 border-b border-gray-100">
+  const canNavigate = checked && managementLink;
+  
+  const Content = () => (
+    <>
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
           {icon}
@@ -39,29 +41,38 @@ const FeatureToggle = ({
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <Switch 
-          id={`toggle-${title}`}
-          checked={checked} 
-          onCheckedChange={onToggle}
-          disabled={disabled || loading}
-          aria-label={`Toggle ${title}`}
-          className={loading ? "opacity-50 cursor-not-allowed" : ""}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <Switch 
+            id={`toggle-${title}`}
+            checked={checked} 
+            onCheckedChange={onToggle}
+            disabled={disabled || loading}
+            aria-label={`Toggle ${title}`}
+            className={loading ? "opacity-50 cursor-not-allowed" : ""}
+          />
+        </div>
         {managementLink && (
-          <Link 
-            to={managementLink} 
-            className={`transition-colors ${
-              checked 
-                ? "text-gray-500 hover:text-gray-700" 
-                : "text-gray-300 pointer-events-none"
-            }`} 
-            aria-label={`Manage ${title}`}
-            tabIndex={checked ? 0 : -1}
-          >
+          <div className={`transition-colors ${checked ? "text-gray-500" : "text-gray-300"}`}>
             <ChevronRight className="w-5 h-5" />
-          </Link>
+          </div>
         )}
       </div>
+    </>
+  );
+
+  return (
+    <div className={`border-b border-gray-100 ${canNavigate ? 'hover:bg-gray-50' : ''}`}>
+      {canNavigate ? (
+        <Link to={managementLink!} className="block">
+          <div className="flex items-center justify-between p-4 cursor-pointer">
+            <Content />
+          </div>
+        </Link>
+      ) : (
+        <div className="flex items-center justify-between p-4">
+          <Content />
+        </div>
+      )}
     </div>
   );
 };

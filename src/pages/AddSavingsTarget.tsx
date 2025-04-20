@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 const AddSavingsTarget = () => {
   const { toast } = useToast();
@@ -81,11 +81,11 @@ const AddSavingsTarget = () => {
       });
 
       navigate("/savings");
-    } catch (error: any) {
-      console.error("Error adding savings target:", error.message);
+    } catch (error: unknown) {
+      console.error("Error adding savings target:", error instanceof Error ? error.message : String(error));
       toast({
         title: "Gagal Menambahkan Target",
-        description: error.message || "Terjadi kesalahan saat menambahkan target tabungan",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan saat menambahkan target tabungan",
         variant: "destructive",
       });
     } finally {
@@ -148,15 +148,13 @@ const AddSavingsTarget = () => {
 
             <div className="space-y-2">
               <Label htmlFor="target_amount">Jumlah Target*</Label>
-              <Input
+              <CurrencyInput
                 id="target_amount"
-                name="target_amount"
-                type="number"
-                placeholder="1000000"
-                value={formData.target_amount}
-                onChange={handleChange}
+                showPrefix={true}
+                placeholder="1.000.000"
+                value={Number(formData.target_amount)}
+                onChange={(value) => setFormData({...formData, target_amount: value.toString()})}
                 disabled={loading}
-                required
               />
             </div>
 
@@ -191,7 +189,16 @@ const AddSavingsTarget = () => {
               />
             </div>
 
-            <div className="pt-4">
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <Button 
+                type="button" 
+                className="w-full" 
+                variant="outline" 
+                onClick={() => navigate("/savings")}
+                disabled={loading}
+              >
+                Batal
+              </Button>
               <Button 
                 type="submit" 
                 className="w-full bg-amber-500 hover:bg-amber-600" 

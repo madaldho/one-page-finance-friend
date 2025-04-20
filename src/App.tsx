@@ -25,7 +25,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Categories from "@/pages/Categories";
 import Transactions from "@/pages/Transactions";
 import WalletForm from "@/components/WalletForm";
-import TestSavingsTransactions from "./pages/TestSavingsTransactions";
 import LoanPaymentPage from './pages/LoanPaymentPage';
 import AddDebtPage from './pages/AddDebtPage';
 import AddReceivablePage from './pages/AddReceivablePage';
@@ -175,7 +174,6 @@ function App() {
               <SavingsEdit />
             </ProtectedRoute>
           } />
-          <Route path="/savings/test" element={<TestSavingsTransactions />} />
           <Route path="/loans" element={
             <ProtectedRoute>
               <LoansManagement />

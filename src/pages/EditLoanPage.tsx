@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loan } from '@/types';
 import Layout from '@/components/Layout';
-import { ArrowLeft, Calendar, User, Info } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Info, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
@@ -107,7 +107,7 @@ const EditLoanPage = () => {
         description: `${loan.type === 'payable' ? 'Hutang' : 'Piutang'} berhasil diperbarui`,
       });
 
-      navigate(`/loans/${loan.id}`);
+      navigate('/loans');
     } catch (error: any) {
       console.error('Error updating loan:', error);
       toast({
@@ -144,7 +144,7 @@ const EditLoanPage = () => {
     <Layout>
       <div className="container mx-auto p-4 max-w-xl pb-24">
         <div className="flex items-center mb-6">
-          <Link to={`/loans/${loan.id}`} className="mr-2">
+          <Link to="/loans" className="mr-2">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-xl font-bold">
@@ -154,6 +154,11 @@ const EditLoanPage = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mb-24">
           <div className="bg-white rounded-lg p-5 shadow-sm">
+            <div className="flex items-center mb-4">
+              <CreditCard className={`${loan.type === 'payable' ? 'text-purple-500' : 'text-green-500'} mr-2 h-5 w-5`} />
+              <h2 className="text-lg font-medium">Detail {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</h2>
+            </div>
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Jumlah</label>
@@ -210,36 +215,44 @@ const EditLoanPage = () => {
                   />
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Jatuh Tempo</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input
-                    type="date"
-                    className="pl-10"
-                    {...register('due_date', { required: 'Tanggal jatuh tempo harus diisi' })}
-                    error={errors.due_date?.message}
-                  />
-                </div>
+          <div className="bg-white rounded-lg p-5 shadow-sm">
+            <div className="flex items-center mb-4">
+              <Calendar className={`${loan.type === 'payable' ? 'text-purple-500' : 'text-green-500'} mr-2 h-5 w-5`} />
+              <h2 className="text-lg font-medium">Jangka Waktu</h2>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Jatuh Tempo</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
+                <Input
+                  type="date"
+                  className="pl-10"
+                  {...register('due_date', { required: 'Tanggal jatuh tempo harus diisi' })}
+                  error={errors.due_date?.message}
+                />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="grid grid-cols-2 gap-4 pt-4">
             <Button
               type="button"
               variant="outline"
-              onClick={() => navigate(`/loans/${loan.id}`)}
+              className="w-full"
+              onClick={() => navigate('/loans')}
             >
               Batal
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className={loan.type === 'payable' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}
+              className={`w-full ${loan.type === 'payable' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-rose-600 hover:bg-rose-700'}`}
             >
-              {loading ? 'Menyimpan...' : 'Simpan Perubahan'}
+              {loading ? 'Menyimpan...' : 'Simpan'}
             </Button>
           </div>
         </form>

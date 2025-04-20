@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, FormEvent } from "react";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
@@ -331,14 +330,7 @@ const SavingsDeposit = () => {
                   />
                 </div>
                 
-                <div className="pt-4 space-y-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-amber-500 hover:bg-amber-600" 
-                    disabled={submitting}
-                  >
-                    {submitting ? "Memproses..." : "Setor"}
-                  </Button>
+                <div className="grid grid-cols-2 gap-4 pt-4">
                   <Button 
                     type="button" 
                     variant="outline" 
@@ -347,6 +339,13 @@ const SavingsDeposit = () => {
                     disabled={submitting}
                   >
                     Batal
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-amber-500 hover:bg-amber-600" 
+                    disabled={submitting}
+                  >
+                    {submitting ? "Memproses..." : "Setor"}
                   </Button>
                 </div>
               </form>

@@ -38,7 +38,7 @@ const AddDebtPage = () => {
       lender: '',
       description: '',
       wallet_id: '',
-      installment: 1
+      installment: 0
     }
   });
 
@@ -230,21 +230,20 @@ const AddDebtPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Cicilan</label>
+                <label className="block text-sm font-medium mb-1">Cicilan (Opsional)</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
                   <Input
                     type="number"
                     className="pl-10"
                     {...register('installment', { 
-                      required: 'Jumlah cicilan harus diisi',
                       min: { value: 1, message: 'Minimal 1 cicilan' }
                     })}
                     placeholder="1"
                     error={errors.installment?.message}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Jumlah cicilan yang harus dibayar</p>
+                <p className="text-xs text-gray-500 mt-1">Jumlah cicilan yang harus dibayar (kosongkan jika tidak ada cicilan)</p>
               </div>
             </div>
           </div>
@@ -268,7 +267,10 @@ const AddDebtPage = () => {
                   {wallets.map(wallet => (
                     <SelectItem key={wallet.id} value={wallet.id}>
                       <div className="flex items-center">
-                        <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                        <div 
+                          className="w-3 h-3 rounded-full mr-2" 
+                          style={{ backgroundColor: wallet.color || '#3b82f6' }}
+                        ></div>
                         <span>{wallet.name} ({formatCurrency(wallet.balance)})</span>
                       </div>
                     </SelectItem>
@@ -284,10 +286,11 @@ const AddDebtPage = () => {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="grid grid-cols-2 gap-4 pt-4">
             <Button
               type="button"
               variant="outline"
+              className="w-full"
               onClick={() => navigate('/loans')}
             >
               Batal
@@ -295,7 +298,7 @@ const AddDebtPage = () => {
             <Button
               type="submit"
               disabled={loading}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-rose-600 hover:bg-rose-700"
             >
               {loading ? 'Menyimpan...' : 'Simpan'}
             </Button>

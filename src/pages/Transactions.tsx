@@ -33,11 +33,14 @@ import {
   ArrowRight,
   ChevronLeft,
   Calendar,
-  Filter as FilterIcon,
+  Filter,
   X,
   MoreHorizontal,
   MoreVertical,
-  Edit2
+  Edit2,
+  RotateCcw,
+  ArrowDownRight,
+  ArrowUpRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,21 +52,9 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Category } from '@/types';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+import { DateRange } from 'react-day-picker';
+import TransactionList from '@/components/TransactionList';
+import { cn } from '@/lib/utils';
 
 // Helper function for media queries
 function useMediaQuery(query: string) {
@@ -120,16 +111,14 @@ const Transactions = () => {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
-  const [selectedWalletId, setSelectedWalletId] = useState<string>('all');
+  const [selectedWalletIds, setSelectedWalletIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddTransaction, setShowAddTransaction] = useState(false);
   const [transactionType, setTransactionType] = useState<'income' | 'expense'>('expense');
   const [selectedWalletName, setSelectedWalletName] = useState<string>('Semua Dompet');
   const [showFilters, setShowFilters] = useState(false);
-  const [dateGroups, setDateGroups] = useState<{[key: string]: Transaction[]}>({});
-  const [isBulkMode, setIsBulkMode] = useState(false);
-  const [selectedTransactions, setSelectedTransactions] = useState<string[]>([]);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [dateRangeFilter, setDateRangeFilter] = useState<DateRange | undefined>(undefined);
   const isSmallScreen = useMediaQuery("(max-width: 767px)");
 
   useEffect(() => {
@@ -141,45 +130,21 @@ const Transactions = () => {
   useEffect(() => {
     // Jika ada parameter wallet di URL, atur filter dompet
     if (walletParam && walletParam !== 'all') {
-      setSelectedWalletId(walletParam);
+      setSelectedWalletIds([walletParam]);
     }
   }, [walletParam]);
 
   useEffect(() => {
     // Dapatkan nama dompet yang dipilih
-    if (selectedWalletId === 'all') {
+    if (selectedWalletIds.length === 0) {
       setSelectedWalletName('Semua Dompet');
     } else {
-      const selectedWallet = wallets.find(w => w.id === selectedWalletId);
+      const selectedWallet = wallets.find(w => w.id === selectedWalletIds[0]);
       if (selectedWallet) {
         setSelectedWalletName(selectedWallet.name);
       }
     }
-  }, [selectedWalletId, wallets]);
-
-  useEffect(() => {
-    // Group transactions by date
-    const filtered = getFilteredTransactions();
-    const groups: {[key: string]: Transaction[]} = {};
-    
-    filtered.forEach(transaction => {
-      const date = transaction.date.split('T')[0];
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(transaction);
-    });
-    
-    // Sort dates in descending order
-    const sortedGroups: {[key: string]: Transaction[]} = {};
-    Object.keys(groups)
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
-      .forEach(date => {
-        sortedGroups[date] = groups[date];
-      });
-    
-    setDateGroups(sortedGroups);
-  }, [transactions, activeTab, selectedWalletId, searchTerm]);
+  }, [selectedWalletIds, wallets]);
 
   const fetchData = async () => {
     try {
@@ -192,8 +157,7 @@ const Transactions = () => {
         .eq('user_id', user?.id);
 
       if (categoriesError) throw categoriesError;
-      // Cast hasil dari supabase ke type Category[]
-      setCategories(categoriesData as unknown as Category[]);
+      setCategories(categoriesData || []);
 
       // Fetch wallets
       const { data: walletsData, error: walletsError } = await supabase
@@ -232,7 +196,7 @@ const Transactions = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
-        title: 'Error',
+        title: 'Terjadi Kesalahan',
         description: 'Gagal memuat data transaksi',
         variant: 'destructive',
       });
@@ -241,19 +205,16 @@ const Transactions = () => {
     }
   };
 
-  const handleDeleteTransaction = async (id: string) => {
+  const handleDeleteTransaction = async (ids: string[]) => {
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      setTransactions(prev => prev.filter(t => t.id !== id));
+      await Promise.all(
+        ids.map(id => supabase.from('transactions').delete().eq('id', id))
+      );
+      
+      setTransactions(prev => prev.filter(t => !ids.includes(t.id)));
       toast({
         title: 'Berhasil',
-        description: 'Transaksi berhasil dihapus',
+        description: `${ids.length > 1 ? `${ids.length} transaksi` : 'Transaksi'} berhasil dihapus`,
       });
     } catch (error) {
       console.error('Error deleting transaction:', error);
@@ -263,6 +224,12 @@ const Transactions = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleEditTransaction = (transaction: Transaction) => {
+    console.log('Edit transaction', transaction);
+    // Arahkan ke halaman edit transaksi
+    navigate(`/transaction/${transaction.type}/${transaction.id}`);
   };
 
   const exportTransactions = async () => {
@@ -310,46 +277,59 @@ const Transactions = () => {
   };
 
   const getFilteredTransactions = () => {
+    if (!transactions) return [];
+    
     return transactions.filter(transaction => {
-      // Filter by tab (transaction type)
+      // Jenis transaksi (all, income, expense, transfer)
       if (activeTab !== 'all' && transaction.type !== activeTab) {
         return false;
       }
       
-      // Filter by wallet
-      if (selectedWalletId !== 'all' && transaction.wallet_id !== selectedWalletId) {
+      // Filter berdasarkan wallet IDs (jika ada yang dipilih)
+      if (selectedWalletIds.length > 0 && !selectedWalletIds.includes(transaction.wallet_id as string) && 
+          !(transaction.destination_wallet_id && selectedWalletIds.includes(transaction.destination_wallet_id as string))) {
         return false;
       }
       
-      // Filter by search term
+      // Filter berdasarkan kategori IDs (jika ada yang dipilih)
+      if (selectedCategoryIds.length > 0 && !selectedCategoryIds.includes(transaction.category as string)) {
+        return false;
+      }
+      
+      // Rentang tanggal
+      if (dateRangeFilter?.from && new Date(transaction.date) < dateRangeFilter.from) {
+        return false;
+      }
+      
+      if (dateRangeFilter?.to) {
+        const toDateWithEndOfDay = new Date(dateRangeFilter.to);
+        toDateWithEndOfDay.setHours(23, 59, 59, 999);
+        if (new Date(transaction.date) > toDateWithEndOfDay) {
+          return false;
+        }
+      }
+      
+      // Filter berdasarkan kata kunci
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
-        return (
-          transaction.title.toLowerCase().includes(searchLower) ||
-          (transaction.description?.toLowerCase().includes(searchLower) || false) ||
-          (transaction.category_data?.name.toLowerCase().includes(searchLower) || false) ||
-          (transaction.wallet_name?.toLowerCase().includes(searchLower) || false)
-        );
+        const matchesTitle = transaction.title?.toLowerCase().includes(searchLower);
+        const matchesDescription = transaction.description?.toLowerCase().includes(searchLower);
+        const matchesCategory = categories.find(
+          cat => cat.id === transaction.category
+        )?.name?.toLowerCase().includes(searchLower);
+        
+        const matchesWallet = wallets.find(
+          w => w.id === transaction.wallet_id
+        )?.name?.toLowerCase().includes(searchLower);
+        
+        if (!(matchesTitle || matchesDescription || matchesCategory || matchesWallet)) {
+          return false;
+        }
       }
       
       return true;
     });
   };
-
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case 'income':
-        return <ArrowUp className="w-4 h-4 text-green-500" />;
-      case 'expense':
-        return <ArrowDown className="w-4 h-4 text-red-500" />;
-      case 'transfer':
-        return <ArrowLeftRight className="w-4 h-4 text-blue-500" />;
-      default:
-        return null;
-    }
-  };
-
-  const filteredTransactions = getFilteredTransactions();
 
   const handleGoBack = () => {
     if (walletParam) {
@@ -361,233 +341,20 @@ const Transactions = () => {
 
   const resetFilters = () => {
     setSearchTerm('');
-    setSelectedWalletId('all');
+    setSelectedWalletIds([]);
+    setSelectedCategoryIds([]);
     setActiveTab('all');
+    setDateRangeFilter(undefined);
     setShowFilters(false);
   };
 
-  const formatDateHeader = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'EEEE, d MMMM yyyy', { locale: id });
-    } catch (error) {
-      return dateString;
-    }
-  };
-
-  const isToday = (dateString: string) => {
-    const today = new Date();
-    const date = new Date(dateString);
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
-  };
-
-  const isYesterday = (dateString: string) => {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const date = new Date(dateString);
-    return (
-      date.getDate() === yesterday.getDate() &&
-      date.getMonth() === yesterday.getMonth() &&
-      date.getFullYear() === yesterday.getFullYear()
-    );
-  };
-
-  const getDateLabel = (dateString: string) => {
-    if (isToday(dateString)) return 'Hari Ini';
-    if (isYesterday(dateString)) return 'Kemarin';
-    return formatDateHeader(dateString);
-  };
-
-  const formatShortDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'dd/MM/yyyy', { locale: id });
-    } catch (error) {
-      return dateString;
-    }
-  };
-
-  // Helper untuk mendapatkan warna badge kategori
-  const getCategoryBadgeClass = (transaction: Transaction) => {
-    const categoryName = transaction.category_data?.name?.toLowerCase() || '';
-    
-    if (transaction.type === 'income') {
-      return "bg-green-100 text-green-700";
-    } else if (transaction.type === 'expense') {
-      if (categoryName.includes('makan')) {
-        return "bg-amber-100 text-amber-700";
-      } else if (categoryName.includes('belanja') || categoryName.includes('shopping')) {
-        return "bg-lime-100 text-lime-700";  
-      } else if (categoryName.includes('hutang')) {
-        return "bg-teal-100 text-teal-700";
-      } else {
-        return "bg-red-100 text-red-700";
-      }
-    } else if (transaction.type === 'transfer') {
-      return "bg-blue-100 text-blue-700";
-    }
-    
-    return "bg-gray-100 text-gray-700";
-  };
-
-  // Helper untuk mendapatkan nama kategori untuk display
-  const getCategoryDisplayName = (transaction: Transaction) => {
-    if (transaction.category_data?.name) {
-      return transaction.category_data.name;
-    }
-    
-    if (transaction.type === 'income') {
-      return 'Terima Piutang';
-    } else if (transaction.type === 'expense') {
-      return 'Hutang';
-    } else {
-      return 'Transfer';
-    }
-  };
-
-  // Helper untuk mendapatkan warna badge dompet
-  const getWalletBadgeClass = (walletName: string = '') => {
-    const name = walletName.toLowerCase();
-    
-    if (name.includes('ovo')) {
-      return "bg-purple-100 text-purple-700";
-    } else if (name.includes('dana')) {
-      return "bg-blue-100 text-blue-700";
-    } else if (name.includes('bca')) {
-      return "bg-blue-900 text-white";
-    } else if (name.includes('gopay')) {
-      return "bg-green-100 text-green-700";
-    }
-    
-    return "bg-gray-100 text-gray-700";
-  };
-
-  // Handle bulk delete
-  const handleBulkDelete = async () => {
-    if (selectedTransactions.length === 0) return;
-    
-    try {
-      await Promise.all(
-        selectedTransactions.map(id => 
-          supabase.from('transactions').delete().eq('id', id)
-        )
-      );
-      
-      setTransactions(prev => prev.filter(t => !selectedTransactions.includes(t.id)));
-      toast({
-        title: 'Berhasil',
-        description: `${selectedTransactions.length} transaksi berhasil dihapus`,
-      });
-      
-      // Reset selection mode
-      setIsBulkMode(false);
-      setSelectedTransactions([]);
-    } catch (error) {
-      console.error('Error deleting transactions:', error);
-      toast({
-        title: 'Error',
-        description: 'Gagal menghapus transaksi',
-        variant: 'destructive',
-      });
-    }
-  };
-  
-  // Toggle selection of a transaction
-  const toggleTransactionSelection = (id: string) => {
-    setSelectedTransactions(prev => {
-      if (prev.includes(id)) {
-        const newSelected = prev.filter(transId => transId !== id);
-        if (newSelected.length === 0) {
-          setIsBulkMode(false);
-        }
-        return newSelected;
-      } else {
-        return [...prev, id];
-      }
-    });
-  };
-  
-  // Handle long press on mobile
-  const handleLongPress = (id: string) => {
-    if (!isSmallScreen) return;
-    
-    if (longPressTimer) clearTimeout(longPressTimer);
-    
-    const timer = setTimeout(() => {
-      setIsBulkMode(true);
-      toggleTransactionSelection(id);
-    }, 500); // 500ms long press
-    
-    setLongPressTimer(timer);
-  };
-  
-  const handlePressEnd = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
-    }
-  };
-  
-  // Handle click on transaction
-  const handleTransactionClick = (id: string) => {
-    if (isBulkMode) {
-      toggleTransactionSelection(id);
-    }
-  };
-
-  // Get wallet badge style - similar to TransactionList component
-  const getWalletBadgeStyle = (walletId: string | null) => {
-    if (!walletId) return {};
-    
-    const wallet = wallets.find(w => w.id === walletId);
-    if (!wallet) return {};
-    
-    if (wallet.color) {
-      return {
-        backgroundColor: `${wallet.color}15`,
-        color: wallet.color,
-        borderColor: `${wallet.color}30`
-      };
-    }
-    
-    return {};
-  };
-  
-  // Get category badge style
-  const getCategoryBadgeStyle = (categoryId: string | undefined) => {
-    if (!categoryId) return {};
-    
-    const category = categories.find(c => c.id === categoryId);
-    if (!category || !category.color) return {};
-    
-    return {
-      backgroundColor: `${category.color}15`,
-      color: category.color,
-      borderColor: `${category.color}30`
-    };
-  };
-  
-  // Get transaction type color
-  const getTransactionTypeColor = (type: string) => {
-    switch (type) {
-      case 'income':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'expense':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
-      case 'transfer':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      default:
-        return 'bg-gray-50 text-gray-700 border-gray-200';
-    }
-  };
+  const filteredTransactions = getFilteredTransactions();
 
   return (
     <Layout>
       <div className="container mx-auto p-4 pb-32 max-w-5xl">
         {/* Header Bar */}
-        <div className="flex items-center justify-between mb-4 sticky top-0 z-10 bg-background pt-2 pb-4">
+        <div className="flex items-center justify-between mb-4 sticky top-0 z-10 bg-background pt-2 pb-4 rounded-lg">
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
@@ -598,104 +365,393 @@ const Transactions = () => {
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-bold">Transaksi</h1>
-            {selectedWalletId !== 'all' && (
+            {selectedWalletIds.length > 0 && (
               <Badge variant="outline" className="ml-2">
                 {selectedWalletName}
               </Badge>
             )}
           </div>
           
-          <div className="flex gap-2">
-            {/* Tampilkan tombol cancel dan delete saat mode bulk */}
-            {isBulkMode ? (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => {
-                    setIsBulkMode(false);
-                    setSelectedTransactions([]);
-                  }}
-                >
-                  Batal
-                </Button>
-                <Button
-                  variant="destructive" 
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={selectedTransactions.length === 0}
-                >
-                  Hapus ({selectedTransactions.length})
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="relative">
-                  <Button variant="outline" size="icon" className="rounded-full">
-                    <Search className="h-4 w-4" />
-                  </Button>
-                </div>
+          <div className="flex gap-2 pr-3">
+           
                 
                 <Sheet open={showFilters} onOpenChange={setShowFilters}>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="icon" className="rounded-full">
-                      <FilterIcon className="h-4 w-4" />
+                      <Filter className="h-4 w-4" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-full sm:max-w-sm">
-                    <SheetHeader>
-                      <SheetTitle>Filter Transaksi</SheetTitle>
-                    </SheetHeader>
-                    <div className="py-6 space-y-6">
+                  <SheetContent className="w-[85vw] sm:max-w-md p-0">
+                    <div className="h-full flex flex-col">
+                      <div className="p-4 border-b">
+                        <SheetTitle className="flex items-center gap-2">
+                          <Filter className="w-5 h-5 text-primary" />
+                          Filter Transaksi
+                        </SheetTitle>
+                      </div>
+                      
+                      <div className="flex-1 overflow-auto">
+                        <div className="p-4 space-y-5">
+                          {/* Jenis Transaksi */}
                       <div className="space-y-2">
+                            <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">Jenis Transaksi</p>
+                              <Badge variant="outline" className="font-normal">
+                                {activeTab === 'all' && 'Semua'}
+                                {activeTab === 'income' && 'Pemasukan'}
+                                {activeTab === 'expense' && 'Pengeluaran'}
+                                {activeTab === 'transfer' && 'Transfer'}
+                              </Badge>
+                            </div>
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                          <TabsList className="grid grid-cols-4 w-full rounded-full">
-                            <TabsTrigger value="all" className="rounded-full">Semua</TabsTrigger>
-                            <TabsTrigger value="income" className="rounded-full">Masuk</TabsTrigger>
-                            <TabsTrigger value="expense" className="rounded-full">Keluar</TabsTrigger>
-                            <TabsTrigger value="transfer" className="rounded-full">Transfer</TabsTrigger>
+                              <TabsList className="grid grid-cols-4 w-full rounded-lg h-9">
+                                <TabsTrigger value="all" className="text-xs rounded-l-lg">Semua</TabsTrigger>
+                                <TabsTrigger value="income" className="text-xs">Masuk</TabsTrigger>
+                                <TabsTrigger value="expense" className="text-xs">Keluar</TabsTrigger>
+                                <TabsTrigger value="transfer" className="text-xs rounded-r-lg">Transfer</TabsTrigger>
                           </TabsList>
                         </Tabs>
                       </div>
 
+                          {/* Multi-select Wallet */}
                       <div className="space-y-2">
+                            <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">Dompet</p>
-                        <Select 
-                          value={selectedWalletId} 
-                          onValueChange={setSelectedWalletId}
-                        >
-                          <SelectTrigger className="w-full">
-                            <Wallet className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder="Semua Dompet" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">Semua Dompet</SelectItem>
-                            {wallets.map(wallet => (
-                              <SelectItem key={wallet.id} value={wallet.id}>
-                                {wallet.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
+                              {selectedWalletIds.length > 0 && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => setSelectedWalletIds([])}
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  Reset ({selectedWalletIds.length})
+                                </Button>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <Select onValueChange={(value) => {
+                                // Handle "all" option
+                                if (value === "all") {
+                                  setSelectedWalletIds([]);
+                                  return;
+                                }
+                                
+                                // Toggle selection
+                                setSelectedWalletIds(prev => 
+                                  prev.includes(value) 
+                                    ? prev.filter(id => id !== value)
+                                    : [...prev, value]
+                                );
+                              }}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={
+                                    selectedWalletIds.length === 0 
+                                      ? "Semua Dompet" 
+                                      : `${selectedWalletIds.length} dompet dipilih`
+                                  } />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <div className="py-2 px-2 border-b border-gray-100">
+                                    <SelectItem value="all" className="rounded-md">
+                                      <div className="flex items-center space-x-2">
+                                        <div className={`h-4 w-4 rounded-sm flex items-center justify-center ${selectedWalletIds.length === 0 ? "bg-primary border-primary" : "border border-gray-300"}`}>
+                                          {selectedWalletIds.length === 0 && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                              <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                          )}
+                                        </div>
+                                        <span className="font-medium">Semua Dompet</span>
+                                      </div>
+                                    </SelectItem>
+                                  </div>
+                                  
+                                  <div className="py-1 max-h-[200px] overflow-auto">
+                                    {wallets.map(wallet => (
+                                      <SelectItem
+                                        key={wallet.id}
+                                        value={wallet.id}
+                                        className={`rounded-md my-1 ${selectedWalletIds.includes(wallet.id) ? `bg-${wallet.color ? wallet.color.replace('#', '') : 'primary'}/10` : ""}`}
+                                      >
+                                        <div className="flex items-center space-x-2">
+                                          <div className={`h-4 w-4 rounded-sm flex items-center justify-center ${selectedWalletIds.includes(wallet.id) ? `bg-${wallet.color || 'primary'} border-${wallet.color || 'primary'}` : "border"}`} style={{ borderColor: wallet.color }}>
+                                            {selectedWalletIds.includes(wallet.id) && (
+                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                              </svg>
+                                            )}
+                                          </div>
+                                          <span style={{ color: wallet.color }} className="font-medium">{wallet.name}</span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </div>
+                                </SelectContent>
+                              </Select>
+                              
+                              {/* Selected Wallets Badges */}
+                              {selectedWalletIds.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {selectedWalletIds.map(walletId => {
+                                    const wallet = wallets.find(w => w.id === walletId);
+                                    if (!wallet) return null;
+                                    return (
+                                      <Badge 
+                                        key={walletId} 
+                                        className="flex items-center gap-1 py-0.5 pl-2 pr-1"
+                                        style={{ backgroundColor: `${wallet.color}20`, color: wallet.color, borderColor: `${wallet.color}30` }}
+                                      >
+                                        {wallet.name}
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                                          onClick={() => setSelectedWalletIds(prev => prev.filter(id => id !== walletId))}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Multi-select Kategori */}
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Pengurutan</p>
-                        <Select>
-                          <SelectTrigger className="w-full">
-                            <Calendar className="w-4 h-4 mr-2" />
-                            <SelectValue placeholder="Terbaru" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="newest">Terbaru</SelectItem>
-                            <SelectItem value="oldest">Terlama</SelectItem>
-                            <SelectItem value="highest">Nominal Tertinggi</SelectItem>
-                            <SelectItem value="lowest">Nominal Terendah</SelectItem>
-                          </SelectContent>
-                        </Select>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-medium">Kategori</p>
+                              {selectedCategoryIds.length > 0 && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => setSelectedCategoryIds([])}
+                                  className="h-6 px-2 text-xs"
+                                >
+                                  Reset ({selectedCategoryIds.length})
+                                </Button>
+                              )}
                       </div>
-                      
+                            <div className="relative">
+                              <Select onValueChange={(value) => {
+                                // Handle "all" option
+                                if (value === "all") {
+                                  setSelectedCategoryIds([]);
+                                  return;
+                                }
+                                
+                                // Toggle selection
+                                setSelectedCategoryIds(prev => 
+                                  prev.includes(value) 
+                                    ? prev.filter(id => id !== value)
+                                    : [...prev, value]
+                                );
+                              }}>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder={
+                                    selectedCategoryIds.length === 0 
+                                      ? "Semua Kategori" 
+                                      : `${selectedCategoryIds.length} kategori dipilih`
+                                  } />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <div className="py-2 px-2 border-b border-gray-100">
+                                    <SelectItem value="all" className="rounded-md">
+                                      <div className="flex items-center space-x-2">
+                                        <div className={`h-4 w-4 rounded-sm flex items-center justify-center ${selectedCategoryIds.length === 0 ? "bg-primary border-primary" : "border border-gray-300"}`}>
+                                          {selectedCategoryIds.length === 0 && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                              <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                          )}
+                                        </div>
+                                        <span className="font-medium">Semua Kategori</span>
+                                      </div>
+                                    </SelectItem>
+                                  </div>
+                                  
+                                  <div className="py-1 max-h-[200px] overflow-auto">
+                                    {categories.map(category => (
+                                      <SelectItem
+                                        key={category.id}
+                                        value={category.id}
+                                        className={`rounded-md my-1 ${selectedCategoryIds.includes(category.id) ? `bg-${category.color ? category.color.replace('#', '') : 'primary'}/10` : ""}`}
+                                      >
+                                        <div className="flex items-center space-x-2">
+                                          <div className={`h-4 w-4 rounded-sm flex items-center justify-center ${selectedCategoryIds.includes(category.id) ? `bg-${category.color || 'primary'} border-${category.color || 'primary'}` : "border"}`} style={{ borderColor: category.color }}>
+                                            {selectedCategoryIds.includes(category.id) && (
+                                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                              </svg>
+                                            )}
+                                          </div>
+                                          <span style={{ color: category.color }} className="font-medium">
+                                            {category.icon && <i className={`fas fa-${category.icon} mr-1 text-xs`}></i>}
+                                            {category.name}
+                                          </span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                    
+                                    {/* Kategori Khusus */}
+                                    <SelectItem
+                                      key="Transfer"
+                                      value="Transfer"
+                                      className={`rounded-md my-1 ${selectedCategoryIds.includes("Transfer") ? "bg-blue-50" : ""}`}
+                                    >
+                                      <div className="flex items-center space-x-2">
+                                        <div className={`h-4 w-4 rounded-sm flex items-center justify-center ${selectedCategoryIds.includes("Transfer") ? "bg-blue-500 border-blue-500" : "border border-blue-400"}`}>
+                                          {selectedCategoryIds.includes("Transfer") && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                              <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                          )}
+                                        </div>
+                                        <span className="text-blue-600 font-medium">
+                                          <i className="fas fa-exchange-alt mr-1 text-xs"></i>
+                                          Transfer
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                    
+                                    <SelectItem
+                                      key="Fee"
+                                      value="Fee"
+                                      className={`rounded-md my-1 ${selectedCategoryIds.includes("Fee") ? "bg-amber-50" : ""}`}
+                                    >
+                                      <div className="flex items-center space-x-2">
+                                        <div className={`h-4 w-4 rounded-sm flex items-center justify-center ${selectedCategoryIds.includes("Fee") ? "bg-amber-500 border-amber-500" : "border border-amber-400"}`}>
+                                          {selectedCategoryIds.includes("Fee") && (
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                                              <polyline points="20 6 9 17 4 12"></polyline>
+                                            </svg>
+                                          )}
+                                        </div>
+                                        <span className="text-amber-600 font-medium">
+                                          <i className="fas fa-percentage mr-1 text-xs"></i>
+                                          Biaya Admin
+                                        </span>
+                                      </div>
+                                    </SelectItem>
+                                  </div>
+                                </SelectContent>
+                              </Select>
+                              
+                              {/* Selected Categories Badges */}
+                              {selectedCategoryIds.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                  {selectedCategoryIds.map(catId => {
+                                    if (catId === "Transfer") {
+                                      return (
+                                        <Badge 
+                                          key={catId} 
+                                          className="flex items-center gap-1 py-0.5 pl-2 pr-1 bg-blue-50 text-blue-700 border-blue-200"
+                                        >
+                                          <i className="fas fa-exchange-alt mr-1 text-xs"></i>
+                                          Transfer
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-4 w-4 p-0 text-blue-400 hover:text-blue-700"
+                                            onClick={() => setSelectedCategoryIds(prev => prev.filter(id => id !== catId))}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </Badge>
+                                      );
+                                    }
+                                    
+                                    if (catId === "Fee") {
+                                      return (
+                                        <Badge 
+                                          key={catId} 
+                                          className="flex items-center gap-1 py-0.5 pl-2 pr-1 bg-amber-50 text-amber-700 border-amber-200"
+                                        >
+                                          <i className="fas fa-percentage mr-1 text-xs"></i>
+                                          Biaya Admin
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            className="h-4 w-4 p-0 text-amber-400 hover:text-amber-700"
+                                            onClick={() => setSelectedCategoryIds(prev => prev.filter(id => id !== catId))}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </Button>
+                                        </Badge>
+                                      );
+                                    }
+                                    
+                                    const category = categories.find(c => c.id === catId);
+                                    if (!category) return null;
+                                    return (
+                                      <Badge 
+                                        key={catId} 
+                                        className="flex items-center gap-1 py-0.5 pl-2 pr-1"
+                                        style={{ backgroundColor: `${category.color}20`, color: category.color, borderColor: `${category.color}30` }}
+                                      >
+                                        {category.icon && <i className={`fas fa-${category.icon} mr-1 text-xs`}></i>}
+                                        {category.name}
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground"
+                                          onClick={() => setSelectedCategoryIds(prev => prev.filter(id => id !== catId))}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Rentang Tanggal */}
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Rentang Tanggal</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Dari</p>
+                                <div className="relative">
+                                  <Input 
+                                    type="date" 
+                                    className="w-full pl-8"
+                                    value={dateRangeFilter?.from ? format(new Date(dateRangeFilter.from), "yyyy-MM-dd") : ""}
+                                    onChange={(e) => {
+                                      const fromDate = e.target.value ? new Date(e.target.value) : undefined;
+                                      setDateRangeFilter(prev => ({
+                                        from: fromDate,
+                                        to: prev?.to
+                                      }));
+                                    }}
+                                  />
+                                  <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Sampai</p>
+                                <div className="relative">
+                                  <Input 
+                                    type="date" 
+                                    className="w-full pl-8"
+                                    value={dateRangeFilter?.to ? format(new Date(dateRangeFilter.to), "yyyy-MM-dd") : ""}
+                                    onChange={(e) => {
+                                      const toDate = e.target.value ? new Date(e.target.value) : undefined;
+                                      setDateRangeFilter(prev => ({
+                                        from: prev?.from,
+                                        to: toDate
+                                      }));
+                                    }}
+                                  />
+                                  <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Pencarian */}
                       <div className="space-y-2">
                         <p className="text-sm font-medium">Pencarian</p>
                         <div className="relative">
@@ -720,20 +776,40 @@ const Transactions = () => {
                         </div>
                       </div>
                       
-                      <div className="pt-4 space-y-4">
+                          {/* Jumlah Transaksi */}
+                          <div className="bg-muted/50 p-3 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-muted-foreground">Jumlah transaksi</span>
+                              <Badge variant="secondary">{filteredTransactions.length}</Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Footer dengan tombol reset dan terapkan */}
+                      <div className="p-4 border-t">
+                        <div className="flex gap-2">
                         <Button 
                           variant="outline"
-                          className="w-full"
-                          onClick={resetFilters}
-                        >
+                            className="flex-1"
+                            onClick={() => {
+                              setActiveTab('all');
+                              setSelectedWalletIds([]);
+                              setSelectedCategoryIds([]);
+                              setDateRangeFilter(undefined);
+                              setSearchTerm('');
+                            }}
+                          >
+                            <RotateCcw className="h-4 w-4 mr-2" />
                           Reset Filter
                         </Button>
                         <Button 
-                          className="w-full"
+                            className="flex-1"
                           onClick={() => setShowFilters(false)}
                         >
-                          Terapkan Filter
+                            Terapkan
                         </Button>
+                        </div>
                       </div>
                     </div>
                   </SheetContent>
@@ -747,13 +823,10 @@ const Transactions = () => {
                 >
                   <FileDown className="h-4 w-4" />
                 </Button>
-              </>
-            )}
           </div>
         </div>
 
         {/* Filter Badges */}
-        {!isBulkMode && (
           <div className="flex flex-wrap gap-2 mb-4">
             {activeTab !== 'all' && (
               <Badge 
@@ -771,7 +844,7 @@ const Transactions = () => {
                 </Button>
               </Badge>
             )}
-            {selectedWalletId !== 'all' && (
+            {selectedWalletIds.length > 0 && (
               <Badge 
                 variant="outline"
                 className="flex items-center gap-1 pl-2 bg-primary/5 border-primary/20"
@@ -781,7 +854,7 @@ const Transactions = () => {
                   variant="ghost" 
                   size="icon" 
                   className="h-5 w-5 p-0 ml-1"
-                  onClick={() => setSelectedWalletId('all')}
+                  onClick={() => setSelectedWalletIds([])}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -803,7 +876,7 @@ const Transactions = () => {
                 </Button>
               </Badge>
             )}
-            {(activeTab !== 'all' || selectedWalletId !== 'all' || searchTerm) && (
+            {(activeTab !== 'all' || selectedWalletIds.length > 0 || searchTerm) && (
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -814,47 +887,89 @@ const Transactions = () => {
               </Button>
             )}
           </div>
-        )}
 
-        {/* Search input, especially visible for desktop */}
-        {!isBulkMode && isSmallScreen === false && (
-          <div className="mb-4 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Cari transaksi..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 border-gray-200 focus:border-primary/40"
-            />
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Pengeluaran Card */}
+            <Card className="bg-red-50 border-red-100 shadow-sm overflow-hidden relative">
+              <div className="absolute right-0 top-0 h-full w-1 bg-red-400"></div>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-red-600 text-sm font-medium mb-1">Pengeluaran</p>
+                    <p className="text-2xl font-bold text-red-700">
+                      {formatCurrency(filteredTransactions
+                        .filter(t => t.type === 'expense')
+                        .reduce((sum, t) => sum + t.amount, 0)
+                      )}
+                    </p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {filteredTransactions.filter(t => t.type === 'expense').length} transaksi
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <ArrowDownRight className="h-5 w-5 text-red-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pemasukan Card */}
+            <Card className="bg-green-50 border-green-100 shadow-sm overflow-hidden relative">
+              <div className="absolute right-0 top-0 h-full w-1 bg-green-400"></div>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-green-600 text-sm font-medium mb-1">Pemasukan</p>
+                    <p className="text-2xl font-bold text-green-700">
+                      {formatCurrency(filteredTransactions
+                        .filter(t => t.type === 'income')
+                        .reduce((sum, t) => sum + t.amount, 0)
+                      )}
+                    </p>
+                    <p className="text-xs text-green-500 mt-1">
+                      {filteredTransactions.filter(t => t.type === 'income').length} transaksi
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <ArrowUpRight className="h-5 w-5 text-green-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Total Transaksi Card */}
+            <Card className="bg-slate-50 border-slate-100 shadow-sm overflow-hidden relative">
+              <div className="absolute right-0 top-0 h-full w-1 bg-slate-400"></div>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-600 text-sm font-medium mb-1">Jumlah Transaksi</p>
+                    <p className="text-2xl font-bold text-slate-700">
+                      {filteredTransactions.length}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {formatCurrency(
+                        filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) -
+                        filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
+                      )}
+                    </p>
+                  </div>
+                  <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
+                    <Wallet className="h-5 w-5 text-slate-500" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        )}
 
-        {/* Desktop Sorting options */}
-        {!isBulkMode && isSmallScreen === false && (
-          <div className="mb-4 flex justify-end">
-            <Select>
-              <SelectTrigger className="w-[180px]">
-                <Calendar className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="Terbaru" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Terbaru</SelectItem>
-                <SelectItem value="oldest">Terlama</SelectItem>
-                <SelectItem value="highest">Nominal Tertinggi</SelectItem>
-                <SelectItem value="lowest">Nominal Terendah</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {/* Transactions Table */}
+        {/* Main Content with TransactionList */}
               {loading ? (
           <div className="flex flex-col items-center justify-center p-8 min-h-[60vh]">
             <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mb-4"></div>
                   <p className="text-gray-500">Memuat data transaksi...</p>
                 </div>
-        ) : Object.keys(dateGroups).length === 0 ? (
+        ) : filteredTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-8 min-h-[60vh] bg-white/50 rounded-lg shadow-sm">
             <div className="text-gray-400 mb-4">
               <Search className="h-12 w-12 mx-auto opacity-20" />
@@ -873,238 +988,17 @@ const Transactions = () => {
               <Plus className="h-4 w-4 mr-2" />
               Tambah Transaksi
             </Button>
-                            </div>
-        ) : isSmallScreen ? (
-          // Mobile view
-          <div className="space-y-2">
-            {Object.entries(dateGroups).flatMap(([date, dateTransactions]) => 
-              dateTransactions.map((transaction) => (
-                <div 
-                  key={transaction.id}
-                  className={`rounded-lg border overflow-hidden transition-all ${
-                    selectedTransactions.includes(transaction.id) ? 'bg-muted border-primary' : 'bg-card'
-                  }`}
-                  onTouchStart={() => handleLongPress(transaction.id)}
-                  onTouchEnd={handlePressEnd}
-                  onTouchMove={handlePressEnd}
-                  onClick={() => handleTransactionClick(transaction.id)}
-                >
-                  <div className="p-4">
-                              <div className="flex items-start justify-between">
-                      <div className="space-y-2">
-                        <Badge 
-                          variant="outline"
-                          className={`rounded-full font-normal ${
-                            transaction.category_data 
-                              ? '' 
-                              : getTransactionTypeColor(transaction.type)
-                          }`}
-                          style={transaction.category_data 
-                            ? getCategoryBadgeStyle(transaction.category)
-                            : {}
-                          }
-                        >
-                          {transaction.category_data?.name || getCategoryDisplayName(transaction)}
-                        </Badge>
-                        
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm text-muted-foreground">
-                            {formatShortDate(transaction.date)}
-                          </p>
-                          <span className="text-muted-foreground/30">•</span>
-                          <Badge 
-                            variant="outline"
-                            className="rounded-full font-normal"
-                            style={getWalletBadgeStyle(transaction.wallet_id)}
-                          >
-                            {transaction.wallet_name}
-                          </Badge>
-                        </div>
-                                </div>
-                      <div className={`font-medium ${
-                                    transaction.type === 'income' 
-                                      ? 'text-green-600' 
-                                      : transaction.type === 'expense' 
-                                        ? 'text-red-600' 
-                                        : 'text-blue-600'
-                                  }`}>
-                                    {transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : ''}
-                                    {formatCurrency(transaction.amount)}
-                                </div>
-                              </div>
-
-                    {transaction.title && (
-                      <p className="text-sm mt-2">
-                        {transaction.title}
-                      </p>
-                    )}
-                    
-                    {transaction.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {transaction.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))
-                                  )}
                                 </div>
         ) : (
-          // Desktop view
-          <Card className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50 hover:bg-gray-50">
-                  {isBulkMode && (
-                    <TableHead className="w-[50px]">
-                      <Checkbox 
-                        checked={selectedTransactions.length === filteredTransactions.length && filteredTransactions.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedTransactions(filteredTransactions.map(t => t.id));
-                          } else {
-                            setSelectedTransactions([]);
-                          }
-                        }}
-                      />
-                    </TableHead>
-                  )}
-                  <TableHead className="w-[100px]">Tanggal</TableHead>
-                  <TableHead className="w-[180px]">Kategori</TableHead>
-                  <TableHead className="w-[140px]">Dompet</TableHead>
-                  <TableHead>Deskripsi</TableHead>
-                  <TableHead className="text-right w-[140px]">Jumlah</TableHead>
-                  {!isBulkMode && (
-                    <TableHead className="w-[70px] text-center">Aksi</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(dateGroups).flatMap(([date, dateTransactions]) => 
-                  dateTransactions.map((transaction) => (
-                    <TableRow 
-                      key={transaction.id}
-                      className={`hover:bg-gray-50 border-t border-gray-100 group ${
-                        selectedTransactions.includes(transaction.id) ? 'bg-muted' : ''
-                      }`}
-                      onClick={() => handleTransactionClick(transaction.id)}
-                    >
-                      {isBulkMode && (
-                        <TableCell className="w-[50px]">
-                          <Checkbox 
-                            checked={selectedTransactions.includes(transaction.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedTransactions(prev => [...prev, transaction.id]);
-                              } else {
-                                setSelectedTransactions(prev => prev.filter(id => id !== transaction.id));
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </TableCell>
-                      )}
-                      <TableCell className="py-3 font-medium">
-                        {formatShortDate(transaction.date)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline"
-                          className={`rounded-full px-3 py-1 text-xs font-medium ${
-                            transaction.category_data 
-                              ? '' 
-                              : getTransactionTypeColor(transaction.type)
-                          }`}
-                          style={transaction.category_data 
-                            ? getCategoryBadgeStyle(transaction.category)
-                            : {}
-                          }
-                        >
-                          {transaction.category_data?.icon && (
-                            <i className={`fas fa-${transaction.category_data.icon} mr-1.5 text-xs`}></i>
-                          )}
-                          {transaction.category_data?.name || getCategoryDisplayName(transaction)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline"
-                          className="rounded-full px-3 py-1 text-xs font-medium"
-                          style={getWalletBadgeStyle(transaction.wallet_id)}
-                        >
-                          {transaction.wallet_name}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {transaction.title || transaction.description || '-'}
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${
-                        transaction.type === 'income' 
-                          ? 'text-green-600' 
-                          : transaction.type === 'expense' 
-                            ? 'text-red-600' 
-                            : 'text-blue-600'
-                      }`}>
-                        {transaction.type === 'income' ? '+' : transaction.type === 'expense' ? '-' : ''}
-                        {formatCurrency(transaction.amount)}
-                      </TableCell>
-                      {!isBulkMode && (
-                        <TableCell className="text-center">
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex justify-center">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => console.log('Edit transaction')}>
-                                  <Edit2 className="mr-2 h-4 w-4" />
-                                  <span>Edit</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-red-600"
-                                  onClick={() => handleDeleteTransaction(transaction.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  <span>Hapus</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-                      </Card>
-              )}
-      </div>
-
-      {/* Add Transaction Dialog */}
-      <Dialog open={showAddTransaction} onOpenChange={setShowAddTransaction}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {transactionType === 'income' ? 'Tambah Pemasukan' : 'Tambah Pengeluaran'}
-            </DialogTitle>
-          </DialogHeader>
-          <TransactionForm 
-            type={transactionType}
-            onAddTransaction={() => {
-              setShowAddTransaction(false);
-              fetchData();
-            }}
-            onClose={() => setShowAddTransaction(false)}
+          <TransactionList
+            transactions={filteredTransactions as Transaction[]}
+            onFilter={setSearchTerm}
+            onDelete={handleDeleteTransaction}
+            onEdit={handleEditTransaction}
+            onDateRangeChange={setDateRangeFilter}
           />
-        </DialogContent>
-      </Dialog>
+              )}
+                          </div>
     </Layout>
   );
 };

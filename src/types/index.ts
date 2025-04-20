@@ -28,11 +28,9 @@ export interface Transaction {
 }
 
 export interface TransactionWithNames extends Transaction {
-  wallet_name?: string;
   category_name?: string;
-  category_data?: Category;
+  wallet_name?: string;
   wallet_data?: Wallet;
-  destination_wallet?: Wallet;
 }
 
 // Additional interfaces needed by the application

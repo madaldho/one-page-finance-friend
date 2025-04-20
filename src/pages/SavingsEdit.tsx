@@ -245,7 +245,7 @@ const SavingsEdit = () => {
               <Textarea
                 id="description"
                 name="description"
-                placeholder="Untuk apa Anda menabung?"
+                placeholder="Deskripsi atau catatan tentang tabungan ini"
                 value={formData.description}
                 onChange={handleChange}
                 disabled={submitting}
@@ -253,14 +253,7 @@ const SavingsEdit = () => {
               />
             </div>
 
-            <div className="pt-4 space-y-2">
-              <Button 
-                type="submit" 
-                className="w-full bg-amber-500 hover:bg-amber-600" 
-                disabled={submitting}
-              >
-                {submitting ? "Menyimpan..." : "Simpan Perubahan"}
-              </Button>
+            <div className="grid grid-cols-2 gap-4 pt-4">
               <Button 
                 type="button" 
                 variant="outline" 
@@ -269,6 +262,13 @@ const SavingsEdit = () => {
                 disabled={submitting}
               >
                 Batal
+              </Button>
+              <Button 
+                type="submit" 
+                className="w-full bg-amber-500 hover:bg-amber-600" 
+                disabled={submitting}
+              >
+                {submitting ? "Menyimpan..." : "Simpan Perubahan"}
               </Button>
             </div>
           </form>

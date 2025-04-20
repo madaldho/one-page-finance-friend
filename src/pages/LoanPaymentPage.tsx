@@ -5,21 +5,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loan, Payment, Wallet, Category } from '@/types';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { formatCurrency } from '@/lib/utils';
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import { DateRange } from "react-day-picker";
 import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { CurrencyInput } from '@/components/ui/currency-input';
 
 interface PaymentFormData {
   amount: number;
-  payment_date: DateRange;
+  payment_date: string;
   wallet_id: string;
   description?: string;
   mark_as_paid: boolean;
@@ -37,7 +35,7 @@ const LoanPaymentPage = () => {
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<PaymentFormData>({
     defaultValues: {
-      payment_date: { from: new Date(), to: new Date() },
+      payment_date: format(new Date(), 'yyyy-MM-dd'),
       amount: 0,
       mark_as_paid: false
     }
@@ -114,7 +112,7 @@ const LoanPaymentPage = () => {
           loan_id: loan.id,
           user_id: user.id,
           amount: data.amount,
-          payment_date: data.payment_date.from,
+          payment_date: data.payment_date,
           wallet_id: data.wallet_id,
           description: data.description
         })
@@ -166,7 +164,7 @@ const LoanPaymentPage = () => {
         title: loan.type === 'payable' ? 'Bayar Hutang' : 'Terima Pembayaran Piutang',
         amount: data.amount,
         type: loan.type === 'payable' ? 'expense' : 'income',
-        date: data.payment_date.from ? format(data.payment_date.from, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        date: data.payment_date,
         category_id: categoryId,
         wallet_id: data.wallet_id,
         description: `${loan.type === 'payable' ? 'Pembayaran hutang' : 'Penerimaan piutang'} untuk ${loan.description || ''}${data.description ? ': ' + data.description : ''}`
@@ -228,9 +226,17 @@ const LoanPaymentPage = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mb-24">
           <div>
             <label className="block text-sm font-medium mb-1">Tanggal Pembayaran</label>
-            <DateRangePicker
-              onChange={(date) => setValue('payment_date', date)}
-            />
+            <div className="relative">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
+              <Input
+                type="date"
+                className="pl-10"
+                {...register('payment_date', { required: 'Tanggal pembayaran harus diisi' })}
+                defaultValue={format(new Date(), 'yyyy-MM-dd')}
+                error={errors.payment_date?.message}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Tanggal saat pembayaran dilakukan</p>
           </div>
 
           <div>
@@ -259,7 +265,13 @@ const LoanPaymentPage = () => {
               <SelectContent>
                 {wallets.map(wallet => (
                   <SelectItem key={wallet.id} value={wallet.id}>
-                    {wallet.name} ({formatCurrency(wallet.balance)})
+                    <div className="flex items-center">
+                      <div 
+                        className="w-3 h-3 rounded-full mr-2" 
+                        style={{ backgroundColor: wallet.color || (loan.type === 'payable' ? '#3b82f6' : '#10b981') }}
+                      ></div>
+                      <span>{wallet.name} ({formatCurrency(wallet.balance)})</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -287,7 +299,7 @@ const LoanPaymentPage = () => {
             </label>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="grid grid-cols-2 gap-4 pt-4">
             <Button
               type="button"
               variant="outline"

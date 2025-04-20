@@ -285,9 +285,8 @@ const Index = () => {
   return (
     <Layout>
     <div className="min-h-screen bg-gray-50">
-      <Header />
-      
       <main className="container mx-auto px-4 pb-32 pt-2">
+      <Header />
         {/* Wallet Section */}
         <section className="mb-5">
             <div className="flex justify-between items-center mb-4">
@@ -309,7 +308,7 @@ const Index = () => {
                   <p className="text-gray-500 mb-2">Belum ada dompet</p>
                   <Button 
                     onClick={handleAddWallet}
-                    className="bg-black text-white hover:bg-gray-800 transition-colors"
+                    className="bg-gray-800 text-white hover:bg-gray-800 transition-colors"
                   >
                     <Plus className="w-4 h-4 mr-2" /> Tambah Dompet
                 </Button>

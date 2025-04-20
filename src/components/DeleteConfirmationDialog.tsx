@@ -10,11 +10,19 @@ import {
 import { Button } from "@/components/ui/button";
 
 interface DeleteConfirmationDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  // Dialog control props - support both patterns
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+
+  // Action props
   onConfirm: () => void;
+  
+  // Content props
   title: string;
   description: string;
+  itemName?: string;
   confirmLabel?: string;
   cancelLabel?: string;
 }
@@ -22,23 +30,40 @@ interface DeleteConfirmationDialogProps {
 const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
   open,
   onOpenChange,
+  isOpen,
+  onClose,
   onConfirm,
   title,
   description,
+  itemName,
   confirmLabel = "Hapus",
   cancelLabel = "Batal",
 }) => {
+  // Support both control patterns
+  const isDialogOpen = open !== undefined ? open : isOpen;
+  
+  const handleOpenChange = (newOpenState: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(newOpenState);
+    } else if (!newOpenState && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription>
+            {description}
+            {itemName && <span className="font-medium"> {itemName}</span>}?
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             className="mt-2 sm:mt-0"
           >
             {cancelLabel}
@@ -47,7 +72,7 @@ const DeleteConfirmationDialog: React.FC<DeleteConfirmationDialogProps> = ({
             variant="destructive"
             onClick={() => {
               onConfirm();
-              onOpenChange(false);
+              handleOpenChange(false);
             }}
             className="mt-2 sm:mt-0"
           >
