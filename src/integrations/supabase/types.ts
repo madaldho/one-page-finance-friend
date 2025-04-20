@@ -9,6 +9,83 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      asset_value_history: {
+        Row: {
+          asset_id: string
+          created_at: string | null
+          date: string
+          id: string
+          updated_at: string | null
+          user_id: string
+          value: number
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string | null
+          date: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+          value: number
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_value_history_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assets: {
+        Row: {
+          category: string
+          created_at: string | null
+          current_value: number
+          id: string
+          initial_value: number
+          name: string
+          purchase_date: string | null
+          purchase_year: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          current_value: number
+          id?: string
+          initial_value: number
+          name: string
+          purchase_date?: string | null
+          purchase_year?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          current_value?: number
+          id?: string
+          initial_value?: number
+          name?: string
+          purchase_date?: string | null
+          purchase_year?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       budget_analysis: {
         Row: {
           budget_amount: number | null

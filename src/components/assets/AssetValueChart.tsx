@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import {
   AreaChart,
@@ -21,15 +20,12 @@ interface AssetValueChartProps {
 }
 
 export function AssetValueChart({ history, initialValue, initialDate }: AssetValueChartProps) {
-  
   const chartData = useMemo(() => {
-    // Sort history by date and add initial value if available
     const sortedHistory = [...history].sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
     
     if (initialDate) {
-      // Check if initial date is already included in history
       const hasInitialDate = sortedHistory.some(h => h.date === initialDate);
       
       if (!hasInitialDate) {
@@ -39,8 +35,8 @@ export function AssetValueChart({ history, initialValue, initialDate }: AssetVal
           user_id: history[0]?.user_id || '',
           value: initialValue,
           date: initialDate,
-          created_at: '',
-          updated_at: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         });
       }
     }
@@ -48,12 +44,12 @@ export function AssetValueChart({ history, initialValue, initialDate }: AssetVal
     return sortedHistory.map(item => ({
       date: item.date,
       value: item.value,
-      formattedDate: format(new Date(item.date), 'dd MMM yyyy', { locale: id }),
+      formattedDate: format(parseISO(item.date), 'dd MMM yyyy', { locale: id }),
     }));
   }, [history, initialValue, initialDate]);
 
-  const formatXAxis = (date: string) => {
-    return format(new Date(date), 'MMM yy', { locale: id });
+  const formatXAxis = (tickItem: string) => {
+    return format(parseISO(tickItem), 'MMM yy', { locale: id });
   };
 
   return (
