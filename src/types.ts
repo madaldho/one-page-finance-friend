@@ -1,3 +1,4 @@
+
 export interface Loan {
   id: string
   user_id: string
@@ -80,4 +81,28 @@ export interface SavingTransaction {
   created_at: string
   updated_at?: string
   wallet?: Wallet
-} 
+}
+
+// Asset types
+export interface Asset {
+  id: string
+  user_id: string
+  name: string
+  category: "property" | "vehicle" | "gold" | "stock" | "other"
+  initial_value: number
+  current_value: number
+  purchase_date?: string
+  purchase_year?: number
+  created_at: string
+  updated_at: string
+}
+
+export interface AssetValueHistory {
+  id: string
+  asset_id: string
+  user_id: string
+  value: number
+  date: string
+  created_at: string
+  updated_at: string
+}
