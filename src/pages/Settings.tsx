@@ -46,7 +46,6 @@ const Settings = () => {
         
         setUser(session.user);
         
-        // Fetch user profile
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
@@ -60,7 +59,6 @@ const Settings = () => {
           }));
         }
         
-        // Fetch user settings
         const { data, error } = await supabase
           .from('user_settings')
           .select('*')
@@ -97,7 +95,6 @@ const Settings = () => {
     try {
       setToggleLoading({...toggleLoading, [setting]: true});
       
-      // Optimistically update UI
       setSettings(prev => ({
         ...prev,
         [setting]: !prev[setting]
@@ -152,7 +149,6 @@ const Settings = () => {
       });
     } catch (error) {
       console.error('Error updating settings:', error);
-      // Revert the optimistic update
       setSettings(prev => ({
         ...prev,
         [setting]: !prev[setting]
