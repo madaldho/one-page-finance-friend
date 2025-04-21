@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
+import ScrollToTop from './components/ScrollToTop';
 import Auth from './components/Auth';
 import Index from './pages/Index';
 import Profile from './pages/Profile';
@@ -92,6 +93,7 @@ function App() {
   return (
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
+        <ScrollToTop />
         <AuthRedirect />
         <Routes>
           <Route path="/" element={<Auth />} />

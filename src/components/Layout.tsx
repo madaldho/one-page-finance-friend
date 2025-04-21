@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, PieChart, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,8 +20,13 @@ const Layout = ({ children }: LayoutProps) => {
     }
   }, [user, navigate]);
 
+  // Ensure page is scrolled to top when layout renders
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
-    <div className="min-h-screen bg-[#F6F6F7] flex flex-col">
+    <div className="min-h-screen bg-[#F6F6F7] flex flex-col pb-16">
       {children}
       
       <nav className="fixed bottom-0 left-0 w-full bg-white px-6 py-3 border-t">
