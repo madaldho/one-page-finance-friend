@@ -1,6 +1,7 @@
 import React, { useState, useEffect, forwardRef, ChangeEvent } from "react";
 import { Input } from "./input";
 import { formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
+import { NumericKeyboard } from "./NumericKeyboard";
 
 export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value?: number;
@@ -21,7 +22,7 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     error, 
     ...props 
   }, ref) => {
-    const [displayValue, setDisplayValue] = useState<string>("");
+    const [showKeyboard, setShowKeyboard] = useState(false);
 
     // Update display value when the actual value changes
     useEffect(() => {
@@ -30,36 +31,18 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       }
     }, [value]);
 
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-      // Get the current cursor position
-      const cursorPosition = e.target.selectionStart || 0;
-      const previousLength = displayValue.length;
-      
-      // Get the value without any formatting
-      const rawValue = e.target.value.replace(/\./g, "");
-      
-      // Only allow digits
-      if (/^\d*$/.test(rawValue)) {
-        // Format the value
-        const formattedValue = formatNumberWithSeparator(rawValue);
-        setDisplayValue(formattedValue);
-        
-        // Calculate new cursor position based on how many dots were added or removed
-        const lengthDifference = formattedValue.length - previousLength;
-        
-        // Call onChange with the numeric value
-        if (onChange) {
-          onChange(parseFormattedNumber(formattedValue));
-        }
-        
-        // Set the cursor position after React re-renders
-        setTimeout(() => {
-          if (e.target.selectionStart !== null) {
-            const newPosition = Math.max(0, cursorPosition + lengthDifference);
-            e.target.setSelectionRange(newPosition, newPosition);
-          }
-        }, 0);
-      }
+    // Remove input focus/cursor/keyboard on most phones:
+    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      setShowKeyboard(true);
+    };
+
+    const [displayValue, setDisplayValue] = useState<string>("");
+
+    // Instead of typing, always use custom keyboard
+    const handleSetAmount = (val: number) => {
+      if (onChange) onChange(val);
+      setDisplayValue(formatNumberWithSeparator(val));
     };
 
     return (
@@ -73,10 +56,18 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           ref={ref}
           type="text"
           value={displayValue}
-          onChange={handleChange}
-          className={`${showPrefix ? 'pl-10' : ''} ${className || ''}`}
+          readOnly // make always readOnly so only our keyboard works
+          onFocus={handleInputFocus}
+          onClick={handleInputFocus}
+          className={`${showPrefix ? 'pl-10' : ''} ${className || ''} cursor-pointer`}
           aria-invalid={!!error}
           {...props}
+        />
+        <NumericKeyboard
+          open={showKeyboard}
+          initialValue={value}
+          onClose={() => setShowKeyboard(false)}
+          onSubmit={handleSetAmount}
         />
         {error && (
           <p className="text-sm text-red-500 mt-1">{error}</p>
@@ -88,4 +79,4 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
 
 CurrencyInput.displayName = "CurrencyInput";
 
-export { CurrencyInput }; 
+export { CurrencyInput };
