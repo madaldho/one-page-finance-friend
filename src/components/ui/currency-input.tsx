@@ -44,7 +44,6 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
 
     const handleSetAmount = (val: number) => {
       if (onChange) onChange(val);
-      setDisplayValue(formatNumberWithSeparator(val));
     };
 
     return (
@@ -74,7 +73,6 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
             initialValue={value}
             onClose={() => setShowKeyboard(false)}
             onSubmit={handleSetAmount}
-            // bottom-docked keyboard, not modal
             presentationMode="bottom-sheet"
           />
         )}
