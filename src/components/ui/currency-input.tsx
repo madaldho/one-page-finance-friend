@@ -1,7 +1,9 @@
-import React, { useState, useEffect, forwardRef, ChangeEvent } from "react";
+
+import React, { useState, useEffect, forwardRef } from "react";
 import { Input } from "./input";
-import { formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
+import { formatNumberWithSeparator } from "@/lib/utils";
 import { NumericKeyboard } from "./NumericKeyboard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value?: number;
@@ -23,23 +25,23 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     ...props 
   }, ref) => {
     const [showKeyboard, setShowKeyboard] = useState(false);
+    const [displayValue, setDisplayValue] = useState<string>("");
+    const isMobile = useIsMobile();
 
-    // Update display value when the actual value changes
+    // Update display value when value changes from parent
     useEffect(() => {
       if (value !== undefined) {
         setDisplayValue(formatNumberWithSeparator(value));
       }
     }, [value]);
 
-    // Remove input focus/cursor/keyboard on most phones:
-    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-      e.preventDefault();
-      setShowKeyboard(true);
+    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement> | React.MouseEvent<HTMLInputElement, MouseEvent>) => {
+      if (isMobile) {
+        e.preventDefault();
+        setShowKeyboard(true);
+      }
     };
 
-    const [displayValue, setDisplayValue] = useState<string>("");
-
-    // Instead of typing, always use custom keyboard
     const handleSetAmount = (val: number) => {
       if (onChange) onChange(val);
       setDisplayValue(formatNumberWithSeparator(val));
@@ -48,7 +50,7 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     return (
       <div className="relative">
         {showPrefix && (
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
             {prefix}
           </span>
         )}
@@ -56,20 +58,27 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           ref={ref}
           type="text"
           value={displayValue}
-          readOnly // make always readOnly so only our keyboard works
+          readOnly={isMobile} // always readonly for custom keyboard on mobile
           onFocus={handleInputFocus}
           onClick={handleInputFocus}
-          className={`${showPrefix ? 'pl-10' : ''} ${className || ''} cursor-pointer`}
+          className={`${showPrefix ? 'pl-10' : ''} ${className || ''} ${isMobile ? "cursor-pointer" : ""}`}
           aria-invalid={!!error}
+          inputMode="numeric"
+          pattern="[0-9]*"
           {...props}
         />
-        <NumericKeyboard
-          open={showKeyboard}
-          initialValue={value}
-          onClose={() => setShowKeyboard(false)}
-          onSubmit={handleSetAmount}
-        />
-        {error && (
+        {/* Show keyboard only on mobile/tablet */}
+        {isMobile && (
+          <NumericKeyboard
+            open={showKeyboard}
+            initialValue={value}
+            onClose={() => setShowKeyboard(false)}
+            onSubmit={handleSetAmount}
+            // bottom-docked keyboard, not modal
+            presentationMode="bottom-sheet"
+          />
+        )}
+        {!isMobile && error && (
           <p className="text-sm text-red-500 mt-1">{error}</p>
         )}
       </div>
