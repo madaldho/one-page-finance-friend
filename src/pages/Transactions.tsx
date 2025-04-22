@@ -9,7 +9,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from '@/components/ui/tabs';
+} from '@/components/ui/tabs'
 import {
   Card,
   CardContent,

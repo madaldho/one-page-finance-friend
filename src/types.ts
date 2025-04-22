@@ -1,4 +1,3 @@
-
 export interface Loan {
   id: string
   user_id: string
@@ -10,6 +9,8 @@ export interface Loan {
   status: "paid" | "unpaid" | "partial"
   due_date: string
   paid_amount?: number
+  wallet_id?: string
+  wallet_name?: string
   created_at: string
   updated_at: string
 }
@@ -28,26 +29,26 @@ export interface Payment {
 
 export interface Category {
   id: string
-  user_id: string
   name: string
-  type: "income" | "expense"
-  icon?: string
+  type: 'income' | 'expense'
   color?: string
-  created_at: string
-  updated_at: string
+  icon?: string
+  user_id?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Wallet {
   id: string
-  user_id: string
   name: string
+  type: string
   balance: number
-  type: string // Mengubah ke string untuk menghindari error tipe
-  color: string
-  is_default: boolean
-  created_at: string
-  updated_at: string
-  gradient: string
+  color?: string
+  gradient?: string
+  user_id: string
+  created_at?: string
+  updated_at?: string
+  is_default?: boolean
 }
 
 export interface Saving {
@@ -104,4 +105,23 @@ export interface AssetValueHistory {
   date: string
   created_at: string
   updated_at: string
+}
+
+export interface Transaction {
+  id: string
+  title: string
+  amount: number
+  type: 'income' | 'expense' | 'transfer' | string
+  date: string
+  description?: string
+  category?: string
+  category_data?: Category
+  wallet_id: string
+  wallet_name?: string
+  destination_wallet_id?: string | null
+  destination_wallet_name?: string
+  created_at?: string
+  updated_at?: string
+  user_id?: string
+  selected?: boolean
 }

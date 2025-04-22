@@ -29,6 +29,9 @@ const EditLoanPage = () => {
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loan, setLoan] = useState<Loan | null>(null);
+  const [originalDescription, setOriginalDescription] = useState('');
+  const [originalLender, setOriginalLender] = useState('');
+  const [originalBorrower, setOriginalBorrower] = useState('');
 
   const { register, handleSubmit, setValue, formState: { errors }, watch } = useForm<EditLoanFormData>();
 
@@ -50,7 +53,20 @@ const EditLoanPage = () => {
 
       if (error) throw error;
       
-      setLoan(data);
+      // Memastikan tipe data sesuai dengan interface Loan
+      setLoan({
+        ...data,
+        type: data.type as "payable" | "receivable",
+        status: data.status as "paid" | "unpaid" | "partial",
+        created_at: data.created_at || new Date().toISOString(),
+        updated_at: data.updated_at || new Date().toISOString(),
+        due_date: data.due_date || new Date().toISOString(),
+      });
+      
+      // Simpan data asli untuk pencarian transaksi terkait
+      setOriginalDescription(data.description || '');
+      setOriginalLender(data.lender || '');
+      setOriginalBorrower(data.borrower || '');
       
       // Set form values
       setValue('amount', data.amount);
@@ -62,16 +78,84 @@ const EditLoanPage = () => {
       } else if (data.type === 'receivable' && data.borrower) {
         setValue('borrower', data.borrower);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching loan data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mengambil data';
       toast({
         title: 'Gagal memuat data',
-        description: error.message || 'Terjadi kesalahan saat mengambil data',
+        description: errorMessage,
         variant: 'destructive',
       });
       navigate('/loans');
     } finally {
       setInitialLoading(false);
+    }
+  };
+
+  // Fungsi untuk memperbarui transaksi terkait dengan pinjaman
+  const updateRelatedTransactions = async (formData: EditLoanFormData) => {
+    if (!user || !loan || !loan.wallet_id) return;
+
+    try {
+      // Mengambil transaksi original yang terkait dengan pinjaman
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('wallet_id', loan.wallet_id)
+        .eq('category', loan.type === 'payable' ? 'Hutang' : 'Piutang');
+
+      if (transactionsError) throw transactionsError;
+
+      console.log('Transaksi yang ditemukan:', transactionsData?.length || 0);
+
+      if (!transactionsData || transactionsData.length === 0) {
+        console.log('Tidak ada transaksi terkait yang ditemukan');
+        return;
+      }
+
+      // Cari transaksi yang sesuai baik dengan judul, deskripsi, atau keduanya
+      const relatedTransactions = transactionsData.filter(transaction => {
+        // Match berdasarkan deskripsi transaksi yang berisi informasi pemberi/peminjam
+        const descriptionMatch = 
+          loan.type === 'payable' 
+            ? transaction.description?.includes(`Pinjaman dari ${originalLender}`)
+            : transaction.description?.includes(`Pinjaman kepada ${originalBorrower}`);
+        
+        // Match berdasarkan judul transaksi yang sama dengan deskripsi pinjaman
+        const titleMatch = transaction.title === originalDescription;
+        
+        return titleMatch || descriptionMatch;
+      });
+
+      console.log('Transaksi terkait yang akan diupdate:', relatedTransactions.length);
+
+      // Update setiap transaksi yang terkait
+      for (const transaction of relatedTransactions) {
+        const updatedTransaction = {
+          title: formData.description,
+          amount: formData.amount,
+          description: loan.type === 'payable'
+            ? `Pinjaman dari ${formData.lender}`
+            : `Pinjaman kepada ${formData.borrower}`
+        };
+
+        const { error: updateError } = await supabase
+          .from('transactions')
+          .update(updatedTransaction)
+          .eq('id', transaction.id);
+
+        if (updateError) {
+          console.error('Error updating transaction:', updateError);
+        } else {
+          console.log('Transaksi berhasil diperbarui:', transaction.id);
+        }
+      }
+
+      return relatedTransactions.length;
+    } catch (error) {
+      console.error('Error updating related transactions:', error);
+      throw error;
     }
   };
 
@@ -102,17 +186,59 @@ const EditLoanPage = () => {
 
       if (error) throw error;
 
+      // Hanya update wallet dan transaksi jika wallet_id tersedia
+      if (loan.wallet_id) {
+        try {
+          // Mengambil data wallet
+          const { data: walletData, error: walletError } = await supabase
+            .from('wallets')
+            .select('*')
+            .eq('id', loan.wallet_id)
+            .single();
+
+          if (walletError) throw walletError;
+
+          // Update wallet balance jika jumlah berubah
+          if (data.amount !== loan.amount && walletData) {
+            const amountDifference = data.amount - loan.amount;
+            
+            // Untuk hutang (payable), saldo bertambah saat meminjam
+            // Untuk piutang (receivable), saldo berkurang saat meminjamkan
+            const newBalance = loan.type === 'payable'
+              ? walletData.balance + amountDifference
+              : walletData.balance - amountDifference;
+
+            const { error: updateWalletError } = await supabase
+              .from('wallets')
+              .update({ balance: newBalance })
+              .eq('id', loan.wallet_id);
+
+            if (updateWalletError) throw updateWalletError;
+          }
+
+          // Update semua transaksi terkait
+          const updatedCount = await updateRelatedTransactions(data);
+          if (updatedCount) {
+            console.log(`Berhasil memperbarui ${updatedCount} transaksi terkait`);
+          }
+        } catch (walletError: unknown) {
+          console.error('Error updating wallet/transaction:', walletError);
+          // Tidak melempar error agar proses tetap berjalan meskipun ada masalah pada wallet
+        }
+      }
+
       toast({
         title: 'Berhasil',
         description: `${loan.type === 'payable' ? 'Hutang' : 'Piutang'} berhasil diperbarui`,
       });
 
       navigate('/loans');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating loan:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat menyimpan perubahan';
       toast({
         title: 'Gagal Menyimpan',
-        description: error.message || 'Terjadi kesalahan saat menyimpan perubahan',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

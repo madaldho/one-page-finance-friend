@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import Layout from "@/components/Layout";
 
 interface AssetFormProps {
   isEditing?: boolean;
@@ -33,7 +34,7 @@ export function AssetForm({ isEditing = false, assetId, defaultValues }: AssetFo
   const [category, setCategory] = useState<"property" | "vehicle" | "gold" | "stock" | "other">(
     defaultValues?.category || "property"
   );
-  const [initialValue, setInitialValue] = useState(defaultValues?.initial_value?.toString() || "");
+  const [initialValue, setInitialValue] = useState<number>(defaultValues?.initial_value || 0);
   const [purchaseDate, setPurchaseDate] = useState(defaultValues?.purchase_date || "");
   const [purchaseYear, setPurchaseYear] = useState(defaultValues?.purchase_year?.toString() || new Date().getFullYear().toString());
 
@@ -44,7 +45,7 @@ export function AssetForm({ isEditing = false, assetId, defaultValues }: AssetFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !initialValue || (!purchaseDate && !purchaseYear)) {
+    if (!name || initialValue <= 0 || (!purchaseDate && !purchaseYear)) {
       toast({
         title: "Pengisian tidak lengkap",
         description: "Mohon lengkapi data yang diperlukan",
@@ -55,9 +56,8 @@ export function AssetForm({ isEditing = false, assetId, defaultValues }: AssetFo
 
     try {
       setLoading(true);
-      const initial_value = parseFloat(initialValue);
       
-      if (isNaN(initial_value) || initial_value <= 0) {
+      if (initialValue <= 0) {
         toast({
           title: "Nilai tidak valid",
           description: "Nilai aset harus berupa angka positif",
@@ -69,8 +69,8 @@ export function AssetForm({ isEditing = false, assetId, defaultValues }: AssetFo
       const data = {
         name,
         category,
-        initial_value,
-        current_value: initial_value, // Initial value is the current value for new assets
+        initial_value: initialValue,
+        current_value: initialValue, // Initial value is the current value for new assets
         purchase_date: purchaseDate || null,
         purchase_year: parseInt(purchaseYear),
         user_id: user?.id,
@@ -113,7 +113,7 @@ export function AssetForm({ isEditing = false, assetId, defaultValues }: AssetFo
           await supabase.from("asset_value_history").insert({
             asset_id: assetData.id,
             user_id: user?.id,
-            value: initial_value,
+            value: initialValue,
             date: new Date().toISOString().split("T")[0],
           });
         }
@@ -127,11 +127,12 @@ export function AssetForm({ isEditing = false, assetId, defaultValues }: AssetFo
       });
 
       navigate("/assets");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan";
       toast({
         title: "Gagal menyimpan data",
-        description: error.message || "Terjadi kesalahan saat menyimpan data aset",
+        description: errorMessage || "Terjadi kesalahan saat menyimpan data aset",
         variant: "destructive",
       });
     } finally {
@@ -148,124 +149,123 @@ export function AssetForm({ isEditing = false, assetId, defaultValues }: AssetFo
   ];
 
   return (
-    <div className="container mx-auto p-4 pb-32 max-w-2xl">
-      <div className="flex items-center mb-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="mr-2"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <h1 className="text-xl font-bold">
-          {isEditing ? "Edit Aset" : "Tambah Aset Baru"}
-        </h1>
-      </div>
+    <Layout>
+      <div className="container mx-auto p-4 pb-32 max-w-xl">
+        <div className="flex items-center mb-6">
+          <Link to="/assets" className="mr-2">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="text-xl font-bold">
+            {isEditing ? "Edit Aset" : "Tambah Aset Baru"}
+          </h1>
+        </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="name">Nama Aset</Label>
-            <Input
-              id="name"
-              placeholder="Contoh: Rumah Jakarta"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="category">Kategori Aset</Label>
-            <Select
-              value={category}
-              onValueChange={(value: "property" | "vehicle" | "gold" | "stock" | "other") => setCategory(value)}
-              required
-            >
-              <SelectTrigger id="category">
-                <SelectValue placeholder="Pilih kategori aset" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="initialValue">Nilai Awal</Label>
-            <div className="relative">
+        <div className="bg-white rounded-lg shadow-sm p-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <Label htmlFor="name" className="block text-sm font-medium mb-1">Nama Aset</Label>
               <Input
-                id="initialValue"
-                type="number"
-                placeholder="0"
-                min="0"
-                step="1000"
-                value={initialValue}
-                onChange={(e) => setInitialValue(e.target.value)}
+                id="name"
+                placeholder="Contoh: Rumah Jakarta"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
-                className="pl-8"
+                className="w-full"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                Rp
-              </span>
             </div>
-            {initialValue && !isNaN(parseFloat(initialValue)) && (
-              <p className="text-xs text-gray-500 mt-1">
-                {formatCurrency(parseFloat(initialValue))}
-              </p>
-            )}
-          </div>
 
-          <div>
-            <Label htmlFor="purchaseDate">Tanggal Pembelian (Opsional)</Label>
-            <Input
-              id="purchaseDate"
-              type="date"
-              value={purchaseDate}
-              onChange={(e) => setPurchaseDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
-            />
-          </div>
+            <div>
+              <Label htmlFor="category" className="block text-sm font-medium mb-1">Kategori Aset</Label>
+              <Select
+                value={category}
+                onValueChange={(value: "property" | "vehicle" | "gold" | "stock" | "other") => setCategory(value)}
+                required
+              >
+                <SelectTrigger id="category" className="w-full">
+                  <SelectValue placeholder="Pilih kategori aset" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div>
-            <Label htmlFor="purchaseYear">Tahun Pembelian</Label>
-            <Select
-              value={purchaseYear}
-              onValueChange={(value) => setPurchaseYear(value)}
-              required
-            >
-              <SelectTrigger id="purchaseYear">
-                <SelectValue placeholder="Pilih tahun pembelian" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {years.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label htmlFor="initialValue" className="block text-sm font-medium mb-1">Nilai Awal</Label>
+              <CurrencyInput
+                showPrefix={true}
+                value={initialValue}
+                onChange={(value) => setInitialValue(value)}
+                placeholder="0"
+              />
+            </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Menyimpan...
-              </>
-            ) : isEditing ? (
-              "Perbarui Aset"
-            ) : (
-              "Tambah Aset"
-            )}
-          </Button>
-        </form>
+            <div>
+              <Label htmlFor="purchaseDate" className="block text-sm font-medium mb-1">Tanggal Pembelian (Opsional)</Label>
+              <Input
+                id="purchaseDate"
+                type="date"
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="purchaseYear" className="block text-sm font-medium mb-1">Tahun Pembelian</Label>
+              <Select
+                value={purchaseYear}
+                onValueChange={(value) => setPurchaseYear(value)}
+                required
+              >
+                <SelectTrigger id="purchaseYear" className="w-full">
+                  <SelectValue placeholder="Pilih tahun pembelian" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {years.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate("/assets")}
+                disabled={loading}
+              >
+                Batal
+              </Button>
+              <Button 
+                type="submit" 
+                className="w-full bg-purple-600 hover:bg-purple-700" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : isEditing ? (
+                  "Perbarui Aset"
+                ) : (
+                  "Simpan"
+                )}
+              </Button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }

@@ -66,7 +66,7 @@ const GRADIENTS = [
 
 const formSchema = z.object({
   name: z.string().min(1, "Nama dompet harus diisi"),
-  type: z.enum(["cash", "bank", "ewallet", "savings"]),
+  type: z.enum(["cash", "bank", "investment", "savings"]),
   balance: z.coerce.number().min(0, "Saldo tidak boleh negatif"),
   color: z.string().min(1, "Warna harus dipilih"),
   useGradient: z.boolean().default(false),
@@ -128,7 +128,7 @@ export default function WalletForm() {
         setWallet(data);
         form.reset({
           name: data.name || '',
-          type: (data.type as "cash" | "bank" | "ewallet" | "savings") || "cash",
+          type: (data.type as "cash" | "bank" | "investment" | "savings") || "cash",
           balance: data.balance || 0,
           color: data.color || WALLET_COLORS[0],
           useGradient: !!data.gradient,
@@ -227,7 +227,7 @@ export default function WalletForm() {
         return <Banknote className="h-4 w-4" />;
       case 'bank':
         return <Landmark className="h-4 w-4" />;
-      case 'ewallet':
+      case 'investment':
         return <CreditCard className="h-4 w-4" />;
       case 'savings':
         return <PiggyBank className="h-4 w-4" />;
@@ -353,10 +353,10 @@ export default function WalletForm() {
                             <span>Rekening Bank</span>
                           </div>
                         </SelectItem>
-                          <SelectItem value="ewallet" className="text-sm">
+                          <SelectItem value="investment" className="text-sm">
                             <div className="flex items-center gap-2">
                               <CreditCard className="h-4 w-4" />
-                              <span>E-Wallet</span>
+                              <span>E-Wallet </span>
                             </div>
                           </SelectItem>
                           <SelectItem value="savings" className="text-sm">
@@ -487,7 +487,7 @@ export default function WalletForm() {
                               onClick={() => {
                                 handleGradientChange(gradient);
                                 // Nonaktifkan pengaturan warna solid kustom
-                                if (field.value === 'custom') {
+                                if (watchColor === 'custom') {
                                   form.setValue('color', WALLET_COLORS[0]);
                                 }
                               }}

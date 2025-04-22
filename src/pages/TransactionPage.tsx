@@ -1058,30 +1058,6 @@ const TransactionPage = () => {
                 )}
               />
             
-              {/* Judul transaksi */}
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-start gap-3 p-3 rounded-xl border border-gray-200">
-                      <MessageSquareText className="h-4 w-4 text-gray-500 mt-2" />
-                      <div className="flex-1">
-                        <FormLabel className="text-xs text-gray-500">Judul Transaksi <span className="text-gray-400">(opsional)</span></FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder={type === "income" ? "Contoh: Gaji Bulanan" : type === "expense" ? "Contoh: Belanja Bulanan" : "Contoh: Transfer ke BCA"}
-                            {...field}
-                            className="border-0 p-0 h-auto mt-1 focus-visible:ring-0 focus-visible:ring-offset-0"
-                          />
-                        </FormControl>
-                      </div>
-                    </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
               {/* Transfer fees fields */}
               {type === "transfer" && (
                 <div className="grid grid-cols-2 gap-4">

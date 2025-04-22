@@ -236,9 +236,7 @@ const AddReceivablePage = () => {
                   <Input
                     type="number"
                     className="pl-10"
-                    {...register('installment', { 
-                      min: { value: 1, message: 'Minimal 1 cicilan' }
-                    })}
+                    {...register('installment')}
                     placeholder="1"
                     error={errors.installment?.message}
                   />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
@@ -15,6 +14,7 @@ interface NumericKeyboardProps {
   title?: string;
   currency?: boolean;
   presentationMode?: "modal" | "bottom-sheet";
+  forceShow?: boolean;
 }
 
 const KEYS = [
@@ -24,6 +24,23 @@ const KEYS = [
   [",", "0", "back", "+"],
 ];
 
+// Fungsi untuk deteksi apakah perangkat adalah mobile/tablet
+const isMobileOrTablet = () => {
+  // Jika di sisi server, anggap false
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
+  
+  // Deteksi berdasarkan user agent
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile|tablet/i.test(userAgent);
+  
+  // Tambahan deteksi ukuran layar (opsional)
+  const isSmallScreen = window.innerWidth <= 1024;
+  
+  return isMobile || isSmallScreen;
+};
+
 export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
   open,
   initialValue = 0,
@@ -32,9 +49,26 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
   title = "Masukan Jumlah",
   currency = true,
   presentationMode = "modal",
+  forceShow = false,
 }) => {
   const [expression, setExpression] = useState<string>(initialValue ? initialValue.toString() : "");
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Deteksi perangkat saat komponen di-mount
+  useEffect(() => {
+    setIsMobile(isMobileOrTablet());
+    
+    // Update saat resize window (opsional)
+    const handleResize = () => {
+      setIsMobile(isMobileOrTablet());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Hide on blur or esc (only on mobile, panel mode)
   useEffect(() => {
@@ -91,8 +125,8 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
     }
   };
 
-  // Styling for panel mode: "bottom-sheet" vs "modal"
-  if (!open) return null;
+  // Jika tidak di perangkat mobile dan tidak dipaksa tampil, jangan tampilkan keyboard
+  if ((!isMobile && !forceShow) || !open) return null;
 
   // Bottom-sheet (mobile/tablet) mode
   if (presentationMode === "bottom-sheet") {

@@ -30,6 +30,7 @@ const LoansManagement = () => {
   const [markPaid, setMarkPaid] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [loanToEdit, setLoanToEdit] = useState<Loan | null>(null);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -222,14 +223,128 @@ const LoansManagement = () => {
     }
 
     try {
-      // TODO: Implement actual payment logic here
+      setPaymentProcessing(true);
+      
+      // 1. Dapatkan data wallet yang dipilih
+      const { data: selectedWalletData, error: walletError } = await supabase
+        .from("wallets")
+        .select("*")
+        .eq("id", paymentWallet)
+        .single();
+      
+      if (walletError) throw walletError;
+      
+      // 2. Ambil kategori yang sesuai dari database
+      // Mencari kategori berdasarkan tipe (income/expense)
+      const categoryType = selectedLoan.type === "payable" ? "expense" : "income";
+      const { data: categoryData, error: categoryError } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("type", categoryType)
+        .eq("user_id", user?.id)
+        .limit(1);
+      
+      if (categoryError) throw categoryError;
+      
+      // Jika tidak ditemukan kategori, lempar error
+      if (!categoryData || categoryData.length === 0) {
+        throw new Error(`Tidak ditemukan kategori dengan tipe ${categoryType}. Buat kategori terlebih dahulu.`);
+      }
+      
+      // Gunakan ID kategori pertama yang ditemukan
+      const categoryId = categoryData[0].id;
+      
+      // 3. Hitung paid_amount baru dan status
+      const newPaidAmount = (selectedLoan.paid_amount || 0) + amount;
+      const isPaid = newPaidAmount >= selectedLoan.amount;
+      const newStatus = isPaid ? "paid" : (newPaidAmount > 0 ? "partial" : "unpaid");
+      
+      // 4. Update loan data (amount_paid dan status)
+      const { error: updateLoanError } = await supabase
+        .from("loans")
+        .update({
+          paid_amount: newPaidAmount,
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", selectedLoan.id);
+      
+      if (updateLoanError) throw updateLoanError;
+      
+      // 5. Perbarui saldo wallet
+      // - Jika hutang (payable), mengurangi saldo wallet (pengeluaran) karena membayar hutang
+      // - Jika piutang (receivable), menambah saldo wallet (pemasukan) karena menerima pembayaran
+      const newBalance = selectedLoan.type === "payable"
+        ? selectedWalletData.balance - amount
+        : selectedWalletData.balance + amount;
+      
+      const { error: updateWalletError } = await supabase
+        .from("wallets")
+        .update({ 
+          balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", paymentWallet);
+      
+      if (updateWalletError) throw updateWalletError;
+      
+      // 6. Catat transaksi di tabel transactions
+      const today = new Date();
+      const formattedDate = format(today, 'yyyy-MM-dd');
+      
+      const transactionData = {
+        user_id: user?.id,
+        title: selectedLoan.type === "payable" 
+          ? "Pembayaran Hutang" 
+          : "Penerimaan Piutang",
+        amount: amount,
+        // Hutang = expense (uang keluar), Piutang = income (uang masuk)
+        type: selectedLoan.type === "payable" ? "expense" : "income",
+        date: formattedDate,
+        // Gunakan ID kategori yang sudah diambil dari database
+        category: categoryId,
+        wallet_id: paymentWallet,
+        description: selectedLoan.type === "payable"
+          ? `Pembayaran hutang untuk: ${selectedLoan.description} (${selectedLoan.lender || 'Tidak ada nama'})`
+          : `Penerimaan piutang dari: ${selectedLoan.description} (${selectedLoan.borrower || 'Tidak ada nama'})`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { error: transactionError } = await supabase
+        .from("transactions")
+        .insert(transactionData);
+      
+      if (transactionError) throw transactionError;
+      
+      // 7. Opsional: Catat payment history
+      const paymentData = {
+        loan_id: selectedLoan.id,
+        user_id: user?.id,
+        amount: amount,
+        payment_date: formattedDate,
+        wallet_id: paymentWallet,
+        description: markPaid ? "Pembayaran penuh" : "Pembayaran sebagian",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      const { error: paymentHistoryError } = await supabase
+        .from("payments")
+        .insert(paymentData);
+      
+      if (paymentHistoryError) {
+        console.error("Error recording payment history:", paymentHistoryError);
+        // Tidak throw error karena ini opsional
+      }
+      
       toast({
         title: "Pembayaran Berhasil",
         description: `Pembayaran ${formatCurrency(amount)} untuk ${selectedLoan.description} berhasil`,
       });
+      
       setPaymentDialogOpen(false);
-      // Refresh data
-      fetchData();
+      fetchData(); // Refresh data
     } catch (error) {
       console.error("Error processing payment:", error instanceof Error ? error.message : String(error));
       toast({
@@ -237,6 +352,8 @@ const LoansManagement = () => {
         description: (error instanceof Error ? error.message : String(error)) || "Terjadi kesalahan saat memproses pembayaran",
         variant: "destructive",
       });
+    } finally {
+      setPaymentProcessing(false);
     }
   };
 
@@ -260,6 +377,54 @@ const LoansManagement = () => {
           .eq("loan_id", selectedLoan.id);
 
         if (paymentsError) throw paymentsError;
+      }
+
+      // Cari transaksi terkait dengan pinjaman ini
+      if (selectedLoan.wallet_id) {
+        try {
+          // Cari transaksi berdasarkan kategori dan deskripsi
+          const { data: transactionsData, error: transactionsError } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', user?.id)
+            .eq('wallet_id', selectedLoan.wallet_id)
+            .eq('category', selectedLoan.type === 'payable' ? 'Hutang' : 'Piutang');
+
+          if (transactionsError) throw transactionsError;
+
+          if (transactionsData && transactionsData.length > 0) {
+            // Filter transaksi yang benar-benar terkait dengan pinjaman ini
+            const relatedTransactions = transactionsData.filter(transaction => {
+              // Match berdasarkan judul dan deskripsi
+              const titleMatch = transaction.title === selectedLoan.description;
+              const descriptionMatch = 
+                selectedLoan.type === 'payable' 
+                  ? transaction.description?.includes(`Pinjaman dari ${selectedLoan.lender}`)
+                  : transaction.description?.includes(`Pinjaman kepada ${selectedLoan.borrower}`);
+              
+              return titleMatch || descriptionMatch;
+            });
+
+            // Hapus semua transaksi terkait
+            for (const transaction of relatedTransactions) {
+              const { error: deleteTransError } = await supabase
+                .from('transactions')
+                .delete()
+                .eq('id', transaction.id);
+              
+              if (deleteTransError) {
+                console.error(`Error menghapus transaksi ${transaction.id}:`, deleteTransError);
+              } else {
+                console.log(`Transaksi ${transaction.id} berhasil dihapus`);
+              }
+            }
+
+            console.log(`Berhasil menghapus ${relatedTransactions.length} transaksi terkait`);
+          }
+        } catch (transactionError) {
+          console.error("Error menghapus transaksi terkait:", transactionError);
+          // Lanjutkan proses meskipun ada masalah menghapus transaksi
+        }
       }
 
       // Delete the loan
@@ -488,17 +653,6 @@ const LoansManagement = () => {
                             >
                               Hapus
                             </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                navigate(`/loans/edit/${loan.id}`);
-                              }}
-                            >
-                              Edit
-                            </Button>
                           </div>
                         </div>
                       )}
@@ -647,17 +801,6 @@ const LoansManagement = () => {
                             >
                               Hapus
                             </Button>
-                          <Button 
-                            size="sm" 
-                              variant="outline"
-                              className="flex-1"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                navigate(`/loans/edit/${loan.id}`);
-                              }}
-                            >
-                              Edit
-                          </Button>
                           </div>
                         </div>
                       )}
@@ -795,13 +938,17 @@ const LoansManagement = () => {
               </Button>
               <Button 
                 type="submit" 
+                disabled={paymentProcessing}
                 className={
                   selectedLoan?.type === "payable" ? 
                   "bg-blue-600 hover:bg-blue-700" : 
                   "bg-green-600 hover:bg-green-700"
                 }
               >
-                {selectedLoan?.type === "payable" ? "Bayar Sekarang" : "Terima Pembayaran"}
+                {paymentProcessing ? 
+                  "Memproses..." : 
+                  (selectedLoan?.type === "payable" ? "Bayar Sekarang" : "Terima Pembayaran")
+                }
               </Button>
             </div>
           </form>

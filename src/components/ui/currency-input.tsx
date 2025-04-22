@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect, forwardRef } from "react";
 import { Input } from "./input";
-import { formatNumberWithSeparator } from "@/lib/utils";
+import { formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
 import { NumericKeyboard } from "./NumericKeyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -42,6 +41,27 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       }
     };
 
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isMobile) return; // Tidak perlu handle di mobile karena menggunakan NumericKeyboard
+      
+      // Mengambil nilai dari input
+      const inputValue = e.target.value;
+      
+      // Hapus semua karakter non-digit dan formatting sebelumnya (titik)
+      const rawValue = inputValue.replace(/[^\d]/g, '');
+      
+      // Konversi ke angka
+      const numericValue = rawValue ? parseInt(rawValue, 10) : 0;
+      
+      // Format untuk tampilan dengan pemisah ribuan
+      setDisplayValue(formatNumberWithSeparator(numericValue));
+      
+      // Panggil onChange callback
+      if (onChange) {
+        onChange(numericValue);
+      }
+    };
+
     const handleSetAmount = (val: number) => {
       if (onChange) onChange(val);
     };
@@ -57,13 +77,13 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
           ref={ref}
           type="text"
           value={displayValue}
-          readOnly={isMobile} // always readonly for custom keyboard on mobile
+          readOnly={isMobile} // hanya readonly untuk mobile
           onFocus={handleInputFocus}
           onClick={handleInputFocus}
+          onChange={handleInputChange} // tambahkan onChange handler untuk desktop
           className={`${showPrefix ? 'pl-10' : ''} ${className || ''} ${isMobile ? "cursor-pointer" : ""}`}
           aria-invalid={!!error}
           inputMode="numeric"
-          pattern="[0-9]*"
           {...props}
         />
         {/* Show keyboard only on mobile/tablet */}
@@ -76,7 +96,7 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
             presentationMode="bottom-sheet"
           />
         )}
-        {!isMobile && error && (
+        {error && (
           <p className="text-sm text-red-500 mt-1">{error}</p>
         )}
       </div>

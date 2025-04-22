@@ -1094,38 +1094,6 @@ const SavingsManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Tombol aksi */}
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate("/home")}
-            aria-label="Kembali ke beranda"
-          >
-            Kembali
-          </Button>
-          <Button 
-            variant="destructive" 
-            className="w-full" 
-            onClick={() => {
-              if (selectedSaving) {
-                setDeleteDialogOpen(true);
-              } else {
-                toast({
-                  title: "Pilih Tabungan",
-                  description: "Pilih tabungan yang ingin dihapus terlebih dahulu",
-                  variant: "destructive",
-                });
-              }
-            }}
-            title="Hapus tabungan"
-            aria-label="Hapus tabungan"
-          >
-            <Trash className="w-4 h-4 mr-2" />
-            Hapus
-          </Button>
-        </div>
       </div>
     </Layout>
   );

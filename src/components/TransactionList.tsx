@@ -456,17 +456,17 @@ const TransactionList = ({
 
   // Mobile view
   const MobileView = () => (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {!selectionMode && (
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-start mb-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => setShowSortMenu(!showSortMenu)}
             className="flex items-center gap-1"
           >
-            <ArrowUpDown className="h-3.5 w-3.5" />
-            <span>Urut</span>
+            <ArrowUpDown className="h-2 w-2" />
+            
             {sortConfig && (
               <Badge variant="secondary" className="ml-1 text-xs">
                 {sortConfig.key === 'created_at' ? 'Waktu Input' : 
@@ -598,10 +598,10 @@ const TransactionList = ({
         const isSelected = selectedIds.includes(transaction.id);
 
         return (
-        <div
-          key={transaction.id}
+          <div
+            key={transaction.id}
             className={cn(
-              "bg-card rounded-lg border overflow-hidden transition-all duration-200",
+              "bg-card rounded-xl border overflow-hidden transition-all duration-200",
               isSelected && "bg-primary/5 border-primary/30"
             )}
             onTouchStart={() => handleTouchStart(transaction.id)}
@@ -623,54 +623,65 @@ const TransactionList = ({
                   <Check className="h-3 w-3" />
                 </div>
               )}
-          <div className="flex items-start justify-between">
-                <div className="space-y-2">
+              
+              <div className="flex justify-between mb-2">
+                {/* Kiri Atas: Tanggal dan kategori */}
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(transaction.date), "dd/MM/yyyy", { locale: id })}
+                  </p>
+                  
                   <Badge 
                     variant="outline"
                     className={cn(
-                      "rounded-md font-normal",
+                      "rounded-md font-normal text-xs",
                       getTransactionTypeColor(transaction.type)
                     )}
                     style={getCategoryBadgeStyle(transaction.category)}
                   >
-                    <span className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1">
                       {categories[transaction.category]?.icon && (
                         <i className={`fas fa-${categories[transaction.category].icon} text-xs`}></i>
                       )}
                       {categories[transaction.category]?.name || transaction.category}
-              </span>
+                    </span>
                   </Badge>
-                  
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(transaction.date), "dd/MM/yyyy", { locale: id })}
-                    </p>
-                    <span className="text-muted-foreground/30">•</span>
-                    <Badge 
-                      variant="outline"
-                      className="rounded-md font-normal"
-                      style={getWalletBadgeStyle(transaction.wallet_id)}
-                    >
-                      {wallet?.name || transaction.wallet_name || '-'}
-                    </Badge>
-                  </div>
-            </div>
+                </div>
+                
+                {/* Kanan Atas: Nominal */}
                 <div className={cn(
-                "font-medium",
+                  "font-medium text-right",
                   transaction.type === "income" && "text-emerald-600",
                   transaction.type === "expense" && "text-rose-600",
-                transaction.type === "transfer" && "text-blue-600"
-              )}>
-                {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                {formatCurrency(transaction.amount)}
+                  transaction.type === "transfer" && "text-blue-600"
+                )}>
+                  {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
+                  {formatCurrency(transaction.amount)}
                 </div>
               </div>
-
-              {transaction.description && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  {transaction.description}
-                </p>
-              )}
+              
+              <div className="flex justify-between items-end">
+                {/* Kiri Bawah: Deskripsi */}
+                <div className="max-w-[65%]">
+                  <p className="text-sm break-words line-clamp-2">
+                    {transaction.title}
+                  </p>
+                  {transaction.description && (
+                    <p className="text-xs text-muted-foreground mt-1 break-words line-clamp-2">
+                      {transaction.description}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Kanan Bawah: Badge Dompet */}
+                <Badge 
+                  variant="outline"
+                  className="rounded-md font-normal text-xs"
+                  style={getWalletBadgeStyle(transaction.wallet_id)}
+                >
+                  {wallet?.name || transaction.wallet_name || '-'}
+                </Badge>
+              </div>
             </div>
             
             <div 
@@ -681,7 +692,7 @@ const TransactionList = ({
             >
               <div className="overflow-hidden">
                 <div className="flex items-center justify-end gap-2 p-3 border-t bg-muted/50">
-                    <Button
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={(e) => {
@@ -689,11 +700,11 @@ const TransactionList = ({
                       onEdit(transaction);
                     }}
                     className="h-8"
-                    >
-                      <Edit2 className="h-4 w-4 mr-2" />
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
                     Edit
-                    </Button>
-                    <Button
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={(e) => {
@@ -702,11 +713,11 @@ const TransactionList = ({
                       setShowDeleteDialog(true);
                     }}
                     className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Hapus
-                    </Button>
-                  </div>
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

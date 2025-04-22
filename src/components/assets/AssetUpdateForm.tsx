@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -9,7 +8,7 @@ import { Asset } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
 
 interface AssetUpdateFormProps {
   asset: Asset;
@@ -21,13 +20,23 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [value, setValue] = useState("");
+  const [formattedValue, setFormattedValue] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   
+  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const numericValue = e.target.value.replace(/\D/g, '');
+    if (numericValue) {
+      const formattedVal = formatNumberWithSeparator(numericValue);
+      setFormattedValue(formattedVal);
+    } else {
+      setFormattedValue("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!value) {
+    if (!formattedValue) {
       toast({
         title: "Nilai tidak boleh kosong",
         description: "Mohon masukkan nilai terbaru aset",
@@ -38,7 +47,7 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
 
     try {
       setLoading(true);
-      const newValue = parseFloat(value);
+      const newValue = parseFormattedNumber(formattedValue);
       
       if (isNaN(newValue) || newValue <= 0) {
         toast({
@@ -108,43 +117,38 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <Label htmlFor="currentValue">Nilai Sebelumnya</Label>
+            <Label htmlFor="currentValue" className="text-sm font-medium">Nilai Sebelumnya</Label>
             <div className="h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50 flex items-center">
               <span className="text-gray-500 mr-1">Rp</span>
-              <span>{formatCurrency(asset.current_value, false)}</span>
+              <span>{formatCurrency(asset.current_value).replace('Rp', '').trim()}</span>
             </div>
           </div>
 
           <div>
-            <Label htmlFor="value">Nilai Terbaru</Label>
-            <div className="relative">
-              <Input
-                id="value"
-                type="number"
-                placeholder="0"
-                min="0"
-                step="1000"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                required
-                className="pl-8"
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-                Rp
-              </span>
+            <Label htmlFor="value" className="text-sm font-medium">Nilai Terbaru</Label>
+            <div className="relative mt-1">
+              <div className="flex rounded-md shadow-sm">
+                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                  Rp
+                </span>
+                <Input
+                  id="value"
+                  type="text"
+                  placeholder="0"
+                  value={formattedValue}
+                  onChange={handleValueChange}
+                  required
+                  className="rounded-l-none"
+                />
+              </div>
             </div>
-            {value && !isNaN(parseFloat(value)) && (
-              <p className="text-xs text-gray-500 mt-1">
-                {formatCurrency(parseFloat(value))}
-              </p>
-            )}
           </div>
 
           <div>
-            <Label htmlFor="date">Tanggal Update</Label>
+            <Label htmlFor="date" className="text-sm font-medium">Tanggal Update</Label>
             <Input
               id="date"
               type="date"
@@ -152,19 +156,34 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
               onChange={(e) => setDate(e.target.value)}
               max={new Date().toISOString().split("T")[0]}
               required
+              className="mt-1"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Menyimpan...
-              </>
-            ) : (
-              "Update Nilai Aset"
-            )}
-          </Button>
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full"
+              onClick={() => navigate(-1)}
+            >
+              Batal
+            </Button>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Menyimpan...
+                </>
+              ) : (
+                "Update Nilai"
+              )}
+            </Button>
+          </div>
         </form>
       </div>
     </div>

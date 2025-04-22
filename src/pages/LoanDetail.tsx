@@ -121,6 +121,26 @@ const LoanDetail = () => {
     setDeleting(true);
 
     try {
+      // Ambil data wallet terkait
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('id', loan.wallet_id)
+        .single();
+
+      if (walletError && loan.wallet_id) {
+        throw walletError;
+      }
+
+      // Ambil transaksi terkait
+      const { data: transactionData, error: transactionError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('category', loan.type === 'payable' ? 'Hutang' : 'Piutang')
+        .eq('title', loan.description)
+        .eq('wallet_id', loan.wallet_id);
+
       // Check if there are payments
       if (payments.length > 0) {
         // Delete all payments first
@@ -131,6 +151,36 @@ const LoanDetail = () => {
 
         if (paymentsError) {
           throw paymentsError;
+        }
+      }
+
+      // Hapus transaksi terkait
+      if (!transactionError && transactionData && transactionData.length > 0) {
+        const { error: delTransactionError } = await supabase
+          .from('transactions')
+          .delete()
+          .in('id', transactionData.map(t => t.id));
+
+        if (delTransactionError) {
+          throw delTransactionError;
+        }
+      }
+
+      // Update saldo wallet jika ada wallet terkait
+      if (walletData && loan.wallet_id) {
+        // Untuk hutang (payable), saldo berkurang saat menghapus hutang (karena awalnya bertambah saat meminjam)
+        // Untuk piutang (receivable), saldo bertambah saat menghapus piutang (karena awalnya berkurang saat meminjamkan)
+        const newBalance = loan.type === 'payable'
+          ? walletData.balance - (loan.amount - (loan.paid_amount || 0))
+          : walletData.balance + (loan.amount - (loan.paid_amount || 0));
+
+        const { error: updateWalletError } = await supabase
+          .from('wallets')
+          .update({ balance: newBalance })
+          .eq('id', loan.wallet_id);
+
+        if (updateWalletError) {
+          throw updateWalletError;
         }
       }
 
