@@ -134,7 +134,6 @@ const LoansManagement = () => {
     }
   };
 
-  // Filter loans based on selected tab
   const filteredLoans = () => {
     switch (selectedTab) {
       case "unpaid":
@@ -152,21 +151,17 @@ const LoansManagement = () => {
     }
   };
 
-  // Get total for hutang (debts)
   const totalHutang = loans
     .filter(loan => loan.type === 'payable' && loan.status !== 'paid')
     .reduce((sum, loan) => sum + (loan.amount - (loan.paid_amount || 0)), 0);
 
-  // Get total for piutang (receivables)
   const totalPiutang = loans
     .filter(loan => loan.type === 'receivable' && loan.status !== 'paid')
     .reduce((sum, loan) => sum + (loan.amount - (loan.paid_amount || 0)), 0);
 
-  // Count items by status
   const countHutangItems = loans.filter(loan => loan.type === "payable" && loan.status !== "paid").length;
   const countPiutangItems = loans.filter(loan => loan.type === "receivable" && loan.status !== "paid").length;
 
-  // Count overdue items
   const countHutangOverdue = loans.filter(loan => {
     const dueDate = new Date(loan.due_date);
     const today = new Date();
@@ -225,7 +220,6 @@ const LoansManagement = () => {
     try {
       setPaymentProcessing(true);
       
-      // 1. Dapatkan data wallet yang dipilih
       const { data: selectedWalletData, error: walletError } = await supabase
         .from("wallets")
         .select("*")
@@ -234,9 +228,9 @@ const LoansManagement = () => {
       
       if (walletError) throw walletError;
       
-      // 2. Ambil kategori yang sesuai dari database
-      // Mencari kategori berdasarkan tipe (income/expense)
       const categoryType = selectedLoan.type === "payable" ? "expense" : "income";
+      const categoryName = selectedLoan.type === "payable" ? "Bayar Hutang" : "Terima Piutang";
+      
       const { data: categoryData, error: categoryError } = await supabase
         .from("categories")
         .select("id, name")
@@ -246,20 +240,16 @@ const LoansManagement = () => {
       
       if (categoryError) throw categoryError;
       
-      // Jika tidak ditemukan kategori, lempar error
       if (!categoryData || categoryData.length === 0) {
         throw new Error(`Tidak ditemukan kategori dengan tipe ${categoryType}. Buat kategori terlebih dahulu.`);
       }
       
-      // Gunakan ID kategori pertama yang ditemukan
       const categoryId = categoryData[0].id;
       
-      // 3. Hitung paid_amount baru dan status
       const newPaidAmount = (selectedLoan.paid_amount || 0) + amount;
-      const isPaid = newPaidAmount >= selectedLoan.amount;
+      const isPaid = newPaidAmount >= selectedLoan.amount || markPaid;
       const newStatus = isPaid ? "paid" : (newPaidAmount > 0 ? "partial" : "unpaid");
       
-      // 4. Update loan data (amount_paid dan status)
       const { error: updateLoanError } = await supabase
         .from("loans")
         .update({
@@ -271,9 +261,6 @@ const LoansManagement = () => {
       
       if (updateLoanError) throw updateLoanError;
       
-      // 5. Perbarui saldo wallet
-      // - Jika hutang (payable), mengurangi saldo wallet (pengeluaran) karena membayar hutang
-      // - Jika piutang (receivable), menambah saldo wallet (pemasukan) karena menerima pembayaran
       const newBalance = selectedLoan.type === "payable"
         ? selectedWalletData.balance - amount
         : selectedWalletData.balance + amount;
@@ -288,7 +275,6 @@ const LoansManagement = () => {
       
       if (updateWalletError) throw updateWalletError;
       
-      // 6. Catat transaksi di tabel transactions
       const today = new Date();
       const formattedDate = format(today, 'yyyy-MM-dd');
       
@@ -298,10 +284,8 @@ const LoansManagement = () => {
           ? "Pembayaran Hutang" 
           : "Penerimaan Piutang",
         amount: amount,
-        // Hutang = expense (uang keluar), Piutang = income (uang masuk)
         type: selectedLoan.type === "payable" ? "expense" : "income",
         date: formattedDate,
-        // Gunakan ID kategori yang sudah diambil dari database
         category: categoryId,
         wallet_id: paymentWallet,
         description: selectedLoan.type === "payable"
@@ -317,7 +301,6 @@ const LoansManagement = () => {
       
       if (transactionError) throw transactionError;
       
-      // 7. Opsional: Catat payment history
       const paymentData = {
         loan_id: selectedLoan.id,
         user_id: user?.id,
@@ -335,7 +318,6 @@ const LoansManagement = () => {
       
       if (paymentHistoryError) {
         console.error("Error recording payment history:", paymentHistoryError);
-        // Tidak throw error karena ini opsional
       }
       
       toast({
@@ -344,7 +326,7 @@ const LoansManagement = () => {
       });
       
       setPaymentDialogOpen(false);
-      fetchData(); // Refresh data
+      fetchData();
     } catch (error) {
       console.error("Error processing payment:", error instanceof Error ? error.message : String(error));
       toast({
@@ -361,7 +343,45 @@ const LoansManagement = () => {
     if (!selectedLoan) return;
     
     try {
-      // Check if there are payments
+      let relatedTransactionIds: string[] = [];
+      
+      const { data: initialTransactions, error: initialTransError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', user?.id)
+        .eq('wallet_id', selectedLoan.wallet_id)
+        .eq('title', selectedLoan.description)
+        .in('type', selectedLoan.type === 'payable' ? ['income'] : ['expense']);
+      
+      if (initialTransError) throw initialTransError;
+      
+      if (initialTransactions && initialTransactions.length > 0) {
+        relatedTransactionIds = [...relatedTransactionIds, ...initialTransactions.map(t => t.id)];
+      }
+      
+      const { data: paymentTransactions, error: paymentTransError } = await supabase
+        .from('transactions')
+        .select('id')
+        .eq('user_id', user?.id)
+        .like('description', `%${selectedLoan.description}%`)
+        .in('type', selectedLoan.type === 'payable' ? ['expense'] : ['income']);
+      
+      if (paymentTransError) throw paymentTransError;
+      
+      if (paymentTransactions && paymentTransactions.length > 0) {
+        relatedTransactionIds = [...relatedTransactionIds, ...paymentTransactions.map(t => t.id)];
+      }
+      
+      if (relatedTransactionIds.length > 0) {
+        const { error: deleteTransError } = await supabase
+          .from('transactions')
+          .delete()
+          .in('id', relatedTransactionIds);
+          
+        if (deleteTransError) throw deleteTransError;
+        console.log(`Deleted ${relatedTransactionIds.length} related transactions`);
+      }
+      
       const { data: payments, error: paymentsCheckError } = await supabase
         .from("payments")
         .select("id")
@@ -370,7 +390,6 @@ const LoansManagement = () => {
       if (paymentsCheckError) throw paymentsCheckError;
       
       if (payments && payments.length > 0) {
-        // Delete all payments first
         const { error: paymentsError } = await supabase
           .from("payments")
           .delete()
@@ -379,55 +398,6 @@ const LoansManagement = () => {
         if (paymentsError) throw paymentsError;
       }
 
-      // Cari transaksi terkait dengan pinjaman ini
-      if (selectedLoan.wallet_id) {
-        try {
-          // Cari transaksi berdasarkan kategori dan deskripsi
-          const { data: transactionsData, error: transactionsError } = await supabase
-            .from('transactions')
-            .select('*')
-            .eq('user_id', user?.id)
-            .eq('wallet_id', selectedLoan.wallet_id)
-            .eq('category', selectedLoan.type === 'payable' ? 'Hutang' : 'Piutang');
-
-          if (transactionsError) throw transactionsError;
-
-          if (transactionsData && transactionsData.length > 0) {
-            // Filter transaksi yang benar-benar terkait dengan pinjaman ini
-            const relatedTransactions = transactionsData.filter(transaction => {
-              // Match berdasarkan judul dan deskripsi
-              const titleMatch = transaction.title === selectedLoan.description;
-              const descriptionMatch = 
-                selectedLoan.type === 'payable' 
-                  ? transaction.description?.includes(`Pinjaman dari ${selectedLoan.lender}`)
-                  : transaction.description?.includes(`Pinjaman kepada ${selectedLoan.borrower}`);
-              
-              return titleMatch || descriptionMatch;
-            });
-
-            // Hapus semua transaksi terkait
-            for (const transaction of relatedTransactions) {
-              const { error: deleteTransError } = await supabase
-                .from('transactions')
-                .delete()
-                .eq('id', transaction.id);
-              
-              if (deleteTransError) {
-                console.error(`Error menghapus transaksi ${transaction.id}:`, deleteTransError);
-              } else {
-                console.log(`Transaksi ${transaction.id} berhasil dihapus`);
-              }
-            }
-
-            console.log(`Berhasil menghapus ${relatedTransactions.length} transaksi terkait`);
-          }
-        } catch (transactionError) {
-          console.error("Error menghapus transaksi terkait:", transactionError);
-          // Lanjutkan proses meskipun ada masalah menghapus transaksi
-        }
-      }
-
-      // Delete the loan
       const { error } = await supabase
         .from("loans")
         .delete()
@@ -441,7 +411,7 @@ const LoansManagement = () => {
       });
 
       setDeleteDialogOpen(false);
-      fetchData(); // Refresh data
+      fetchData();
     } catch (error) {
       console.error("Error deleting loan:", error instanceof Error ? error.message : String(error));
       toast({
@@ -452,9 +422,7 @@ const LoansManagement = () => {
     }
   };
 
-  // Fungsi untuk menangani klik pada item hutang/piutang
   const handleBudgetClick = (loan: Loan) => {
-    // Toggle: jika mengklik item yang sama, tutup detail, jika tidak, tampilkan detail item baru
     setLoanToEdit(loanToEdit?.id === loan.id ? null : loan);
   };
 
@@ -468,7 +436,6 @@ const LoansManagement = () => {
           <h1 className="text-xl font-bold">Hutang & Piutang</h1>
         </div>
 
-        {/* Feature Toggle Section */}
         <section className="mb-6 bg-white rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -483,7 +450,6 @@ const LoansManagement = () => {
           </div>
         </section>
 
-        {/* Summary Section */}
         <section className="mb-6 grid grid-cols-2 gap-3">
           <div className="bg-red-50 p-4 rounded-lg border border-red-100">
             <p className="text-xs text-red-700 mb-1">Total Hutang</p>
@@ -503,7 +469,6 @@ const LoansManagement = () => {
           </div>
         </section>
 
-        {/* Tabs Section */}
         <section className="mb-6">
           <Tabs defaultValue="all" value={selectedTab} onValueChange={setSelectedTab}>
             <TabsList className="grid grid-cols-4 mb-4">
@@ -515,7 +480,6 @@ const LoansManagement = () => {
           </Tabs>
         </section>
 
-        {/* Hutang List Section */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold">Daftar Hutang Aktif</h2>
@@ -552,13 +516,12 @@ const LoansManagement = () => {
                       key={loan.id} 
                       className="bg-white rounded-lg shadow-sm"
                     >
-                      {/* Header loan item yang selalu terlihat */}
                       <div onClick={() => handleBudgetClick(loan)} className="cursor-pointer">
                         <div className="flex items-start p-3">
                           <div className="w-1 self-stretch bg-red-500 rounded-l-lg mr-3"></div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
-                        <div>
+                              <div>
                                 <div className="flex items-center gap-2">
                                   <h3 className="font-medium text-gray-800">{loan.description}</h3>
                                   {isPaid && (
@@ -579,7 +542,6 @@ const LoansManagement = () => {
                         </div>
                       </div>
 
-                      {/* Detail hutang ketika diklik */}
                       {loanToEdit?.id === loan.id && (
                         <div className="p-4 border-t border-gray-100">
                           <div className="grid grid-cols-2 gap-4 mb-4">
@@ -602,7 +564,7 @@ const LoansManagement = () => {
                               <p className="text-xs text-gray-500 mb-1">Wallet</p>
                               <p className="font-medium">{loan.wallet_name || "CASH"}</p>
                             </div>
-                        </div>
+                          </div>
                           
                           <div className="mb-4">
                             <p className="text-xs text-gray-500 mb-1">Progress Pembayaran</p>
@@ -625,21 +587,21 @@ const LoansManagement = () => {
                             </div>
                             <div>
                               <p className="text-gray-500">Sisa: {formatCurrency(loan.amount - (loan.paid_amount || 0))}</p>
-                        </div>
-                      </div>
+                            </div>
+                          </div>
 
                           <div className="flex gap-2 justify-between">
-                      {!isPaid && (
-                          <Button 
-                            size="sm" 
+                            {!isPaid && (
+                              <Button 
+                                size="sm" 
                                 className="flex-1"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   navigate(`/loans/${loan.id}/payment`);
                                 }}
-                          >
-                            Bayar
-                          </Button>
+                              >
+                                Bayar
+                              </Button>
                             )}
                             <Button 
                               size="sm" 
@@ -663,7 +625,6 @@ const LoansManagement = () => {
           )}
         </section>
 
-        {/* Piutang List Section */}
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-semibold">Daftar Piutang Aktif</h2>
@@ -700,13 +661,12 @@ const LoansManagement = () => {
                       key={loan.id} 
                       className="bg-white rounded-lg shadow-sm"
                     >
-                      {/* Header loan item yang selalu terlihat */}
                       <div onClick={() => handleBudgetClick(loan)} className="cursor-pointer">
                         <div className="flex items-start p-3">
                           <div className="w-1 self-stretch bg-green-500 rounded-l-lg mr-3"></div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
-                        <div>
+                              <div>
                                 <div className="flex items-center gap-2">
                                   <h3 className="font-medium text-gray-800">{loan.description}</h3>
                                   {isPaid && (
@@ -727,7 +687,6 @@ const LoansManagement = () => {
                         </div>
                       </div>
 
-                      {/* Detail piutang ketika diklik */}
                       {loanToEdit?.id === loan.id && (
                         <div className="p-4 border-t border-gray-100">
                           <div className="grid grid-cols-2 gap-4 mb-4">
@@ -750,7 +709,7 @@ const LoansManagement = () => {
                               <p className="text-xs text-gray-500 mb-1">Wallet</p>
                               <p className="font-medium">{loan.wallet_name || "CASH"}</p>
                             </div>
-                        </div>
+                          </div>
                           
                           <div className="mb-4">
                             <p className="text-xs text-gray-500 mb-1">Progress Pembayaran</p>
@@ -773,11 +732,11 @@ const LoansManagement = () => {
                             </div>
                             <div>
                               <p className="text-gray-500">Sisa: {formatCurrency(loan.amount - (loan.paid_amount || 0))}</p>
-                        </div>
-                      </div>
+                            </div>
+                          </div>
 
                           <div className="flex gap-2 justify-between">
-                      {!isPaid && (
+                            {!isPaid && (
                               <Button 
                                 size="sm"
                                 className="flex-1 bg-green-600 hover:bg-green-700"
@@ -811,7 +770,6 @@ const LoansManagement = () => {
           )}
         </section>
 
-        {/* Tips Section */}
         <section className="bg-blue-50 rounded-lg p-4 mb-6">
           <h3 className="font-semibold mb-3 text-blue-800">Tips Penggunaan Hutang & Piutang</h3>
           <ul className="space-y-2 text-sm text-blue-700">
@@ -838,7 +796,6 @@ const LoansManagement = () => {
           </ul>
         </section>
 
-        {/* Feature Description Section */}
         <section className="bg-purple-50 rounded-lg p-4">
           <h3 className="font-semibold mb-3 text-purple-800">Penjelasan Fitur Hutang & Piutang</h3>
           <div className="space-y-2 text-sm text-purple-700">
@@ -854,7 +811,6 @@ const LoansManagement = () => {
         </section>
       </div>
 
-      {/* Payment Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -955,7 +911,6 @@ const LoansManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
