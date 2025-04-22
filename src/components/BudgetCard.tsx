@@ -23,10 +23,12 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
   const [showDetail, setShowDetail] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [expandedView, setExpandedView] = useState(false);
+  const [budgetExpenses, setBudgetExpenses] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+    fetchBudgetExpenses();
+  }, [budgetArray]);
 
   const fetchCategories = async () => {
     try {
@@ -38,6 +40,34 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
       setCategories(data || []);
     } catch (error) {
       console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchBudgetExpenses = async () => {
+    try {
+      const expenses: Record<string, number> = {};
+      
+      for (const budget of budgetArray) {
+        const startDate = new Date(budget.start_date);
+        const endDate = budget.end_date ? new Date(budget.end_date) : new Date();
+        
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("amount")
+          .eq("category", budget.category)
+          .eq("type", "expense")
+          .gte("date", startDate.toISOString().split('T')[0])
+          .lte("date", endDate.toISOString().split('T')[0]);
+          
+        if (error) throw error;
+        
+        const totalExpenses = data?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
+        expenses[budget.id] = totalExpenses;
+      }
+      
+      setBudgetExpenses(expenses);
+    } catch (error) {
+      console.error("Error fetching budget expenses:", error);
     }
   };
 
@@ -54,8 +84,8 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
   };
 
   const calculateProgress = (budget: Budget) => {
-    if (!budget.spent) return 0;
-    return (budget.spent / budget.amount) * 100;
+    const spent = budgetExpenses[budget.id] || 0;
+    return (spent / budget.amount) * 100;
   };
 
   const getProgressColor = (progress: number) => {
@@ -103,12 +133,12 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
     <>
       <div className="bg-white rounded-lg p-4 relative overflow-hidden">
         {/* Header with icon */}
-      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="bg-blue-50 p-2 rounded-full">
               <BarChart3 className="h-5 w-5 text-blue-500" />
             </div>
-        <h2 className="text-lg font-medium">Anggaran</h2>
+            <h2 className="text-lg font-medium">Anggaran</h2>
             {budgetArray.length > 0 && (
               <div className="bg-blue-100 text-blue-700 text-xs font-medium rounded-full px-2 py-0.5">
                 {budgetArray.length} aktif
@@ -125,10 +155,10 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
                 {expandedView ? "Ringkas" : "Lihat semua"}
               </button>
             )}
-        <Link to="/budgets" className="flex items-center text-sm text-blue-600 hover:text-blue-700">
-          Kelola <ChevronRight className="h-4 w-4 ml-1" />
-        </Link>
-      </div>
+            <Link to="/budgets" className="flex items-center text-sm text-blue-600 hover:text-blue-700">
+              Kelola <ChevronRight className="h-4 w-4 ml-1" />
+            </Link>
+          </div>
         </div>
 
         {/* Decorative element */}
@@ -136,8 +166,9 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
 
         <div className="space-y-3">
           {(expandedView ? budgetArray : budgetArray.slice(0, 3)).map((budget) => {
-          const progress = calculateProgress(budget);
-          return (
+            const progress = calculateProgress(budget);
+            const spent = budgetExpenses[budget.id] || 0;
+            return (
               <div
                 key={budget.id}
                 className="relative bg-gray-50 p-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors border border-gray-100"
@@ -162,23 +193,23 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
 
                 <div className="mb-1.5 flex justify-between items-center">
                   <span className="text-sm text-gray-600">
-                    Rp {budget.spent?.toLocaleString() || 0} dari Rp {budget.amount.toLocaleString()}
+                    Rp {spent.toLocaleString()} dari Rp {budget.amount.toLocaleString()}
                   </span>
                   <span className="text-xs font-medium px-1 py-0.5 rounded bg-gray-200">
                     {Math.min(Math.round(progress), 100)}%
-                </span>
+                  </span>
+                </div>
+
+                <Progress
+                  value={progress}
+                  className="h-2"
+                  indicatorClassName={getProgressColor(progress)}
+                />
               </div>
+            );
+          })}
 
-              <Progress
-                value={progress}
-                className="h-2"
-                indicatorClassName={getProgressColor(progress)}
-              />
-            </div>
-          );
-        })}
-
-        {budgetArray.length === 0 && (
+          {budgetArray.length === 0 && (
             <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-200">
               <Wallet className="h-12 w-12 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-500 font-medium">Belum ada anggaran</p>
@@ -270,13 +301,13 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
                 <div className="bg-gray-50 p-4 rounded-lg text-center">
                   <ArrowUpDown className="h-4 w-4 mx-auto mb-1 text-gray-400" />
                   <p className="text-gray-500 text-xs mb-1">Terpakai</p>
-                  <p className="font-medium text-lg">Rp {selectedBudget.spent?.toLocaleString() || 0}</p>
+                  <p className="font-medium text-lg">Rp {budgetExpenses[selectedBudget.id]?.toLocaleString() || 0}</p>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg text-center">
                   <Wallet className="h-4 w-4 mx-auto mb-1 text-gray-400" />
                   <p className="text-gray-500 text-xs mb-1">Sisa</p>
-                  <p className={`font-medium text-lg ${(selectedBudget.amount - (selectedBudget.spent || 0)) < 0 ? 'text-red-500' : ''}`}>
-                    Rp {Math.max(0, selectedBudget.amount - (selectedBudget.spent || 0)).toLocaleString()}
+                  <p className={`font-medium text-lg ${(selectedBudget.amount - (budgetExpenses[selectedBudget.id] || 0)) < 0 ? 'text-red-500' : ''}`}>
+                    Rp {Math.max(0, selectedBudget.amount - (budgetExpenses[selectedBudget.id] || 0)).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -299,8 +330,8 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
                 </Link>
               </div>
             </div>
-      </div>
-    </div>
+          </div>
+        </div>
       )}
     </>
   );

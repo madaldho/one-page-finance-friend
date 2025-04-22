@@ -45,6 +45,7 @@ const BudgetManagement = () => {
   const [editSourceName, setEditSourceName] = useState("");
   const [editSourceAmount, setEditSourceAmount] = useState("");
   const [categories, setCategories] = useState<{id: string; name: string; color?: string}[]>([]);
+  const [budgetExpenses, setBudgetExpenses] = useState<Record<string, number>>({});
   
   // State untuk Budget
   const [budgetToEdit, setBudgetToEdit] = useState<Budget | null>(null);
@@ -176,6 +177,9 @@ const BudgetManagement = () => {
         
       if (expiredError) throw expiredError;
       setExpiredBudgets(expiredData || []);
+
+      // Fetch budget expenses
+      await fetchBudgetExpenses([...budgetsData || [], ...expiredData || []]);
     } catch (error: unknown) {
       console.error("Error fetching budget data:", error);
       const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat mengambil data";
@@ -187,6 +191,39 @@ const BudgetManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchBudgetExpenses = async (budgetList: Budget[]) => {
+    try {
+      const expenses: Record<string, number> = {};
+      
+      for (const budget of budgetList) {
+        const startDate = new Date(budget.start_date);
+        const endDate = budget.end_date ? new Date(budget.end_date) : new Date();
+        
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("amount")
+          .eq("category", budget.category)
+          .eq("type", "expense")
+          .gte("date", startDate.toISOString().split('T')[0])
+          .lte("date", endDate.toISOString().split('T')[0]);
+          
+        if (error) throw error;
+        
+        const totalExpenses = data?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
+        expenses[budget.id] = totalExpenses;
+      }
+      
+      setBudgetExpenses(expenses);
+    } catch (error) {
+      console.error("Error fetching budget expenses:", error);
+    }
+  };
+
+  const calculateProgress = (budget: Budget) => {
+    const spent = budgetExpenses[budget.id] || 0;
+    return (spent / budget.amount) * 100;
   };
 
   const handleToggleBudgetFeature = async () => {
@@ -242,11 +279,6 @@ const BudgetManagement = () => {
         variant: "destructive",
       });
     }
-  };
-
-  const calculateProgress = (budget: Budget) => {
-    if (!budget.spent) return 0;
-    return (budget.spent / budget.amount) * 100;
   };
 
   const getProgressColor = (progress: number) => {
@@ -948,6 +980,7 @@ const BudgetManagement = () => {
           <div className="space-y-4">
             {budgets.map((budget) => {
               const progress = calculateProgress(budget);
+              const spent = budgetExpenses[budget.id] || 0;
               return (
                 <div key={budget.id}>
                   <div
@@ -963,24 +996,24 @@ const BudgetManagement = () => {
                           ></div>
                           <h3 className="font-medium">{getCategoryName(budget.category)}</h3>
                         </div>
-                    <span className="text-sm">
-                      Rp {budget.spent?.toLocaleString() || 0} / Rp {budget.amount.toLocaleString()}
-                    </span>
-                  </div>
+                        <span className="text-sm">
+                          Rp {spent.toLocaleString()} / Rp {budget.amount.toLocaleString()}
+                        </span>
+                      </div>
                       <div className="flex items-center justify-between gap-2 mt-1">
-                  <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <span className="text-xs text-gray-500">{displayPeriod(budget)}</span>
                           <span className="text-xs text-orange-500">• {getRemainingTime(budget)}</span>
                         </div>
                         <span className="text-xs font-medium">
                           {Math.min(Math.round(progress), 100)}%
                         </span>
-                  </div>
-                  <Progress 
-                    value={progress} 
+                      </div>
+                      <Progress 
+                        value={progress} 
                         className="h-2 mt-1" 
-                    indicatorClassName={getProgressColor(progress)}
-                  />
+                        indicatorClassName={getProgressColor(progress)}
+                      />
                     </div>
                     <div className="relative">
                       <button 
@@ -1148,8 +1181,8 @@ const BudgetManagement = () => {
 
                               <div className="bg-white p-3 rounded-lg">
                                 <p className="text-xs text-gray-500">Sisa Anggaran</p>
-                                <p className={`font-medium ${budget.amount - (budget.spent || 0) < 0 ? 'text-red-500' : ''}`}>
-                                  Rp {Math.max(0, budget.amount - (budget.spent || 0)).toLocaleString()}
+                                <p className={`font-medium ${budget.amount - spent < 0 ? 'text-red-500' : ''}`}>
+                                  Rp {Math.max(0, budget.amount - spent).toLocaleString()}
                                 </p>
                               </div>
 
@@ -1212,20 +1245,21 @@ const BudgetManagement = () => {
           </div>
           
           {!showHistory ? (
-          <p className="text-sm text-gray-500 text-center py-2">
+            <p className="text-sm text-gray-500 text-center py-2">
               {expiredBudgets.length} anggaran yang telah berakhir
             </p>
           ) : (
             <div className="space-y-3 mt-4">
               {expiredBudgets.map((budget) => {
                 const progress = calculateProgress(budget);
+                const spent = budgetExpenses[budget.id] || 0;
                 return (
                   <div key={budget.id} className="bg-gray-50 rounded-lg p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <h3 className="font-medium">{getCategoryName(budget.category)}</h3>
                       <div className="flex items-center gap-2">
                         <span className="text-sm">
-                          Rp {budget.spent?.toLocaleString() || 0} / Rp {budget.amount.toLocaleString()}
+                          Rp {spent.toLocaleString()} / Rp {budget.amount.toLocaleString()}
                         </span>
                         <div className="relative">
                           <button 
@@ -1239,7 +1273,6 @@ const BudgetManagement = () => {
                           
                           {showBudgetMenu === budget.id && (
                             <div className="absolute right-0 mt-1 w-36 bg-white shadow-lg rounded-md py-1 z-10">
-                              
                               <button
                                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center gap-2"
                                 onClick={() => handleShowDeleteBudgetDialog(budget)}
