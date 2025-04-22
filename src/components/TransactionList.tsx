@@ -115,7 +115,7 @@ const TransactionList = ({
         if (categoriesError) throw categoriesError;
         
         const categoryMap = categoriesData.reduce((acc, cat) => {
-          acc[cat.id] = cat;
+          acc[cat.id] = cat as Category;
           return acc;
         }, {} as Record<string, Category>);
         
@@ -264,7 +264,7 @@ const TransactionList = ({
     touchStartTimeRef.current = Date.now();
     longPressTimeoutRef.current = setTimeout(() => {
       handleLongPress(id);
-    }, 500); // 500ms for long press
+    }, 2000); // Increased to 5 seconds (5000ms) for long press
   };
 
   const handleTouchEnd = () => {
@@ -455,136 +455,100 @@ const TransactionList = ({
   );
 
   // Mobile view
-  const MobileView = () => (
-    <div className="space-y-1">
+  const MobileView = () => {
+    // Group transactions by month and year
+    const groupTransactionsByMonth = () => {
+      const groupedTransactions: Record<string, Transaction[]> = {};
+      
+      sortedTransactions.forEach(transaction => {
+        const date = new Date(transaction.date);
+        const month = date.getMonth(); // 0-11
+        const year = date.getFullYear();
+        
+        // Format: "MMM YY" -> "MAR 25" for March 2025
+        const monthLabel = new Intl.DateTimeFormat('en', { month: 'short' }).format(date);
+        const twoDigitYear = (year % 100).toString();
+        const key = `${monthLabel} ${twoDigitYear}`.toUpperCase();
+        
+        if (!groupedTransactions[key]) {
+          groupedTransactions[key] = [];
+        }
+        
+        groupedTransactions[key].push(transaction);
+      });
+      
+      return groupedTransactions;
+    };
+    
+    const groupedTransactions = groupTransactionsByMonth();
+    
+    const sortLabels: Record<string, string> = {
+      'created_at': 'Waktu',
+      'date': 'Tanggal',
+      'amount': 'Nominal',
+      'category': 'Kategori',
+      'wallet_id': 'Dompet'
+    };
+    
+    return (
+      <div>
       {!selectionMode && (
-        <div className="flex justify-start mb-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowSortMenu(!showSortMenu)}
-            className="flex items-center gap-1"
-          >
-            <ArrowUpDown className="h-2 w-2" />
+        <div className="mb-4 mt-1">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              Menampilkan {sortedTransactions.length} transaksi
+            </div>
             
-            {sortConfig && (
-              <Badge variant="secondary" className="ml-1 text-xs">
-                {sortConfig.key === 'created_at' ? 'Waktu Input' : 
-                 sortConfig.key === 'date' ? 'Tanggal' : 
-                 sortConfig.key === 'amount' ? 'Nominal' : 
-                 sortConfig.key === 'category' ? 'Kategori' : 
-                 sortConfig.key === 'wallet_id' ? 'Dompet' : 
-                 sortConfig.key}
-                {' '}
-                {sortConfig.direction === 'asc' ? '↑' : '↓'}
-              </Badge>
-            )}
-          </Button>
+            <div 
+              className="flex items-center gap-1.5 text-xs text-foreground/70 cursor-pointer" 
+              onClick={() => setShowSortMenu(!showSortMenu)}
+            >
+              <span>{sortLabels[sortConfig.key] || sortConfig.key}</span>
+              <ArrowUpDown className="h-3 w-3" />
+            </div>
+          </div>
           
           {showSortMenu && (
-            <div className="absolute z-50 mt-8 w-56 rounded-md border bg-popover shadow-md animate-in fade-in-80">
-              <div className="p-2">
-                <h4 className="font-medium text-sm mb-1 px-2">Urut Berdasarkan</h4>
-                <div className="space-y-1">
-                  <Button 
-                    variant={sortConfig.key === 'created_at' ? "secondary" : "ghost"} 
-                    className="w-full justify-between text-xs h-8"
-                    onClick={() => {
-                      setSortConfig({ 
-                        key: 'created_at', 
-                        direction: sortConfig.key === 'created_at' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
-                      });
-                      setShowSortMenu(false);
-                    }}
-                  >
-                    <span>Waktu Input</span>
-                    {sortConfig.key === 'created_at' && (
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform",
-                        sortConfig.direction === 'desc' && "rotate-180"
-                      )} />
-                    )}
-                  </Button>
+            <div 
+              className="fixed inset-0 z-[100] flex items-end justify-center bg-black/20 animate-in fade-in-0 duration-150"
+              onClick={() => setShowSortMenu(false)}
+            >
+              <div 
+                className="w-full max-w-md bg-background rounded-t-xl shadow-lg animate-in slide-in-from-bottom duration-300"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-center pt-2 pb-1">
+                  <div className="w-10 h-1 bg-muted-foreground/20 rounded-full"></div>
+                </div>
+                
+                <div className="p-3 space-y-2">
+                  <div className="text-sm font-medium px-2">Urutkan</div>
                   
-                  <Button 
-                    variant={sortConfig.key === 'date' ? "secondary" : "ghost"} 
-                    className="w-full justify-between text-xs h-8"
-                    onClick={() => {
-                      setSortConfig({ 
-                        key: 'date', 
-                        direction: sortConfig.key === 'date' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
-                      });
-                      setShowSortMenu(false);
-                    }}
-                  >
-                    <span>Tanggal Transaksi</span>
-                    {sortConfig.key === 'date' && (
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform",
-                        sortConfig.direction === 'desc' && "rotate-180"
-                      )} />
-                    )}
-                  </Button>
-                  
-                  <Button 
-                    variant={sortConfig.key === 'amount' ? "secondary" : "ghost"} 
-                    className="w-full justify-between text-xs h-8"
-                    onClick={() => {
-                      setSortConfig({ 
-                        key: 'amount', 
-                        direction: sortConfig.key === 'amount' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
-                      });
-                      setShowSortMenu(false);
-                    }}
-                  >
-                    <span>Nominal</span>
-                    {sortConfig.key === 'amount' && (
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform",
-                        sortConfig.direction === 'desc' && "rotate-180"
-                      )} />
-                    )}
-                  </Button>
-                  
-                  <Button 
-                    variant={sortConfig.key === 'category' ? "secondary" : "ghost"} 
-                    className="w-full justify-between text-xs h-8"
-                    onClick={() => {
-                      setSortConfig({ 
-                        key: 'category', 
-                        direction: sortConfig.key === 'category' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
-                      });
-                      setShowSortMenu(false);
-                    }}
-                  >
-                    <span>Kategori</span>
-                    {sortConfig.key === 'category' && (
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform",
-                        sortConfig.direction === 'desc' && "rotate-180"
-                      )} />
-                    )}
-                  </Button>
-                  
-                  <Button 
-                    variant={sortConfig.key === 'wallet_id' ? "secondary" : "ghost"} 
-                    className="w-full justify-between text-xs h-8"
-                    onClick={() => {
-                      setSortConfig({ 
-                        key: 'wallet_id', 
-                        direction: sortConfig.key === 'wallet_id' && sortConfig.direction === 'desc' ? 'asc' : 'desc' 
-                      });
-                      setShowSortMenu(false);
-                    }}
-                  >
-                    <span>Dompet</span>
-                    {sortConfig.key === 'wallet_id' && (
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform",
-                        sortConfig.direction === 'desc' && "rotate-180"
-                      )} />
-                    )}
-                  </Button>
+                  <div className="grid grid-cols-1 gap-px bg-border rounded-lg overflow-hidden">
+                    {Object.entries(sortLabels).map(([key, label]) => (
+                      <button
+                        key={key}
+                        className={cn(
+                          "flex items-center justify-between py-3 px-4 bg-card",
+                          sortConfig.key === key && "bg-muted"
+                        )}
+                        onClick={() => {
+                          setSortConfig({
+                            key: key as keyof Transaction,
+                            direction: sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc'
+                          });
+                          setShowSortMenu(false);
+                        }}
+                      >
+                        <span className="text-sm">{label}</span>
+                        {sortConfig.key === key && (
+                          <span className="text-primary">
+                            {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -592,24 +556,55 @@ const TransactionList = ({
         </div>
       )}
       
-      {sortedTransactions.map((transaction) => {
+      {/* Sticky selection counter */}
+      {selectionMode && selectedIds.length > 0 && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom duration-300">
+          <div className="bg-primary text-primary-foreground py-1.5 px-3 rounded-full shadow-lg text-sm flex items-center gap-2">
+            <span className="font-medium">{selectedIds.length}</span>
+            <span>Terpilih</span>
+          </div>
+        </div>
+      )}
+      
+        <div className="space-y-4">
+          {Object.entries(groupedTransactions).map(([monthYear, monthTransactions], monthIndex) => (
+            <div key={monthYear} className="space-y-px">
+              {/* Month Header */}
+              <div className="bg-slate-800 text-white font-medium text-sm px-4 py-2 rounded-lg mb-1">
+                {monthYear}
+              </div>
+              
+              {/* Transactions for this month */}
+              {monthTransactions.map((transaction, index) => {
         const isExpanded = expandedTransaction === transaction.id;
         const wallet = wallets[transaction.wallet_id];
         const isSelected = selectedIds.includes(transaction.id);
+                
+                // Determine if transaction is first or last in its group
+                const isFirst = index === 0;
+                const isLast = index === monthTransactions.length - 1;
 
         return (
           <div
             key={transaction.id}
             className={cn(
-              "bg-card rounded-xl border overflow-hidden transition-all duration-200",
-              isSelected && "bg-primary/5 border-primary/30"
+                      "bg-card border border-t-0 first:border-t transition-all duration-200",
+                      isSelected && "bg-primary/5 border-red-500 border-3",
+                      isFirst && "rounded-t-lg", 
+                      isLast && "rounded-b-lg",
+                      !isFirst && !isLast && "rounded-none"
             )}
+            style={{
+              borderWidth: isSelected ? '3px' : '1px',
+              borderColor: isSelected ? '#ef4444' : '',
+              boxShadow: isSelected ? '0 0 0 1px rgba(239, 68, 68, 0.15)' : ''
+            }}
             onTouchStart={() => handleTouchStart(transaction.id)}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
           >
             <div 
-              className="p-4 cursor-pointer hover:bg-muted/50 transition-colors relative"
+                      className="p-3 cursor-pointer hover:bg-muted/30 transition-colors relative"
               onClick={() => {
                 if (selectionMode) {
                   handleToggleSelect(transaction.id, !isSelected);
@@ -618,18 +613,15 @@ const TransactionList = ({
                 }
               }}
             >
-              {isSelected && (
-                <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
-                  <Check className="h-3 w-3" />
-                </div>
-              )}
+              {/* Remove the overlapping check icon */}
               
-              <div className="flex justify-between mb-2">
-                {/* Kiri Atas: Tanggal dan kategori */}
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(transaction.date), "dd/MM/yyyy", { locale: id })}
-                  </p>
+                      <div className="flex justify-between items-start">
+                        {/* Left Side */}
+                        <div className="flex flex-col gap-1.5 max-w-[65%]">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(transaction.date), "dd/MM/yyyy")}
+                            </span>
                   
                   <Badge 
                     variant="outline"
@@ -641,16 +633,23 @@ const TransactionList = ({
                   >
                     <span className="flex items-center gap-1">
                       {categories[transaction.category]?.icon && (
-                        <i className={`fas fa-${categories[transaction.category].icon} text-xs`}></i>
+                                  <i className={`fas fa-${categories[transaction.category].icon} text-[10px]`}></i>
                       )}
                       {categories[transaction.category]?.name || transaction.category}
                     </span>
                   </Badge>
                 </div>
                 
-                {/* Kanan Atas: Nominal */}
+                          {/* Description */}
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {transaction.description || transaction.title || "-"}
+                          </p>
+                        </div>
+                        
+                        {/* Right Side */}
+                        <div className="flex flex-col items-end gap-1.5">
                 <div className={cn(
-                  "font-medium text-right",
+                            "font-medium",
                   transaction.type === "income" && "text-emerald-600",
                   transaction.type === "expense" && "text-rose-600",
                   transaction.type === "transfer" && "text-blue-600"
@@ -658,29 +657,15 @@ const TransactionList = ({
                   {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
                   {formatCurrency(transaction.amount)}
                 </div>
-              </div>
-              
-              <div className="flex justify-between items-end">
-                {/* Kiri Bawah: Deskripsi */}
-                <div className="max-w-[65%]">
-                  <p className="text-sm break-words line-clamp-2">
-                    {transaction.title}
-                  </p>
-                  {transaction.description && (
-                    <p className="text-xs text-muted-foreground mt-1 break-words line-clamp-2">
-                      {transaction.description}
-                    </p>
-                  )}
-                </div>
-                
-                {/* Kanan Bawah: Badge Dompet */}
+                          
                 <Badge 
                   variant="outline"
-                  className="rounded-md font-normal text-xs"
+                            className="rounded-sm text-[10px] py-0 px-1.5 font-normal"
                   style={getWalletBadgeStyle(transaction.wallet_id)}
                 >
                   {wallet?.name || transaction.wallet_name || '-'}
                 </Badge>
+                        </div>
               </div>
             </div>
             
@@ -699,9 +684,9 @@ const TransactionList = ({
                       e.stopPropagation();
                       onEdit(transaction);
                     }}
-                    className="h-8"
+                            className="h-8 text-xs"
                   >
-                    <Edit2 className="h-4 w-4 mr-2" />
+                            <Edit2 className="h-3.5 w-3.5 mr-1.5" />
                     Edit
                   </Button>
                   <Button
@@ -712,9 +697,9 @@ const TransactionList = ({
                       setTransactionToDelete([transaction.id]);
                       setShowDeleteDialog(true);
                     }}
-                    className="h-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+                            className="h-8 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                     Hapus
                   </Button>
                 </div>
@@ -723,8 +708,12 @@ const TransactionList = ({
           </div>
         );
       })}
+            </div>
+          ))}
+        </div>
     </div>
   );
+  };
 
   return (
     <div className="space-y-4">
@@ -742,12 +731,12 @@ const TransactionList = ({
         </div>
           
           {selectionMode && (
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full md:w-auto animate-in slide-in-from-right duration-300">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={exitSelectionMode}
-                className="h-9 rounded-full"
+                className="h-9 rounded-full shadow-sm hover:shadow transition-all"
               >
                 Batal
               </Button>
@@ -755,7 +744,7 @@ const TransactionList = ({
                 variant="destructive"
                 size="sm"
                 onClick={handleBulkDelete}
-                className="h-9 rounded-full"
+                className="h-9 rounded-full shadow-sm hover:shadow transition-all"
                 disabled={selectedIds.length === 0}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -764,17 +753,6 @@ const TransactionList = ({
             </div>
           )}
           </div>
-      )}
-
-      {selectionMode && (
-        <div className="bg-primary/5 p-3 rounded-lg border border-primary/20">
-          <p className="text-sm text-muted-foreground">
-            {isDesktop ? 
-              'Pilih transaksi yang ingin dihapus.' : 
-              'Ketuk untuk memilih. Tekan lama untuk memilih banyak transaksi sekaligus.'
-            }
-          </p>
-        </div>
       )}
 
       {isDesktop ? <DesktopView /> : <MobileView />}

@@ -890,81 +890,77 @@ const Transactions = () => {
             )}
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {/* Pengeluaran Card */}
-            <Card className="bg-red-50 border-red-100 shadow-sm overflow-hidden relative">
-              <div className="absolute right-0 top-0 h-full w-1 bg-red-400"></div>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-red-600 text-sm font-medium mb-1">Pengeluaran</p>
-                    <p className="text-2xl font-bold text-red-700">
-                      {formatCurrency(filteredTransactions
-                        .filter(t => t.type === 'expense')
-                        .reduce((sum, t) => sum + t.amount, 0)
-                      )}
-                    </p>
-                    <p className="text-xs text-red-500 mt-1">
-                      {filteredTransactions.filter(t => t.type === 'expense').length} transaksi
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                    <ArrowDownRight className="h-5 w-5 text-red-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Pemasukan Card */}
-            <Card className="bg-green-50 border-green-100 shadow-sm overflow-hidden relative">
-              <div className="absolute right-0 top-0 h-full w-1 bg-green-400"></div>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-600 text-sm font-medium mb-1">Pemasukan</p>
-                    <p className="text-2xl font-bold text-green-700">
-                      {formatCurrency(filteredTransactions
-                        .filter(t => t.type === 'income')
-                        .reduce((sum, t) => sum + t.amount, 0)
-                      )}
-                    </p>
-                    <p className="text-xs text-green-500 mt-1">
-                      {filteredTransactions.filter(t => t.type === 'income').length} transaksi
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                    <ArrowUpRight className="h-5 w-5 text-green-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Total Transaksi Card */}
-            <Card className="bg-slate-50 border-slate-100 shadow-sm overflow-hidden relative">
-              <div className="absolute right-0 top-0 h-full w-1 bg-slate-400"></div>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-slate-600 text-sm font-medium mb-1">Jumlah Transaksi</p>
-                    <p className="text-2xl font-bold text-slate-700">
-                      {filteredTransactions.length}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {formatCurrency(
-                        filteredTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) -
-                        filteredTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
-                      )}
-                    </p>
-                  </div>
-                  <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                    <Wallet className="h-5 w-5 text-slate-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {
+  /* Summary Cards - Redesigned for better mobile experience */
+}<div className="grid grid-cols-3 gap-2 mb-4">
+      {/* Pengeluaran Card */}
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <CardContent className="p-2">
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <div className="w-1 h-4 bg-red-400 rounded-full mr-1"></div>
+              <div className="h-5 w-5 rounded-full bg-red-50 flex items-center justify-center">
+                <ArrowDownRight className="h-3 w-3 text-red-500" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-gray-600 truncate">Pengeluaran</p>
+            <p className="text-sm font-bold text-red-600 truncate">
+              {formatCurrency(
+                filteredTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0),
+              )}
+            </p>
+            <p className="text-[10px] text-gray-500 truncate">
+              {filteredTransactions.filter((t) => t.type === "expense").length} transaksi
+            </p>
           </div>
+        </CardContent>
+      </Card>
 
+      {/* Pemasukan Card */}
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <CardContent className="p-2">
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <div className="w-1 h-4 bg-green-400 rounded-full mr-1"></div>
+              <div className="h-5 w-5 rounded-full bg-green-50 flex items-center justify-center">
+                <ArrowUpRight className="h-3 w-3 text-green-500" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-gray-600 truncate">Pemasukan</p>
+            <p className="text-sm font-bold text-green-600 truncate">
+              {formatCurrency(
+                filteredTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0),
+              )}
+            </p>
+            <p className="text-[10px] text-gray-500 truncate">
+              {filteredTransactions.filter((t) => t.type === "income").length} transaksi
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Total Transaksi Card */}
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <CardContent className="p-2">
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <div className="w-1 h-4 bg-slate-400 rounded-full mr-1"></div>
+              <div className="h-5 w-5 rounded-full bg-slate-50 flex items-center justify-center">
+                <Wallet className="h-3 w-3 text-slate-500" />
+              </div>
+            </div>
+            <p className="text-xs font-medium text-gray-600 truncate">Jumlah</p>
+            <p className="text-sm font-bold text-slate-600 truncate">{filteredTransactions.length}</p>
+            <p className="text-[10px] text-gray-500 truncate">
+              {formatCurrency(
+                filteredTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0) -
+                  filteredTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0),
+              )}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
         {/* Main Content with TransactionList */}
               {loading ? (
           <div className="flex flex-col items-center justify-center p-8 min-h-[60vh]">

@@ -823,13 +823,13 @@ const SavingsManagement = () => {
               <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mr-3 shrink-0">
                 <span className="text-amber-800 text-sm font-medium">2</span>
               </div>
-              <p className="text-sm">Pilih kategori pemasukan dan persentase untuk ditabung</p>
+              <p className="text-sm">Setor dan Tarik dana ke Tabungan Anda</p>
             </div>
             <div className="flex">
               <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mr-3 shrink-0">
                 <span className="text-amber-800 text-sm font-medium">3</span>
               </div>
-              <p className="text-sm">Saat Anda menambahkan pemasukan dalam kategori yang dipilih, aplikasi akan secara otomatis mengalokasikan persentase yang ditentukan ke target tabungan Anda</p>
+              <p className="text-sm">Klik Untuk mengedit, melihat histori, bahkan menghapus target tabungan Anda</p>
             </div>
             <div className="flex">
               <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mr-3 shrink-0">

@@ -536,7 +536,7 @@ const Index = () => {
                   Lihat Semua <ChevronRight className="h-3 w-3 ml-1" />
                 </Button>
               </CardHeader>
-              <CardContent className="p-0 sm:p-4">
+              <CardContent className="p-1 sm:p-4">
                 <TransactionList
                   transactions={transactions.slice(0, 5)}
                   onFilter={handleFilterTransactions}
