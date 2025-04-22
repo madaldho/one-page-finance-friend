@@ -73,6 +73,8 @@ interface Transaction {
   wallet_id: string;
   destination_wallet_id?: string;
   fee?: number;
+  source_fee?: number;
+  destination_fee?: number;
   created_at?: string;
 }
 
@@ -403,36 +405,62 @@ const TransactionPage = () => {
           
           console.log("Transaksi income berhasil dibuat:", incomeData);
           
-          // 3. If there's a fee, create a separate expense transaction for it
-          if (totalFees > 0) {
-            const { data: feeData, error: feeError } = await supabase
+          // 3. If there are fees, create separate expense transactions for source and destination fees
+          // 3a. Handle source wallet fee if it exists
+          if (data.source_fee > 0) {
+            const { data: sourceFeeData, error: sourceFeeError } = await supabase
               .from("transactions")
               .insert({
-                title: `Biaya Admin Transfer`,
-                amount: totalFees,
+                title: `Biaya Admin Transfer (${sourceWallet.name})`,
+                amount: data.source_fee,
                 type: "expense",
                 date: data.date,
-                category: "Biaya Admin",
-                description: `Biaya admin untuk transfer ${sourceWallet.name} ke ${destWallet.name}`,
+                category: "Fee",
+                description: `Biaya admin pengiriman dari ${sourceWallet.name} ke ${destWallet.name}`,
                 user_id: user.id,
                 wallet_id: sourceWallet.id
               })
               .select()
               .single();
               
-            if (feeError) {
-              console.error("Fee transaction error:", feeError);
-              throw feeError;
+            if (sourceFeeError) {
+              console.error("Source fee transaction error:", sourceFeeError);
+              throw sourceFeeError;
             }
             
-            console.log("Transaksi biaya admin berhasil dibuat:", feeData);
+            console.log("Transaksi biaya admin sumber berhasil dibuat:", sourceFeeData);
+          }
+          
+          // 3b. Handle destination wallet fee if it exists
+          if (data.destination_fee > 0) {
+            const { data: destFeeData, error: destFeeError } = await supabase
+              .from("transactions")
+              .insert({
+                title: `Biaya Admin Transfer (${destWallet.name})`,
+                amount: data.destination_fee,
+                type: "expense",
+                date: data.date,
+                category: "Fee",
+                description: `Biaya admin penerimaan di ${destWallet.name} dari ${sourceWallet.name}`,
+                user_id: user.id,
+                wallet_id: destWallet.id
+              })
+              .select()
+              .single();
+              
+            if (destFeeError) {
+              console.error("Destination fee transaction error:", destFeeError);
+              throw destFeeError;
+            }
+            
+            console.log("Transaksi biaya admin tujuan berhasil dibuat:", destFeeData);
           }
         
-          // Update source wallet (deduct transfer amount + fee)
+          // Update source wallet (deduct transfer amount + source fee)
           const { error: sourceWalletError } = await supabase
             .from("wallets")
             .update({ 
-              balance: sourceWallet.balance - data.amount - totalFees 
+              balance: sourceWallet.balance - data.amount - (data.source_fee || 0)
             })
             .eq("id", sourceWallet.id);
           
@@ -441,11 +469,11 @@ const TransactionPage = () => {
             throw sourceWalletError;
           }
           
-          // Update destination wallet (add transfer amount only)
+          // Update destination wallet (add transfer amount - destination fee)
           const { error: destWalletError } = await supabase
             .from("wallets")
             .update({ 
-              balance: destWallet.balance + data.amount
+              balance: destWallet.balance + data.amount - (data.destination_fee || 0)
             })
             .eq("id", destWallet.id);
           
@@ -457,9 +485,10 @@ const TransactionPage = () => {
           // Use the expense transaction as the main one to display
           transactionData = {
             ...expenseData,
-            destination_wallet_id: destWallet.id, // Tambahkan info dompet tujuan untuk UI
-            fee: totalFees
-          } as Transaction;
+            destination_wallet_id: destWallet.id,
+            source_fee: data.source_fee || 0,
+            destination_fee: data.destination_fee || 0
+          } as unknown as Transaction;
           
           console.log("Transfer selesai, data transaksi:", transactionData);
           
@@ -682,6 +711,32 @@ const TransactionPage = () => {
               <div className="py-2">
                 <span className="text-gray-500 block mb-1">Deskripsi</span>
                 <p className="text-sm">{transaction.description}</p>
+              </div>
+            )}
+
+            {type === "transfer" && (transaction.source_fee > 0 || transaction.destination_fee > 0) && (
+              <div className="py-2 border-t">
+                <span className="text-gray-500 block mb-1">Biaya Admin</span>
+                <div className="space-y-1">
+                  {transaction.source_fee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm">{wallets.find(w => w.id === transaction.wallet_id)?.name}</span>
+                      <span className="font-medium text-red-500">{formatCurrency(transaction.source_fee)}</span>
+                    </div>
+                  )}
+                  {transaction.destination_fee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm">{wallets.find(w => w.id === transaction.destination_wallet_id)?.name}</span>
+                      <span className="font-medium text-red-500">{formatCurrency(transaction.destination_fee)}</span>
+                    </div>
+                  )}
+                  {(transaction.source_fee > 0 && transaction.destination_fee > 0) && (
+                    <div className="flex justify-between pt-1 border-t border-dashed border-gray-200">
+                      <span className="text-sm font-medium">Total Biaya</span>
+                      <span className="font-medium text-red-500">{formatCurrency((transaction.source_fee || 0) + (transaction.destination_fee || 0))}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

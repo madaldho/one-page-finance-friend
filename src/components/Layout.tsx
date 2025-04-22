@@ -1,7 +1,6 @@
-
 import React, { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, PieChart, Settings } from 'lucide-react';
+import { Home, PieChart, Settings, TableProperties } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface LayoutProps {
@@ -49,6 +48,16 @@ const Layout = ({ children }: LayoutProps) => {
           >
             <PieChart className="w-5 h-5" />
             <span className="text-xs">Analisis</span>
+          </Link>
+          
+          <Link 
+            to="/transactions" 
+            className={`flex flex-col items-center gap-1 ${
+              location.pathname.includes('/transaction') ? 'text-[#6E59A5]' : 'text-gray-400'
+            }`}
+          >
+            <TableProperties className="w-5 h-5" />
+            <span className="text-xs">Transaksi</span>
           </Link>
           
           <Link 

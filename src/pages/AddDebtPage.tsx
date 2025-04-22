@@ -78,20 +78,15 @@ const AddDebtPage = () => {
     setLoading(true);
 
     try {
-      // Find selected wallet to get the name
-      const selectedWallet = wallets.find(w => w.id === data.wallet_id);
-      
       // Prepare loan data
-      const loanData = {
+      const loanData: Partial<Loan> = {
         user_id: user.id,
         amount: data.amount,
         due_date: data.due_date,
         type: 'payable', // hutang = payable
         status: 'unpaid',
         description: data.description,
-        lender: data.lender,
-        wallet_id: data.wallet_id,
-        wallet_name: selectedWallet?.name
+        lender: data.lender
       };
 
       // Insert to database
@@ -104,34 +99,40 @@ const AddDebtPage = () => {
       if (error) throw error;
 
       // Update wallet balance (uang masuk ke dompet)
-      if (data.wallet_id && selectedWallet) {
-        // Untuk hutang, tambah saldo karena menerima uang
-        const newBalance = selectedWallet.balance + data.amount;
-        
-        const { error: walletError } = await supabase
-          .from('wallets')
-          .update({ balance: newBalance })
-          .eq('id', data.wallet_id);
+      if (data.wallet_id) {
+        const selectedWallet = wallets.find(w => w.id === data.wallet_id);
+        if (selectedWallet) {
+          // Store wallet ID and name in the loan record
+          const { error: updateLoanError } = await supabase
+            .from('loans')
+            .update({ 
+              wallet_id: data.wallet_id,
+              wallet_name: selectedWallet.name
+            })
+            .eq('id', newLoan.id);
+            
+          if (updateLoanError) {
+            console.error("Error updating loan with wallet info:", updateLoanError);
+          }
           
-        if (walletError) throw walletError;
-        
-        // Catat transaksi
-        const transactionData = {
-          user_id: user.id,
-          title: data.description,
-          amount: data.amount,
-          type: 'income',
-          date: format(new Date(), 'yyyy-MM-dd'),
-          category: 'Hutang',
-          wallet_id: data.wallet_id,
-          description: `Pinjaman dari ${data.lender}`
-        };
-        
-        const { error: transactionError } = await supabase
-          .from('transactions')
-          .insert(transactionData);
+          // Catat transaksi - ini akan otomatis memperbarui saldo wallet melalui trigger database
+          const transactionData = {
+            user_id: user.id,
+            title: data.description,
+            amount: data.amount,
+            type: 'income',
+            date: format(new Date(), 'yyyy-MM-dd'),
+            category: 'Hutang',
+            wallet_id: data.wallet_id,
+            description: `Pinjaman dari ${data.lender}`
+          };
           
-        if (transactionError) throw transactionError;
+          const { error: transactionError } = await supabase
+            .from('transactions')
+            .insert(transactionData);
+            
+          if (transactionError) throw transactionError;
+        }
       }
 
       toast({
@@ -309,4 +310,4 @@ const AddDebtPage = () => {
   );
 };
 
-export default AddDebtPage;
+export default AddDebtPage; 

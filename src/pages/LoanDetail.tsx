@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loan, Payment } from '@/types';
 import { ArrowLeft, Calendar, Trash, Edit, MoreVertical, Info, CreditCard, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/format';
 import { format, parseISO } from 'date-fns';
 import { id } from 'date-fns/locale';
 import Layout from '@/components/Layout';
@@ -51,7 +51,6 @@ const LoanDetail = () => {
     try {
       setLoading(true);
       
-      // Fetch loan details
       const { data: loanData, error: loanError } = await supabase
         .from('loans')
         .select('*')
@@ -66,11 +65,9 @@ const LoanDetail = () => {
         throw new Error('Data pinjaman tidak ditemukan');
       }
       
-      // Menambahkan remaining_amount ke data pinjaman
       const paidAmount = loanData.paid_amount || 0;
       const remainingAmount = loanData.amount - paidAmount;
       
-      // Memastikan semua data pinjaman sesuai dengan interface Loan
       const loanWithDefaults: LoanWithRemaining = {
         ...loanData as Loan,
         paid_amount: paidAmount,
@@ -79,7 +76,6 @@ const LoanDetail = () => {
       
       setLoan(loanWithDefaults);
 
-      // Fetch payments
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('loan_payments')
         .select('*')
@@ -94,7 +90,6 @@ const LoanDetail = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
       
-      // Pesan error yang lebih spesifik berdasarkan tipe error
       let errorMessage = 'Terjadi kesalahan yang tidak diketahui';
       
       if (error instanceof PostgrestError) {
@@ -121,7 +116,8 @@ const LoanDetail = () => {
     setDeleting(true);
 
     try {
-      // Ambil data wallet terkait
+      console.log("Mulai proses penghapusan hutang/piutang:", loan.id);
+
       const { data: walletData, error: walletError } = await supabase
         .from('wallets')
         .select('*')
@@ -129,94 +125,150 @@ const LoanDetail = () => {
         .single();
 
       if (walletError && loan.wallet_id) {
+        console.error("Error mengambil data wallet:", walletError);
         throw walletError;
       }
 
-      // Ambil transaksi terkait
-      const { data: transactionData, error: transactionError } = await supabase
+      const { data: relatedTransactions, error: transactionsError } = await supabase
         .from('transactions')
         .select('*')
-        .eq('user_id', user?.id)
-        .eq('category', loan.type === 'payable' ? 'Hutang' : 'Piutang')
-        .eq('title', loan.description)
-        .eq('wallet_id', loan.wallet_id);
+        .eq('user_id', user?.id);
 
-      // Check if there are payments
-      if (payments.length > 0) {
-        // Delete all payments first
-        const { error: paymentsError } = await supabase
-          .from('loan_payments')
-          .delete()
-          .eq('loan_id', loan.id);
-
-        if (paymentsError) {
-          throw paymentsError;
-        }
+      if (transactionsError) {
+        console.error("Error mengambil data transaksi:", transactionsError);
+        throw transactionsError;
       }
 
-      // Hapus transaksi terkait
-      if (!transactionError && transactionData && transactionData.length > 0) {
-        const { error: delTransactionError } = await supabase
+      const matchingTransactions = relatedTransactions ? relatedTransactions.filter(transaction => {
+        if (loan.type === 'payable') {
+          return transaction.description?.includes(`Pinjaman dari ${loan.lender}`) &&
+                 transaction.title === loan.description;
+        } else {
+          return transaction.description?.includes(`Pinjaman kepada ${loan.borrower}`) &&
+                 transaction.title === loan.description;
+        }
+      }) : [];
+
+      const { data: paymentsData, error: paymentsCheckError } = await supabase
+        .from("payments")
+        .select("*")
+        .eq("loan_id", loan.id);
+
+      if (paymentsCheckError) {
+        console.error("Error mengambil data pembayaran:", paymentsCheckError);
+        throw paymentsCheckError;
+      }
+
+      let paymentTransactions: any[] = [];
+      if (paymentsData && paymentsData.length > 0) {
+        console.log("Pembayaran terkait yang ditemukan:", paymentsData.length);
+        
+        const { data: allTransactions, error: allTransError } = await supabase
           .from('transactions')
-          .delete()
-          .in('id', transactionData.map(t => t.id));
+          .select('*')
+          .eq('user_id', user?.id);
 
-        if (delTransactionError) {
-          throw delTransactionError;
+        if (allTransError) {
+          console.error("Error mengambil semua transaksi:", allTransError);
+          throw allTransError;
         }
+
+        paymentTransactions = allTransactions ? allTransactions.filter(transaction => {
+          const titleMatch = loan.type === 'payable' 
+            ? transaction.title?.includes('Pembayaran Hutang')
+            : transaction.title?.includes('Penerimaan Piutang');
+            
+          const descMatch = transaction.description?.includes(loan.description);
+          
+          return titleMatch && descMatch;
+        }) : [];
+
+        console.log("Transaksi pembayaran terkait:", paymentTransactions.length);
       }
 
-      // Update saldo wallet jika ada wallet terkait
-      if (walletData && loan.wallet_id) {
-        // Untuk hutang (payable), saldo berkurang saat menghapus hutang (karena awalnya bertambah saat meminjam)
-        // Untuk piutang (receivable), saldo bertambah saat menghapus piutang (karena awalnya berkurang saat meminjamkan)
-        const newBalance = loan.type === 'payable'
-          ? walletData.balance - (loan.amount - (loan.paid_amount || 0))
-          : walletData.balance + (loan.amount - (loan.paid_amount || 0));
-
+      if (walletData) {
+        let newBalance = walletData.balance;
+        
+        if (matchingTransactions.length > 0) {
+          const adjustment = loan.type === 'payable' ? -loan.amount : loan.amount;
+          newBalance += adjustment;
+          console.log(`Penyesuaian saldo transaksi awal: ${adjustment}`);
+        }
+        
+        if (paymentTransactions.length > 0) {
+          for (const trans of paymentTransactions) {
+            const adjustment = loan.type === 'payable' ? trans.amount : -trans.amount;
+            newBalance += adjustment;
+            console.log(`Penyesuaian saldo pembayaran: ${adjustment}`);
+          }
+        }
+        
         const { error: updateWalletError } = await supabase
           .from('wallets')
           .update({ balance: newBalance })
-          .eq('id', loan.wallet_id);
+          .eq('id', walletData.id);
 
         if (updateWalletError) {
+          console.error("Error updating wallet balance:", updateWalletError);
           throw updateWalletError;
+        }
+        
+        console.log(`Saldo wallet berhasil diperbarui dari ${walletData.balance} menjadi ${newBalance}`);
+      }
+
+      const allRelatedTransactions = [...matchingTransactions, ...paymentTransactions];
+      if (allRelatedTransactions.length > 0) {
+        for (const transaction of allRelatedTransactions) {
+          const { error: deleteTransError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', transaction.id);
+          
+          if (deleteTransError) {
+            console.error(`Error deleting transaction ${transaction.id}:`, deleteTransError);
+          } else {
+            console.log(`Transaction ${transaction.id} deleted`);
+          }
         }
       }
 
-      // Delete the loan
+      if (paymentsData && paymentsData.length > 0) {
+        const { error: paymentsError } = await supabase
+          .from("payments")
+          .delete()
+          .eq("loan_id", loan.id);
+
+        if (paymentsError) {
+          console.error("Error menghapus pembayaran:", paymentsError);
+          throw paymentsError;
+        }
+        console.log("Semua pembayaran berhasil dihapus");
+      }
+
       const { error } = await supabase
-        .from('loans')
+        .from("loans")
         .delete()
-        .eq('id', loan.id);
+        .eq("id", loan.id);
 
       if (error) {
+        console.error("Error menghapus hutang/piutang:", error);
         throw error;
       }
 
+      console.log("Hutang/piutang berhasil dihapus");
+      
       toast({
-        title: 'Berhasil',
+        title: "Berhasil",
         description: `${loan.type === 'payable' ? 'Hutang' : 'Piutang'} telah dihapus`,
       });
 
       navigate('/loans');
-    } catch (error) {
-      console.error('Error deleting loan:', error);
-      
-      // Pesan error yang lebih spesifik berdasarkan tipe error
-      let errorMessage = 'Terjadi kesalahan yang tidak diketahui';
-      
-      if (error instanceof PostgrestError) {
-        errorMessage = `Error database: ${error.message}`;
-        console.log('PostgrestError code:', error.code);
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
+    } catch (error: any) {
+      console.error('Error deleting loan:', error instanceof Error ? error.message : String(error));
       toast({
-        title: 'Gagal Menghapus',
-        description: errorMessage,
-        variant: 'destructive'
+        title: "Gagal Menghapus",
+        description: (error instanceof Error ? error.message : String(error)) || "Terjadi kesalahan saat menghapus",
+        variant: "destructive"
       });
     } finally {
       setDeleting(false);
@@ -323,7 +375,6 @@ const LoanDetail = () => {
             </div>
           </div>
 
-          {/* Progress bar */}
           <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
             <div 
               className={`h-2 rounded-full ${
@@ -332,7 +383,7 @@ const LoanDetail = () => {
               }`}
               style={{ width: `${progressPercentage}%` }}
             ></div>
-              </div>
+          </div>
 
           <div className="space-y-2 mb-4">
             <div className="flex items-start">
@@ -361,91 +412,88 @@ const LoanDetail = () => {
                 <p className="text-xs text-gray-500">Catatan</p>
                 <p className="font-medium">{loan.description || '-'}</p>
               </div>
-              </div>
             </div>
-
-            {/* Payment Button */}
-            {canPay && (
-              <div className="mt-4">
-                <Button
-                  onClick={() => navigate(`/loans/${loan.id}/payment`)}
-                  className={`w-full ${
-                    loan.type === 'payable' 
-                      ? 'bg-blue-500 hover:bg-blue-600' 
-                      : 'bg-green-500 hover:bg-green-600'
-                  }`}
-                >
-                  {loan.type === 'payable' ? 'Bayar Hutang' : 'Terima Pembayaran'}
-                </Button>
-              </div>
-            )}
           </div>
 
-          {/* Payment History */}
+          {canPay && (
+            <div className="mt-4">
+              <Button
+                onClick={() => navigate(`/loans/${loan.id}/payment`)}
+                className={`w-full ${
+                  loan.type === 'payable' 
+                    ? 'bg-blue-500 hover:bg-blue-600' 
+                    : 'bg-green-500 hover:bg-green-600'
+                }`}
+              >
+                {loan.type === 'payable' ? 'Bayar Hutang' : 'Terima Pembayaran'}
+              </Button>
+            </div>
+          )}
+        </div>
+
         <div className="bg-white rounded-lg p-5 shadow-sm">
           <h3 className="font-medium mb-4 flex items-center">
             <Check className="h-4 w-4 mr-2 text-blue-500" />
             Riwayat Pembayaran
           </h3>
           
-            {payments.length === 0 ? (
+          {payments.length === 0 ? (
             <div className="text-center py-6 border border-dashed rounded-lg">
               <p className="text-gray-500">Belum ada pembayaran</p>
             </div>
           ) : (
             <div className="space-y-3">
-                {payments.map(payment => (
+              {payments.map(payment => (
                 <div key={payment.id} className="border rounded-lg p-3 hover:bg-gray-50">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-medium">{formatCurrency(payment.amount)}</p>
-                        <p className="text-sm text-gray-500">
-                          {format(new Date(payment.payment_date), 'dd MMMM yyyy', { locale: id as any })}
-                        </p>
-                      </div>
-                      {payment.description && (
-                      <p className="text-sm text-gray-500 max-w-[50%] text-right">{payment.description}</p>
-                      )}
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-medium">{formatCurrency(payment.amount)}</p>
+                      <p className="text-sm text-gray-500">
+                        {format(new Date(payment.payment_date), 'dd MMMM yyyy', { locale: id as any })}
+                      </p>
                     </div>
+                    {payment.description && (
+                      <p className="text-sm text-gray-500 max-w-[50%] text-right">{payment.description}</p>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Hapus</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus {loan.type === 'payable' ? 'hutang' : 'piutang'} ini?
-              {payments.length > 0 && (
-                <p className="mt-2 text-red-500">
-                  Tindakan ini juga akan menghapus {payments.length} riwayat pembayaran terkait.
-                </p>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={deleting}
-            >
-              Batal
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting ? 'Menghapus...' : 'Hapus'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Hapus</DialogTitle>
+              <DialogDescription>
+                Apakah Anda yakin ingin menghapus {loan.type === 'payable' ? 'hutang' : 'piutang'} ini?
+                {payments.length > 0 && (
+                  <p className="mt-2 text-red-500">
+                    Tindakan ini juga akan menghapus {payments.length} riwayat pembayaran terkait.
+                  </p>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteDialogOpen(false)}
+                disabled={deleting}
+              >
+                Batal
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Menghapus...' : 'Hapus'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </Layout>
   );
 };

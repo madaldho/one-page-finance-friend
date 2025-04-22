@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -10,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency } from '@/lib/format';
 import { format } from 'date-fns';
 import Layout from '@/components/Layout';
 import { CurrencyInput } from '@/components/ui/currency-input';
@@ -105,6 +106,43 @@ const LoanPaymentPage = () => {
         throw new Error('Saldo wallet tidak mencukupi');
       }
 
+      // Find appropriate category
+      let categoryId;
+      if (loan.type === 'payable') {
+        // Untuk pembayaran hutang, cari kategori pengeluaran khusus pembayaran hutang
+        const debtPaymentCategory = categories.find(cat => 
+          cat.name.toLowerCase().includes('pembayaran hutang') ||
+          cat.name.toLowerCase().includes('bayar hutang') ||
+          cat.name.toLowerCase() === 'hutang');
+        
+        if (!debtPaymentCategory) {
+          // Gunakan kategori pengeluaran default jika tidak ada yang spesifik
+          const defaultExpenseCategory = categories.find(cat => cat.type === 'expense');
+          categoryId = defaultExpenseCategory?.id;
+        } else {
+          categoryId = debtPaymentCategory?.id;
+        }
+      } else {
+        // Untuk penerimaan piutang, cari kategori pemasukan khusus penerimaan piutang
+        const receivablePaymentCategory = categories.find(cat => 
+          cat.name.toLowerCase().includes('penerimaan piutang') ||
+          cat.name.toLowerCase().includes('terima piutang') ||
+          cat.name.toLowerCase() === 'piutang');
+        
+        if (!receivablePaymentCategory) {
+          // Gunakan kategori pemasukan default jika tidak ada yang spesifik
+          const defaultIncomeCategory = categories.find(cat => cat.type === 'income');
+          categoryId = defaultIncomeCategory?.id;
+        } else {
+          categoryId = receivablePaymentCategory?.id;
+        }
+      }
+
+      // Jika tidak ada kategori yang sesuai, throw error
+      if (!categoryId) {
+        throw new Error(`Mohon tambahkan kategori ${loan.type === 'payable' ? 'pengeluaran' : 'pemasukan'} terlebih dahulu.`);
+      }
+
       // Start transaction
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
@@ -148,16 +186,6 @@ const LoanPaymentPage = () => {
 
       if (walletError) throw walletError;
       
-      // Cari kategori yang sesuai atau gunakan default jika tidak ditemukan
-      let categoryId = null;
-      if (loan.type === 'payable') {
-        const debtPaymentCategory = categories.find(cat => cat.name.toLowerCase() === 'pembayaran hutang');
-        categoryId = debtPaymentCategory?.id;
-      } else {
-        const receivablePaymentCategory = categories.find(cat => cat.name.toLowerCase() === 'penerimaan piutang');
-        categoryId = receivablePaymentCategory?.id;
-      }
-      
       // Catat transaksi
       const transactionData = {
         user_id: user.id,
@@ -165,7 +193,7 @@ const LoanPaymentPage = () => {
         amount: data.amount,
         type: loan.type === 'payable' ? 'expense' : 'income',
         date: data.payment_date,
-        category_id: categoryId,
+        category: categoryId, // Gunakan ID kategori
         wallet_id: data.wallet_id,
         description: `${loan.type === 'payable' ? 'Pembayaran hutang' : 'Penerimaan piutang'} untuk ${loan.description || ''}${data.description ? ': ' + data.description : ''}`
       };
@@ -257,7 +285,6 @@ const LoanPaymentPage = () => {
             <label className="block text-sm font-medium mb-1">Pilih Sumber Dana</label>
             <Select 
               onValueChange={(value) => setValue('wallet_id', value)}
-              {...register('wallet_id', { required: 'Pilih wallet untuk pembayaran' })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Pilih wallet" />
@@ -292,7 +319,7 @@ const LoanPaymentPage = () => {
           <div className="flex items-center space-x-2">
             <Checkbox
               id="mark-paid"
-              {...register('mark_as_paid')}
+              onCheckedChange={(checked) => setValue('mark_as_paid', checked === true)}
             />
             <label htmlFor="mark-paid" className="text-sm">
               Tandai sebagai lunas meskipun pembayaran parsial
@@ -321,4 +348,4 @@ const LoanPaymentPage = () => {
   );
 };
 
-export default LoanPaymentPage; 
+export default LoanPaymentPage;

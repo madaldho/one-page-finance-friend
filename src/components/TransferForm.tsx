@@ -1,19 +1,19 @@
-
 import React, { useState, useEffect } from "react";
-import { ArrowDownUp } from "lucide-react";
+import { ArrowDownUp, AlertCircle } from "lucide-react";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "./ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormDescription } from "./ui/form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet } from "@/types";
+import { Wallet, Transaction } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
+import { Separator } from "./ui/separator";
 
 const transferSchema = z.object({
   amount: z.coerce.number().min(1, "Jumlah harus lebih dari 0"),
@@ -21,13 +21,14 @@ const transferSchema = z.object({
   sourceWallet: z.string().min(1, "Wallet asal harus dipilih"),
   destinationWallet: z.string().min(1, "Wallet tujuan harus dipilih"),
   description: z.string().optional(),
-  fee: z.coerce.number().min(0, "Biaya admin tidak boleh negatif").default(0),
+  sourceFee: z.coerce.number().min(0, "Biaya admin tidak boleh negatif").default(0),
+  destinationFee: z.coerce.number().min(0, "Biaya admin tidak boleh negatif").default(0),
 });
 
 type TransferFormValues = z.infer<typeof transferSchema>;
 
 interface TransferFormProps {
-  onAddTransaction: (transaction: any) => void;
+  onAddTransaction: (transaction: Transaction) => void;
   onClose?: () => void;
 }
 
@@ -45,7 +46,8 @@ const TransferForm = ({ onAddTransaction, onClose }: TransferFormProps) => {
       sourceWallet: "",
       destinationWallet: "",
       description: "",
-      fee: 0,
+      sourceFee: 0,
+      destinationFee: 0,
     },
   });
 
@@ -86,7 +88,11 @@ const TransferForm = ({ onAddTransaction, onClose }: TransferFormProps) => {
     setIsOpen(false);
     if (onClose) {
       setTimeout(() => {
-        navigate('/transaction/transfer');
+        navigate('/transaction/transfer', { 
+          state: { 
+            enableSeparateFees: true 
+          } 
+        });
       }, 300);
     }
   };
@@ -101,11 +107,26 @@ const TransferForm = ({ onAddTransaction, onClose }: TransferFormProps) => {
             Transfer Antar Wallet
           </SheetTitle>
         </SheetHeader>
-        <div className="mt-10 flex flex-col items-center justify-center">
+        <div className="mt-6 mb-2 px-1">
+          <Card className="bg-amber-50 border-amber-200 p-3">
+            <div className="flex gap-2">
+              <AlertCircle className="text-amber-500 h-5 w-5 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">Biaya Admin Terpisah</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Anda dapat mencatat biaya admin untuk masing-masing wallet secara terpisah.
+                  Misalnya, biaya admin OVO 2.000 dan biaya admin BCA 3.000.
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+        <Separator className="my-4" />
+        <div className="mt-4 flex flex-col items-center justify-center">
           <img src="/placeholder.svg" alt="Transfer illustration" className="w-32 h-32 mb-4" />
           <h3 className="text-lg font-medium mb-2">Lakukan Transfer Antar Wallet</h3>
           <p className="text-sm text-gray-500 text-center mb-6">
-            Transfer dana antar wallet Anda dengan mudah dan pantau setiap pergerakan dana.
+            Transfer dana antar wallet Anda dengan mudah dan pantau setiap pergerakan dana dengan biaya admin yang terpisah.
           </p>
           <Button 
             onClick={handleNavigateToTransferPage}

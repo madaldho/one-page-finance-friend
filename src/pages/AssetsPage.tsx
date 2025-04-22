@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { ArrowLeft, Plus, Building, Wallet, HelpCircle } from "lucide-react"
+import { ArrowLeft, Plus, Building, Wallet, HelpCircle, CircleDollarSign, PieChart, ArrowUpRight } from "lucide-react"
 import { Asset } from "@/types"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/integrations/supabase/client"
@@ -9,39 +9,60 @@ import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
 import { AssetCard } from "@/components/assets/AssetCard"
 import Layout from "@/components/Layout"
+import { Progress } from "@/components/ui/progress"
+
+interface WalletData {
+  id: string;
+  name: string;
+  balance: number;
+  user_id: string;
+}
 
 export default function AssetsPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { toast } = useToast()
   const [assets, setAssets] = useState<Asset[]>([])
+  const [wallets, setWallets] = useState<WalletData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (user) {
-      fetchAssets()
+      fetchData()
     }
   }, [user])
 
-  const fetchAssets = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      
+      // Fetch assets
+      const { data: assetData, error: assetError } = await supabase
         .from("assets")
         .select("*")
         .eq("user_id", user?.id)
         .order("created_at", { ascending: false })
 
-      if (error) throw error
+      if (assetError) throw assetError
+      
+      // Fetch wallets
+      const { data: walletData, error: walletError } = await supabase
+        .from("wallets")
+        .select("*")
+        .eq("user_id", user?.id)
+
+      if (walletError) throw walletError
       
       // Menggunakan casting untuk mengatasi masalah tipe data
-      const typedAssets = data as unknown as Asset[];
+      const typedAssets = assetData as unknown as Asset[];
       setAssets(typedAssets || [])
+      
+      setWallets(walletData as WalletData[] || [])
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Terjadi kesalahan saat memuat data";
       toast({
         title: "Error",
-        description: "Gagal memuat daftar aset",
+        description: "Gagal memuat data kekayaan",
         variant: "destructive"
       })
     } finally {
@@ -49,7 +70,13 @@ export default function AssetsPage() {
     }
   }
 
-  const totalWealth = assets.reduce((sum, asset) => sum + asset.current_value, 0)
+  const totalAssetValue = assets.reduce((sum, asset) => sum + asset.current_value, 0)
+  const totalWalletBalance = wallets.reduce((sum, wallet) => sum + wallet.balance, 0)
+  const totalWealth = totalAssetValue + totalWalletBalance
+
+  // Calculate percentages for the pie chart
+  const assetPercentage = totalWealth > 0 ? (totalAssetValue / totalWealth) * 100 : 0
+  const walletPercentage = totalWealth > 0 ? (totalWalletBalance / totalWealth) * 100 : 0
 
   // Group assets by category
   const assetsByCategory = assets.reduce((acc, asset) => {
@@ -102,19 +129,62 @@ export default function AssetsPage() {
           <h1 className="text-xl font-bold">Aset</h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm p-5 mb-6">
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-sm text-gray-500">Total Kekayaan</p>
-            <Button 
-              onClick={() => navigate("/assets/add")} 
-              size="sm" 
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Tambah
-            </Button>
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-white">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-2">
+                <PieChart className="w-5 h-5 text-white/80" />
+                <h2 className="font-medium">Total Kekayaan</h2>
+              </div>
+              <Button 
+                onClick={() => navigate("/assets/add")} 
+                size="sm" 
+                variant="secondary"
+                className="bg-white/20 hover:bg-white/30 text-white border-0"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Tambah
+              </Button>
+            </div>
+            <p className="text-3xl font-bold mb-2">{formatCurrency(totalWealth)}</p>
+            
+            <div className="flex items-center text-xs text-white/80 mt-1">
+              <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
+              <span>Total dari nilai aset dan saldo dompet</span>
+            </div>
           </div>
-          <p className="text-2xl font-bold">{formatCurrency(totalWealth)}</p>
+          
+          {/* Breakdown */}
+          <div className="p-4 divide-y">
+            <div className="pb-4">
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-indigo-400"></div>
+                  <span className="text-sm font-medium">Nilai Aset</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-semibold">{formatCurrency(totalAssetValue)}</span>
+                  <span className="text-xs text-gray-500">{assetPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+              <Progress value={assetPercentage} className="h-1.5 bg-gray-100" indicatorClassName="bg-indigo-400" />
+            </div>
+            
+            <div className="pt-4">
+              <div className="flex justify-between items-center mb-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-purple-400"></div>
+                  <span className="text-sm font-medium">Saldo Dompet</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-semibold">{formatCurrency(totalWalletBalance)}</span>
+                  <span className="text-xs text-gray-500">{walletPercentage.toFixed(1)}%</span>
+                </div>
+              </div>
+              <Progress value={walletPercentage} className="h-1.5 bg-gray-100" indicatorClassName="bg-purple-400" />
+            </div>
+          </div>
         </div>
 
         {loading ? (

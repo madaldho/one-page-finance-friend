@@ -72,17 +72,7 @@ const SavingsCard = ({ savings }: SavingsCardProps) => {
 
   return (
     <div className="bg-white rounded-lg p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
-          <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mr-2">
-            <PiggyBank className="h-3 w-3 text-amber-700" />
-          </div>
-          <h2 className="text-base font-medium text-amber-800">Target Tabungan</h2>
-        </div>
-        <Link to="/savings" className="flex items-center text-xs text-amber-600 hover:text-amber-700">
-          Kelola <ChevronRight className="h-3 w-3 ml-1" />
-        </Link>
-      </div>
+      
 
       <div className="space-y-2.5">
         {savings.slice(0, 3).map((saving) => {

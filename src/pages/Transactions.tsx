@@ -79,7 +79,7 @@ interface Transaction {
   id: string;
   title: string;
   amount: number;
-  type: 'income' | 'expense' | 'transfer' | string;
+  type: 'income' | 'expense' | string;
   date: string;
   description?: string;
   category?: string;
@@ -280,7 +280,7 @@ const Transactions = () => {
     if (!transactions) return [];
     
     return transactions.filter(transaction => {
-      // Jenis transaksi (all, income, expense, transfer)
+      // Jenis transaksi (all, income, expense)
       if (activeTab !== 'all' && transaction.type !== activeTab) {
         return false;
       }
@@ -354,30 +354,34 @@ const Transactions = () => {
     <Layout>
       <div className="container mx-auto p-4 pb-32 max-w-5xl">
         {/* Header Bar */}
-        <div className="flex items-center justify-between mb-4 sticky top-0 z-10 bg-background pt-2 pb-4 rounded-lg">
+        <div className="flex items-center justify-between px-3 py-3 mb-5 sticky top-0 z-20 bg-background/95 backdrop-blur-sm shadow-sm rounded-xl border border-gray-100">
           <div className="flex items-center gap-2">
+            {walletParam && (
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-9 w-9 rounded-full" 
+                className="h-9 w-9 rounded-full hover:bg-gray-100" 
               onClick={handleGoBack}
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold">Transaksi</h1>
+            )}
+            <h1 className="text-xl font-bold tracking-tight">Transaksi</h1>
             {selectedWalletIds.length > 0 && (
-              <Badge variant="outline" className="ml-2">
+              <Badge variant="outline" className="ml-1 px-2 py-0 h-6 text-xs bg-primary/5">
                 {selectedWalletName}
               </Badge>
             )}
           </div>
           
-          <div className="flex gap-2 pr-3">
-           
-                
+          <div className="flex items-center gap-2">
                 <Sheet open={showFilters} onOpenChange={setShowFilters}>
                   <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" className="rounded-full">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="rounded-full h-9 w-9 border-gray-200 hover:bg-gray-50"
+                >
                       <Filter className="h-4 w-4" />
                     </Button>
                   </SheetTrigger>
@@ -400,15 +404,13 @@ const Transactions = () => {
                                 {activeTab === 'all' && 'Semua'}
                                 {activeTab === 'income' && 'Pemasukan'}
                                 {activeTab === 'expense' && 'Pengeluaran'}
-                                {activeTab === 'transfer' && 'Transfer'}
                               </Badge>
                             </div>
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                              <TabsList className="grid grid-cols-4 w-full rounded-lg h-9">
+                          <TabsList className="grid grid-cols-3 w-full rounded-lg h-9">
                                 <TabsTrigger value="all" className="text-xs rounded-l-lg">Semua</TabsTrigger>
                                 <TabsTrigger value="income" className="text-xs">Masuk</TabsTrigger>
-                                <TabsTrigger value="expense" className="text-xs">Keluar</TabsTrigger>
-                                <TabsTrigger value="transfer" className="text-xs rounded-r-lg">Transfer</TabsTrigger>
+                            <TabsTrigger value="expense" className="text-xs rounded-r-lg">Keluar</TabsTrigger>
                           </TabsList>
                         </Tabs>
                       </div>
@@ -818,7 +820,7 @@ const Transactions = () => {
                 <Button 
                   variant="outline" 
                   size="icon"
-                  className="rounded-full"
+              className="rounded-full h-9 w-9 border-gray-200 hover:bg-gray-50"
                   onClick={exportTransactions}
                 >
                   <FileDown className="h-4 w-4" />

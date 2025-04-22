@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -12,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { formatCurrency } from '@/lib/format';
 
 interface EditLoanFormData {
   amount: number;
@@ -32,6 +34,8 @@ const EditLoanPage = () => {
   const [originalDescription, setOriginalDescription] = useState('');
   const [originalLender, setOriginalLender] = useState('');
   const [originalBorrower, setOriginalBorrower] = useState('');
+  const [originalAmount, setOriginalAmount] = useState(0);
+  const [originalWalletId, setOriginalWalletId] = useState('');
 
   const { register, handleSubmit, setValue, formState: { errors }, watch } = useForm<EditLoanFormData>();
 
@@ -63,10 +67,12 @@ const EditLoanPage = () => {
         due_date: data.due_date || new Date().toISOString(),
       });
       
-      // Simpan data asli untuk pencarian transaksi terkait
+      // Save original data for transaction update
       setOriginalDescription(data.description || '');
       setOriginalLender(data.lender || '');
       setOriginalBorrower(data.borrower || '');
+      setOriginalAmount(data.amount || 0);
+      setOriginalWalletId(data.wallet_id || '');
       
       // Set form values
       setValue('amount', data.amount);
@@ -92,69 +98,79 @@ const EditLoanPage = () => {
     }
   };
 
-  // Fungsi untuk memperbarui transaksi terkait dengan pinjaman
-  const updateRelatedTransactions = async (formData: EditLoanFormData) => {
-    if (!user || !loan || !loan.wallet_id) return;
+  // Find related transactions by matching criteria
+  const findRelatedTransactions = async () => {
+    if (!user || !loan || !loan.wallet_id) return [];
 
     try {
-      // Mengambil transaksi original yang terkait dengan pinjaman
-      const { data: transactionsData, error: transactionsError } = await supabase
+      // Fetch transactions related to this loan by matching criteria
+      const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', user.id)
-        .eq('wallet_id', loan.wallet_id)
+        .eq('wallet_id', originalWalletId)
         .eq('category', loan.type === 'payable' ? 'Hutang' : 'Piutang');
 
-      if (transactionsError) throw transactionsError;
+      if (error) throw error;
 
-      console.log('Transaksi yang ditemukan:', transactionsData?.length || 0);
-
-      if (!transactionsData || transactionsData.length === 0) {
-        console.log('Tidak ada transaksi terkait yang ditemukan');
-        return;
+      if (!data || data.length === 0) {
+        console.log('No related transactions found');
+        return [];
       }
 
-      // Cari transaksi yang sesuai baik dengan judul, deskripsi, atau keduanya
-      const relatedTransactions = transactionsData.filter(transaction => {
-        // Match berdasarkan deskripsi transaksi yang berisi informasi pemberi/peminjam
+      // Match by description and borrower/lender info
+      const relatedTransactions = data.filter(transaction => {
+        // Match by title (usually the loan description)
+        const titleMatch = transaction.title === originalDescription;
+        
+        // Match by description content (contains borrower/lender info)
         const descriptionMatch = 
           loan.type === 'payable' 
             ? transaction.description?.includes(`Pinjaman dari ${originalLender}`)
             : transaction.description?.includes(`Pinjaman kepada ${originalBorrower}`);
         
-        // Match berdasarkan judul transaksi yang sama dengan deskripsi pinjaman
-        const titleMatch = transaction.title === originalDescription;
-        
         return titleMatch || descriptionMatch;
       });
 
-      console.log('Transaksi terkait yang akan diupdate:', relatedTransactions.length);
+      console.log(`Found ${relatedTransactions.length} related transactions`);
+      return relatedTransactions;
+    } catch (error) {
+      console.error('Error finding related transactions:', error);
+      return [];
+    }
+  };
 
-      // Update setiap transaksi yang terkait
-      for (const transaction of relatedTransactions) {
-        const updatedTransaction = {
-          title: formData.description,
-          amount: formData.amount,
-          description: loan.type === 'payable'
-            ? `Pinjaman dari ${formData.lender}`
-            : `Pinjaman kepada ${formData.borrower}`
-        };
+  const updateWalletBalance = async (walletId: string, amountChange: number) => {
+    if (!walletId) return;
 
-        const { error: updateError } = await supabase
-          .from('transactions')
-          .update(updatedTransaction)
-          .eq('id', transaction.id);
-
-        if (updateError) {
-          console.error('Error updating transaction:', updateError);
-        } else {
-          console.log('Transaksi berhasil diperbarui:', transaction.id);
-        }
+    try {
+      // Get current wallet balance
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('id', walletId)
+        .single();
+      
+      if (walletError) throw walletError;
+      
+      if (!walletData) {
+        throw new Error('Wallet not found');
       }
 
-      return relatedTransactions.length;
+      // Calculate new balance
+      const newBalance = walletData.balance + amountChange;
+      
+      // Update wallet balance
+      const { error: updateError } = await supabase
+        .from('wallets')
+        .update({ balance: newBalance })
+        .eq('id', walletId);
+      
+      if (updateError) throw updateError;
+      
+      console.log(`Wallet ${walletId} balance updated: ${walletData.balance} -> ${newBalance}`);
     } catch (error) {
-      console.error('Error updating related transactions:', error);
+      console.error('Error updating wallet balance:', error);
       throw error;
     }
   };
@@ -186,45 +202,48 @@ const EditLoanPage = () => {
 
       if (error) throw error;
 
-      // Hanya update wallet dan transaksi jika wallet_id tersedia
-      if (loan.wallet_id) {
-        try {
-          // Mengambil data wallet
-          const { data: walletData, error: walletError } = await supabase
-            .from('wallets')
-            .select('*')
-            .eq('id', loan.wallet_id)
-            .single();
+      // Find related transactions to update them
+      const relatedTransactions = await findRelatedTransactions();
 
-          if (walletError) throw walletError;
-
-          // Update wallet balance jika jumlah berubah
-          if (data.amount !== loan.amount && walletData) {
-            const amountDifference = data.amount - loan.amount;
-            
-            // Untuk hutang (payable), saldo bertambah saat meminjam
-            // Untuk piutang (receivable), saldo berkurang saat meminjamkan
-            const newBalance = loan.type === 'payable'
-              ? walletData.balance + amountDifference
-              : walletData.balance - amountDifference;
-
-            const { error: updateWalletError } = await supabase
-              .from('wallets')
-              .update({ balance: newBalance })
-              .eq('id', loan.wallet_id);
-
-            if (updateWalletError) throw updateWalletError;
-          }
-
-          // Update semua transaksi terkait
-          const updatedCount = await updateRelatedTransactions(data);
-          if (updatedCount) {
-            console.log(`Berhasil memperbarui ${updatedCount} transaksi terkait`);
-          }
-        } catch (walletError: unknown) {
-          console.error('Error updating wallet/transaction:', walletError);
-          // Tidak melempar error agar proses tetap berjalan meskipun ada masalah pada wallet
+      // Calculate how the wallet balance should change
+      if (loan.wallet_id && relatedTransactions.length > 0) {
+        // Amount difference between new and old
+        const amountDifference = data.amount - originalAmount;
+        
+        if (amountDifference !== 0) {
+          // For payable (debt), positive difference means more money received (add to wallet)
+          // For receivable (loan given), positive difference means more money given out (subtract from wallet)
+          const walletChangeAmount = loan.type === 'payable' 
+            ? amountDifference 
+            : -amountDifference;
+          
+          // Update wallet balance
+          await updateWalletBalance(loan.wallet_id, walletChangeAmount);
         }
+        
+        // Update all related transactions
+        for (const transaction of relatedTransactions) {
+          const updatedTransaction = {
+            title: data.description,
+            amount: data.amount,
+            description: loan.type === 'payable'
+              ? `Pinjaman dari ${data.lender}`
+              : `Pinjaman kepada ${data.borrower}`
+          };
+
+          const { error: updateError } = await supabase
+            .from('transactions')
+            .update(updatedTransaction)
+            .eq('id', transaction.id);
+
+          if (updateError) {
+            console.error('Error updating transaction:', updateError);
+          } else {
+            console.log('Transaction updated successfully:', transaction.id);
+          }
+        }
+      } else {
+        console.log('No wallet_id or related transactions found for adjustment');
       }
 
       toast({
@@ -274,15 +293,15 @@ const EditLoanPage = () => {
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-xl font-bold">
-            Edit {loan.type === 'payable' ? 'Hutang' : 'Piutang'}
+            Edit {loan?.type === 'payable' ? 'Hutang' : 'Piutang'}
           </h1>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mb-24">
           <div className="bg-white rounded-lg p-5 shadow-sm">
             <div className="flex items-center mb-4">
-              <CreditCard className={`${loan.type === 'payable' ? 'text-purple-500' : 'text-green-500'} mr-2 h-5 w-5`} />
-              <h2 className="text-lg font-medium">Detail {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</h2>
+              <CreditCard className={`${loan?.type === 'payable' ? 'text-purple-500' : 'text-green-500'} mr-2 h-5 w-5`} />
+              <h2 className="text-lg font-medium">Detail {loan?.type === 'payable' ? 'Hutang' : 'Piutang'}</h2>
             </div>
 
             <div className="space-y-4">
@@ -297,7 +316,7 @@ const EditLoanPage = () => {
                 />
               </div>
 
-              {loan.type === 'payable' ? (
+              {loan?.type === 'payable' ? (
                 <div>
                   <label className="block text-sm font-medium mb-1">Pemberi Pinjaman</label>
                   <div className="relative">
@@ -346,7 +365,7 @@ const EditLoanPage = () => {
 
           <div className="bg-white rounded-lg p-5 shadow-sm">
             <div className="flex items-center mb-4">
-              <Calendar className={`${loan.type === 'payable' ? 'text-purple-500' : 'text-green-500'} mr-2 h-5 w-5`} />
+              <Calendar className={`${loan?.type === 'payable' ? 'text-purple-500' : 'text-green-500'} mr-2 h-5 w-5`} />
               <h2 className="text-lg font-medium">Jangka Waktu</h2>
             </div>
 
@@ -376,7 +395,7 @@ const EditLoanPage = () => {
             <Button
               type="submit"
               disabled={loading}
-              className={`w-full ${loan.type === 'payable' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-rose-600 hover:bg-rose-700'}`}
+              className={`w-full ${loan?.type === 'payable' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-rose-600 hover:bg-rose-700'}`}
             >
               {loading ? 'Menyimpan...' : 'Simpan'}
             </Button>
@@ -387,4 +406,4 @@ const EditLoanPage = () => {
   );
 };
 
-export default EditLoanPage; 
+export default EditLoanPage;

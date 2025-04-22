@@ -15,7 +15,8 @@ import {
   Filter,
   ExternalLink,
   ArrowDownRight,
-  ArrowUpRight
+  ArrowUpRight,
+  RefreshCw
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import TransactionForm from '@/components/TransactionForm';
-import { getWalletIcon, getDefaultGradient } from '@/components/WalletCard';
+import { getWalletIcon } from '@/components/WalletCard';
 import Layout from '@/components/Layout';
 import { Card } from '@/components/ui/card';
 import TransactionList from '@/components/TransactionList';
@@ -93,16 +94,66 @@ const WalletDetail = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [showTransactionForm, setShowTransactionForm] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchWalletAndTransactions();
+    
+    // Set interval untuk refresh wallet balance secara berkala
+    const refreshInterval = setInterval(() => {
+      if (id) {
+        console.log("Auto-refreshing wallet data...");
+        // Hanya refresh wallet data tanpa refresh transaksi untuk performa
+        refreshWalletBalance();
+      }
+    }, 3000); // refresh setiap 3 detik
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
+  }, [id]);
+
+  useEffect(() => {
+    fetchWalletAndTransactions();
+    
+    // Handler untuk event perubahan saldo wallet
+    const handleWalletBalanceChanged = (event: Event) => {
+      if (!event.detail) return;
+      // Cast event ke CustomEvent dengan type assertion
+      const customEvent = event as CustomEvent<{walletId: string, oldBalance: number, newBalance: number}>;
+      const { walletId, newBalance } = customEvent.detail;
+      
+      // Periksa apakah wallet yang berubah adalah wallet yang sedang ditampilkan
+      if (id === walletId) {
+        console.log(`Wallet balance updated: ${newBalance}`);
+        // Perbarui state wallet dengan saldo baru
+        setWallet(prevWallet => {
+          if (!prevWallet) return null;
+          return {
+            ...prevWallet,
+            balance: newBalance
+          };
+        });
+        
+        // Refresh data transaksi juga
+        fetchWalletAndTransactions();
+      }
+    };
+    
+    // Tambahkan event listener
+    window.addEventListener('wallet_balance_changed', handleWalletBalanceChanged);
+    
+    // Cleanup event listener saat komponen unmount
+    return () => {
+      window.removeEventListener('wallet_balance_changed', handleWalletBalanceChanged);
+    };
   }, [id]);
 
   // Tambahkan useEffect untuk memanggil fetch saat filter diubah
@@ -299,6 +350,54 @@ const WalletDetail = () => {
     navigate(`/transactions?wallet=${id}`);
   };
 
+  // Modifikasi refreshWalletBalance untuk menambahkan UI feedback
+  const refreshWalletBalance = async (showFeedback = false) => {
+    if (!id) return;
+    
+    if (showFeedback) setRefreshing(true);
+    
+    try {
+      // Dapatkan saldo terbaru langsung dari database
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('id', id)
+        .single();
+        
+      if (error) {
+        console.error("Error refreshing wallet balance:", error);
+        if (showFeedback) toast({
+          title: "Gagal menyegarkan saldo",
+          description: "Terjadi kesalahan saat memuat saldo terbaru",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Jika saldo berubah, perbarui state
+      if (data && wallet && data.balance !== wallet.balance) {
+        console.log(`Wallet balance changed: ${wallet.balance} -> ${data.balance}`);
+        
+        // Update saldo wallet
+        setWallet(prev => prev ? {...prev, balance: data.balance} : null);
+        
+        if (showFeedback) toast({
+          title: "Saldo diperbarui",
+          description: `Saldo terbaru: ${formatCurrency(data.balance)}`,
+        });
+      } else if (showFeedback) {
+        toast({
+          title: "Saldo sudah yang terbaru",
+          description: `Saldo saat ini: ${formatCurrency(wallet?.balance || 0)}`,
+        });
+      }
+    } catch (err) {
+      console.error("Error in refreshWalletBalance:", err);
+    } finally {
+      if (showFeedback) setRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -320,10 +419,11 @@ const WalletDetail = () => {
   }
 
   const getCardStyle = () => {
+    const defaultColor = "#4f46e5"; // Default color jika tidak ada
     const style: React.CSSProperties = {
-      background: wallet.gradient 
+      background: wallet.gradient && wallet.color
         ? `linear-gradient(135deg, ${wallet.color}, ${wallet.gradient})`
-        : wallet.color,
+        : wallet.color || defaultColor,
       color: "white",
     };
     return style;
@@ -343,6 +443,17 @@ const WalletDetail = () => {
             <ChevronLeft className="h-6 w-6" />
           </Button>
           <h1 className="text-2xl font-semibold">Detail Dompet</h1>
+          
+          {/* Tambah tombol refresh */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="ml-auto rounded-full"
+            onClick={() => refreshWalletBalance(true)}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
 
         {/* Wallet Card */}
@@ -396,7 +507,7 @@ const WalletDetail = () => {
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense' | 'transfer') => setFilterType(value)}>
+          <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense') => setFilterType(value)}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Filter Transaksi" />
             </SelectTrigger>
@@ -404,7 +515,6 @@ const WalletDetail = () => {
               <SelectItem value="all">Semua Transaksi</SelectItem>
               <SelectItem value="income">Pemasukan</SelectItem>
               <SelectItem value="expense">Pengeluaran</SelectItem>
-              <SelectItem value="transfer">Transfer</SelectItem>
             </SelectContent>
           </Select>
             

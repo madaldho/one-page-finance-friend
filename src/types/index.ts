@@ -61,6 +61,8 @@ export interface Loan {
   due_date?: string;
   status: string;
   paid_amount?: number;
+  wallet_id?: string;
+  wallet_name?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -72,6 +74,8 @@ export interface Payment {
   payment_date: string;
   transaction_id?: string;
   user_id?: string;
+  wallet_id?: string;
+  wallet_name?: string;
 }
 
 export interface Saving {

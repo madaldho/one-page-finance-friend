@@ -138,7 +138,7 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
             <div className="bg-blue-50 p-2 rounded-full">
               <BarChart3 className="h-5 w-5 text-blue-500" />
             </div>
-            <h2 className="text-lg font-medium">Anggaran</h2>
+           
             {budgetArray.length > 0 && (
               <div className="bg-blue-100 text-blue-700 text-xs font-medium rounded-full px-2 py-0.5">
                 {budgetArray.length} aktif
@@ -155,9 +155,7 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
                 {expandedView ? "Ringkas" : "Lihat semua"}
               </button>
             )}
-            <Link to="/budgets" className="flex items-center text-sm text-blue-600 hover:text-blue-700">
-              Kelola <ChevronRight className="h-4 w-4 ml-1" />
-            </Link>
+          
           </div>
         </div>
 

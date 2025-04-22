@@ -111,7 +111,7 @@ export interface Transaction {
   id: string
   title: string
   amount: number
-  type: 'income' | 'expense' | 'transfer' | string
+  type: 'income' | 'expense' | string
   date: string
   description?: string
   category?: string
@@ -124,4 +124,6 @@ export interface Transaction {
   updated_at?: string
   user_id?: string
   selected?: boolean
+  is_adjustment?: boolean
+  is_deleted?: boolean
 }
