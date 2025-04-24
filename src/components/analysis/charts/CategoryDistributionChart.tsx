@@ -1,15 +1,26 @@
+
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { ChevronDown } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
-import { Category, TransactionWithNames, Wallet } from "@/types";
+import {
+  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Transaction, TransactionWithNames } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/utils';
+import { Category, Wallet } from '@/types';
 import { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO } from "date-fns";
+import { ChevronDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface CategoryDistributionChartProps {
   transactions: TransactionWithNames[];
@@ -35,7 +46,6 @@ export function CategoryDistributionChart({
     percentage: string;
   }>>([]);
 
-  // Filter transactions by date range
   const filteredTransactions = useMemo(() => {
     if (!dateRange || !dateRange.from) {
       return transactions;
@@ -45,13 +55,11 @@ export function CategoryDistributionChart({
       const transactionDate = parseISO(transaction.date);
       
       if (dateRange.to) {
-        // Filter for a date range
         return isWithinInterval(transactionDate, {
           start: dateRange.from,
           end: dateRange.to
         });
       } else {
-        // Filter for a single date
         const from = dateRange.from;
         return (
           transactionDate.getDate() === from.getDate() &&
@@ -62,10 +70,8 @@ export function CategoryDistributionChart({
     });
   }, [transactions, dateRange]);
 
-  // Calculate data based on activeTab and viewType
   const chartData = useMemo(() => {
     if (viewType === "category") {
-      // Category-based data
       const dataMap = new Map<string, { value: number, color: string, id: string }>();
       
       filteredTransactions.forEach(transaction => {
@@ -76,7 +82,6 @@ export function CategoryDistributionChart({
           const categoryName = transaction.category_name || "Lainnya";
           const categoryId = transaction.category_id || "";
           
-          // Find category color from the categories array
           const category = categories.find(cat => cat.id === categoryId);
           const color = category?.color || `#${Math.floor(Math.random()*16777215).toString(16)}`;
           
@@ -101,7 +106,6 @@ export function CategoryDistributionChart({
         }))
         .sort((a, b) => b.value - a.value);
     } else {
-      // Wallet-based data
       const dataMap = new Map<string, { value: number, color: string, id: string }>();
       
       filteredTransactions.forEach(transaction => {
@@ -112,7 +116,6 @@ export function CategoryDistributionChart({
           const walletName = transaction.wallet_name || "Lainnya";
           const walletId = transaction.wallet_id || "";
           
-          // Find wallet color from the wallets array
           const wallet = wallets.find(w => w.id === walletId);
           const color = wallet?.color || wallet?.gradient || `hsl(${walletName.charCodeAt(0) % 360}, 70%, 50%)`;
           
@@ -143,7 +146,6 @@ export function CategoryDistributionChart({
     return chartData.reduce((sum, item) => sum + item.value, 0);
   }, [chartData]);
 
-  // Update details data whenever chartData changes
   useEffect(() => {
     if (chartData.length > 0) {
       const details = chartData.map(item => ({
@@ -157,7 +159,6 @@ export function CategoryDistributionChart({
     }
   }, [chartData, totalAmount]);
 
-  // Sorted details data for display
   const sortedDetailsData = useMemo(() => {
     const sortableItems = [...detailsData];
     if (sortConfig !== null) {
@@ -188,7 +189,6 @@ export function CategoryDistributionChart({
     return sortableItems;
   }, [detailsData, sortConfig]);
 
-  // Handle sorting when header is clicked
   const requestSort = (key: string) => {
     let direction: "ascending" | "descending" = "ascending";
     if (sortConfig && sortConfig.key === key && sortConfig.direction === "ascending") {
@@ -197,12 +197,10 @@ export function CategoryDistributionChart({
     setSortConfig({ key, direction });
   };
 
-  // Toggle detail section visibility
   const toggleDetail = () => {
     setIsDetailOpen(!isDetailOpen);
   };
 
-  // Get data for each wallet type if viewType is wallet
   const walletTypeTotals = useMemo(() => {
     if (viewType !== "wallet") return null;
     
@@ -231,6 +229,25 @@ export function CategoryDistributionChart({
     return result;
   }, [filteredTransactions, wallets, viewType]);
 
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="white" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+
   if (chartData.length === 0) {
     return (
       <Card className="w-full">
@@ -258,7 +275,6 @@ export function CategoryDistributionChart({
       </CardHeader>
       <CardContent className="p-0">
         <div className="flex flex-col w-full">
-          {/* Chart Section */}
           <div className="bg-white rounded-t-lg overflow-hidden border shadow-sm">
             <div className="h-[350px] p-6">
               <div className="h-full flex flex-col">
@@ -308,7 +324,6 @@ export function CategoryDistributionChart({
                 </div>
 
                 <div className="flex-1 flex flex-col">
-                  {/* Pie Chart */}
                   <div className="flex-1 min-h-[250px] flex items-center justify-center">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
@@ -317,7 +332,7 @@ export function CategoryDistributionChart({
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={false}
+                          label={renderCustomizedLabel}
                           outerRadius={({ viewBox }) => Math.min(viewBox.width, viewBox.height) / 3}
                           innerRadius={({ viewBox }) => Math.min(viewBox.width, viewBox.height) / 4.5}
                           fill="#8884d8"
@@ -330,7 +345,6 @@ export function CategoryDistributionChart({
                               const isAlreadySelected = detailsData.length === 1 && detailsData[0].name === clickedItem.name;
                               
                               if (isAlreadySelected) {
-                                // Show all items again
                                 const allDetails = chartData.map(item => ({
                                   name: item.name,
                                   value: item.value,
@@ -339,7 +353,6 @@ export function CategoryDistributionChart({
                                 }));
                                 setDetailsData(allDetails);
                               } else {
-                                // Show just this item
                                 setDetailsData([{
                                   name: clickedItem.name,
                                   value: clickedItem.value,
@@ -348,7 +361,6 @@ export function CategoryDistributionChart({
                                 }]);
                               }
                               
-                              // Open detail section if not already open
                               if (!isDetailOpen) {
                                 setIsDetailOpen(true);
                               }
@@ -388,7 +400,6 @@ export function CategoryDistributionChart({
             </div>
           </div>
 
-          {/* Expandable Data Details Section */}
           <div className="bg-white rounded-b-lg border-x border-b shadow-sm overflow-hidden">
             <div
               className="p-2 bg-gray-50 border-t flex justify-between items-center cursor-pointer hover:bg-gray-100 transition-colors"
@@ -461,7 +472,6 @@ export function CategoryDistributionChart({
                         )}
                       </tr>
                     ))}
-                    {/* Total row */}
                     <tr className="border-t border-gray-300 font-medium bg-gray-50">
                       <td className="px-2 py-2 whitespace-nowrap">
                         <div className="flex items-center">
@@ -494,4 +504,4 @@ export function CategoryDistributionChart({
       </CardContent>
     </Card>
   );
-} 
+}

@@ -1,7 +1,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Asset } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +12,7 @@ export default function EditAssetPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  const [asset, setAsset] = useState<Asset | null>(null);
+  const [asset, setAsset] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

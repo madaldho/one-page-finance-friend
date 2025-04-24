@@ -1,14 +1,22 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, CircleDollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Asset } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { formatCurrency, formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { formatCurrency } from "@/lib/utils";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle,
+  CardDescription
+} from "@/components/ui/card";
 
 interface AssetUpdateFormProps {
   asset: Asset;
@@ -20,23 +28,13 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [formattedValue, setFormattedValue] = useState("");
+  const [newValue, setNewValue] = useState<number>(asset.current_value);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  
-  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const numericValue = e.target.value.replace(/\D/g, '');
-    if (numericValue) {
-      const formattedVal = formatNumberWithSeparator(numericValue);
-      setFormattedValue(formattedVal);
-    } else {
-      setFormattedValue("");
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formattedValue) {
+    if (!newValue) {
       toast({
         title: "Nilai tidak boleh kosong",
         description: "Mohon masukkan nilai terbaru aset",
@@ -47,7 +45,6 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
 
     try {
       setLoading(true);
-      const newValue = parseFormattedNumber(formattedValue);
       
       if (isNaN(newValue) || newValue <= 0) {
         toast({
@@ -92,7 +89,7 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
       console.error("Error:", error);
       toast({
         title: "Gagal memperbarui nilai",
-        description: error.message || "Terjadi kesalahan saat memperbarui nilai aset",
+        description: "Terjadi kesalahan saat memperbarui nilai aset",
         variant: "destructive",
       });
     } finally {
@@ -101,7 +98,7 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
   };
 
   return (
-    <div className="container mx-auto p-4 pb-32 max-w-2xl">
+    <div className="container mx-auto p-4 pb-32 max-w-md">
       <div className="flex items-center mb-6">
         <Button
           variant="ghost"
@@ -117,75 +114,77 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <Label htmlFor="currentValue" className="text-sm font-medium">Nilai Sebelumnya</Label>
-            <div className="h-10 px-3 py-2 border border-gray-200 rounded-md bg-gray-50 flex items-center">
-              <span className="text-gray-500 mr-1">Rp</span>
-              <span>{formatCurrency(asset.current_value).replace('Rp', '').trim()}</span>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Perbarui Nilai Aset</CardTitle>
+          <CardDescription>
+            Silakan masukkan nilai terbaru dari aset Anda
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="currentValue" className="text-sm">Nilai Sebelumnya</Label>
+              <div className="bg-gray-50 p-3 rounded-md flex items-center gap-3">
+                <CircleDollarSign className="text-gray-400 h-5 w-5" />
+                <span className="font-medium">{formatCurrency(asset.current_value)}</span>
+              </div>
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="value" className="text-sm font-medium">Nilai Terbaru</Label>
-            <div className="relative mt-1">
-              <div className="flex rounded-md shadow-sm">
-                <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
-                  Rp
-                </span>
-                <Input
+            <div className="space-y-2">
+              <Label htmlFor="value" className="text-sm">Nilai Terbaru</Label>
+              <div className="relative">
+                <CircleDollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5 z-10" />
+                <CurrencyInput
                   id="value"
-                  type="text"
+                  value={newValue}
+                  onChange={setNewValue}
+                  className="pl-10"
                   placeholder="0"
-                  value={formattedValue}
-                  onChange={handleValueChange}
                   required
-                  className="rounded-l-none"
                 />
               </div>
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="date" className="text-sm font-medium">Tanggal Update</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
-              required
-              className="mt-1"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm">Tanggal Update</Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                required
+              />
+            </div>
 
-          <div className="grid grid-cols-2 gap-4 pt-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full"
-              onClick={() => navigate(-1)}
-            >
-              Batal
-            </Button>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Menyimpan...
-                </>
-              ) : (
-                "Update Nilai"
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button 
+                type="button" 
+                variant="outline" 
+                className="w-full"
+                onClick={() => navigate(-1)}
+              >
+                Batal
+              </Button>
+              <Button 
+                type="submit" 
+                className="w-full bg-purple-600 hover:bg-purple-700" 
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Update Nilai"
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

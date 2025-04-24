@@ -161,16 +161,19 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
               <button
                 key={i}
                 onClick={() => handleKey(key)}
-                className={`text-2xl py-2 rounded-lg transition active:bg-gray-300 w-full ${
-                  key === "back" ? "text-red-500" : ""
-                }`}
-                style={{
-                  gridColumn: key === "back" ? undefined : undefined,
-                }}
+                className={`
+                  text-2xl py-2 rounded-lg transition active:bg-gray-300 w-full h-14
+                  ${key === "back" ? "bg-gray-200 hover:bg-gray-300 flex items-center justify-center" : ""}
+                  ${["+", "-", "×", "÷"].includes(key) ? "bg-gray-200 text-blue-600 font-semibold" : ""}
+                `}
                 type="button"
               >
                 {key === "back" ? (
-                  <svg width="26" height="26" viewBox="0 0 20 20" fill="none"><path d="M12.5 8.5L9.5 11.5M9.5 8.5L12.5 11.5M17 10C17 14.4183 13.4183 18 9 18C4.58172 18 1 14.4183 1 10C1 5.58172 4.58172 2 9 2C13.4183 2 17 5.58172 17 10Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 9.5L14 12.5L17 15.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M14 12.5H9" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M21 12.5C21 16.9183 17.4183 20.5 13 20.5C8.58172 20.5 5 16.9183 5 12.5C5 8.08172 8.58172 4.5 13 4.5C17.4183 4.5 21 8.08172 21 12.5Z" stroke="#EF4444" strokeWidth="1.5"/>
+                  </svg>
                 ) : (
                   key
                 )}
@@ -213,15 +216,18 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
             <button
               key={i}
               onClick={() => handleKey(key)}
-              className={`text-2xl py-2 rounded-lg transition active:bg-gray-300 ${
-                key === "back" ? "text-red-500" : ""
-              }`}
-              style={{
-                gridColumn: key === "back" ? "span 1" : undefined,
-              }}
+              className={`
+                text-2xl py-2 rounded-lg transition active:bg-gray-300 h-14
+                ${key === "back" ? "bg-gray-200 hover:bg-gray-300 flex items-center justify-center" : ""}
+                ${["+", "-", "×", "÷"].includes(key) ? "bg-gray-200 text-blue-600 font-semibold" : ""}
+              `}
             >
               {key === "back" ? (
-                <svg width="26" height="26" viewBox="0 0 20 20" fill="none"><path d="M12.5 8.5L9.5 11.5M9.5 8.5L12.5 11.5M17 10C17 14.4183 13.4183 18 9 18C4.58172 18 1 14.4183 1 10C1 5.58172 4.58172 2 9 2C13.4183 2 17 5.58172 17 10Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17 9.5L14 12.5L17 15.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M14 12.5H9" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M21 12.5C21 16.9183 17.4183 20.5 13 20.5C8.58172 20.5 5 16.9183 5 12.5C5 8.08172 8.58172 4.5 13 4.5C17.4183 4.5 21 8.08172 21 12.5Z" stroke="#EF4444" strokeWidth="1.5"/>
+                </svg>
               ) : (
                 key
               )}

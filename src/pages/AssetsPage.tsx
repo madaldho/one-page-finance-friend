@@ -137,15 +137,26 @@ export default function AssetsPage() {
                 <PieChart className="w-5 h-5 text-white/80" />
                 <h2 className="font-medium">Total Kekayaan</h2>
               </div>
-              <Button 
-                onClick={() => navigate("/assets/add")} 
-                size="sm" 
-                variant="secondary"
-                className="bg-white/20 hover:bg-white/30 text-white border-0"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Tambah
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => navigate("/assets/transactions")} 
+                  size="sm" 
+                  variant="secondary"
+                  className="bg-white/20 hover:bg-white/30 text-white border-0"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
+                  Transaksi
+                </Button>
+                <Button 
+                  onClick={() => navigate("/assets/add")} 
+                  size="sm" 
+                  variant="secondary"
+                  className="bg-white/20 hover:bg-white/30 text-white border-0"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Tambah
+                </Button>
+              </div>
             </div>
             <p className="text-3xl font-bold mb-2">{formatCurrency(totalWealth)}</p>
             

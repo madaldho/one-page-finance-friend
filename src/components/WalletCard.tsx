@@ -48,16 +48,9 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
   const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
 
-  const getCardStyle = () => {
-    const style: React.CSSProperties = {
-      background: wallet.gradient 
-        ? `linear-gradient(135deg, ${wallet.color}, ${wallet.gradient})`
-        : wallet.color,
-      color: "white",
-      transition: "all 0.3s ease",
-    };
-    return style;
-  };
+  const cardStyle = (wallet as unknown as { gradient?: string }).gradient 
+    ? { background: `linear-gradient(135deg, ${(wallet as unknown as { gradient?: string }).gradient})` }
+    : { backgroundColor: wallet.color || '#4F46E5' };
 
   const handleCardClick = () => {
     navigate(`/wallet/${wallet.id}`);
@@ -99,13 +92,13 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
           "relative p-3 sm:p-4 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300",
           "before:content-[''] before:absolute before:inset-0 before:bg-black/10 before:opacity-0 group-hover:before:opacity-100 before:transition-opacity"
         )}
-        style={getCardStyle()}
+        style={cardStyle}
         onClick={handleCardClick}
       >
-        <div className="flex justify-between items-start mb-2 sm:mb-4">
-          <div className="flex items-center gap-1 sm:gap-2 max-w-[70%]">
+        <div className="flex justify-between items-start mb-2 sm:mb-4 ">
+          <div className="flex items-center gap-1 sm:gap-2 max-w-[70%] text-white">
             {getWalletIcon(wallet.type || "cash")}
-            <h3 className="text-sm sm:text-lg font-semibold truncate">{wallet.name}</h3>
+            <h3 className="text-sm sm:text-lg font-semibold truncate ">{wallet.name} </h3>
             {wallet.is_default && (
               <span className="bg-white/20 text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
                 Default
@@ -151,10 +144,10 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
         </div>
 
         <div className="space-y-0 sm:space-y-1">
-          <p className="text-base sm:text-2xl font-bold leading-tight break-words">
+          <p className="text-base sm:text-2xl font-bold leading-tight break-words text-white">
             {formatCurrency(wallet.balance)}
           </p>
-          <p className="text-xs sm:text-sm opacity-90">
+          <p className="text-xs sm:text-sm opacity-90 text-white">
             {wallet.type === "bank" ? "Rekening Bank" : 
              wallet.type === "savings" ? "Tabungan" : "Uang Tunai"}
           </p>

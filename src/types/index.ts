@@ -16,24 +16,28 @@ export interface Wallet {
 
 export interface Transaction {
   id: string;
+  user_id: string;
   title: string;
   amount: number;
   type: "income" | "expense" | "transfer";
   date: string;
-  category?: string;
-  wallet_id?: string;
-  destination_wallet_id?: string;
+  category: string;
+  wallet_id: string;
   description?: string;
-  user_id?: string;
+  destination_wallet_id?: string;
+  fee?: number;
+  is_adjustment?: boolean;
+  is_deleted?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface TransactionWithNames extends Transaction {
-  category_name?: string;
   wallet_name?: string;
-  wallet_data?: Wallet;
+  category_name?: string;
+  destination_wallet_name?: string;
 }
 
-// Additional interfaces needed by the application
 export interface Budget {
   id: string;
   category: string;
@@ -55,11 +59,11 @@ export interface Loan {
   title: string;
   description: string;
   amount: number;
-  type: string;
+  type: "payable" | "receivable";
   borrower?: string;
   lender?: string;
   due_date?: string;
-  status: string;
+  status: "paid" | "unpaid" | "partial";
   paid_amount?: number;
   wallet_id?: string;
   wallet_name?: string;
@@ -114,8 +118,6 @@ export interface SavingTransaction {
 export interface Database {
   public: {
     Tables: {
-      // ... existing tables ...
-      
       savings: {
         Row: Saving;
         Insert: Omit<Saving, 'id' | 'created_at' | 'updated_at'>;
@@ -137,4 +139,42 @@ export interface Database {
       // ... existing tables ...
     };
   };
+}
+
+export interface Asset {
+  id: string;
+  user_id: string;
+  name: string;
+  category: string;
+  initial_value: number;
+  current_value: number;
+  purchase_date: string | null;
+  purchase_year: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssetValueHistory {
+  id: string;
+  asset_id: string;
+  value: number;
+  date: string;
+  user_id: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AssetTransaction {
+  id: string;
+  user_id: string;
+  asset_id: string;
+  transaction_id: string;
+  amount: number;
+  admin_fee: number;
+  net_amount: number;
+  type: "sale" | "purchase";
+  date: string;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
 }

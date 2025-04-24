@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Budget } from "@/types";
+import { Budget } from "@/types/index";
 import DeleteConfirmationDialog from "@/components/DeleteConfirmationDialog";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -201,13 +201,19 @@ const BudgetManagement = () => {
         const startDate = new Date(budget.start_date);
         const endDate = budget.end_date ? new Date(budget.end_date) : new Date();
         
-        const { data, error } = await supabase
+        let query = supabase
           .from("transactions")
           .select("amount")
-          .eq("category", budget.category)
           .eq("type", "expense")
           .gte("date", startDate.toISOString().split('T')[0])
           .lte("date", endDate.toISOString().split('T')[0]);
+          
+        // Hanya filter berdasarkan kategori jika bukan "all"
+        if (budget.category !== "all") {
+          query = query.eq("category", budget.category);
+        }
+        
+        const { data, error } = await query;
           
         if (error) throw error;
         

@@ -22,7 +22,7 @@ export type Database = {
         Insert: {
           asset_id: string
           created_at?: string | null
-          date: string
+          date?: string
           id?: string
           updated_at?: string | null
           user_id: string
@@ -83,99 +83,6 @@ export type Database = {
           purchase_year?: number | null
           updated_at?: string | null
           user_id?: string
-        }
-        Relationships: []
-      }
-      budget_analysis: {
-        Row: {
-          budget_amount: number | null
-          budget_type: string | null
-          category: string | null
-          end_date: string | null
-          percent_used: number | null
-          period: string | null
-          source_name: string | null
-          spent_amount: number | null
-          start_date: string | null
-          user_id: string | null
-        }
-        Insert: {
-          budget_amount?: number | null
-          budget_type?: string | null
-          category?: string | null
-          end_date?: string | null
-          percent_used?: number | null
-          period?: string | null
-          source_name?: string | null
-          spent_amount?: number | null
-          start_date?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          budget_amount?: number | null
-          budget_type?: string | null
-          category?: string | null
-          end_date?: string | null
-          percent_used?: number | null
-          period?: string | null
-          source_name?: string | null
-          spent_amount?: number | null
-          start_date?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      budget_items: {
-        Row: {
-          amount: number
-          budget_type: string
-          category: string
-          color: string
-          created_at: string | null
-          end_date: string | null
-          id: string
-          percent_value: number | null
-          period: string
-          source_id: string | null
-          source_name: string | null
-          spent: number | null
-          start_date: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          amount: number
-          budget_type: string
-          category: string
-          color: string
-          created_at?: string | null
-          end_date?: string | null
-          id: string
-          percent_value?: number | null
-          period: string
-          source_id?: string | null
-          source_name?: string | null
-          spent?: number | null
-          start_date?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number
-          budget_type?: string
-          category?: string
-          color?: string
-          created_at?: string | null
-          end_date?: string | null
-          id?: string
-          percent_value?: number | null
-          period?: string
-          source_id?: string | null
-          source_name?: string | null
-          spent?: number | null
-          start_date?: string | null
-          updated_at?: string | null
-          user_id?: string | null
         }
         Relationships: []
       }
@@ -366,6 +273,8 @@ export type Database = {
           type: string
           updated_at: string | null
           user_id: string
+          wallet_id: string | null
+          wallet_name: string | null
         }
         Insert: {
           amount: number
@@ -380,6 +289,8 @@ export type Database = {
           type: string
           updated_at?: string | null
           user_id: string
+          wallet_id?: string | null
+          wallet_name?: string | null
         }
         Update: {
           amount?: number
@@ -394,8 +305,18 @@ export type Database = {
           type?: string
           updated_at?: string | null
           user_id?: string
+          wallet_id?: string | null
+          wallet_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "loans_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -408,6 +329,7 @@ export type Database = {
           updated_at: string | null
           user_id: string
           wallet_id: string
+          wallet_name: string | null
         }
         Insert: {
           amount: number
@@ -419,6 +341,7 @@ export type Database = {
           updated_at?: string | null
           user_id: string
           wallet_id: string
+          wallet_name?: string | null
         }
         Update: {
           amount?: number
@@ -430,6 +353,7 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           wallet_id?: string
+          wallet_name?: string | null
         }
         Relationships: [
           {
@@ -614,6 +538,8 @@ export type Database = {
           destination_wallet_id: string | null
           fee: number | null
           id: string
+          is_adjustment: boolean | null
+          is_deleted: boolean | null
           title: string
           type: string
           updated_at: string | null
@@ -629,6 +555,8 @@ export type Database = {
           destination_wallet_id?: string | null
           fee?: number | null
           id?: string
+          is_adjustment?: boolean | null
+          is_deleted?: boolean | null
           title: string
           type: string
           updated_at?: string | null
@@ -644,6 +572,8 @@ export type Database = {
           destination_wallet_id?: string | null
           fee?: number | null
           id?: string
+          is_adjustment?: boolean | null
+          is_deleted?: boolean | null
           title?: string
           type?: string
           updated_at?: string | null
@@ -697,6 +627,115 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_history: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          change_amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          new_balance: number | null
+          previous_balance: number | null
+          reference_id: string | null
+          reference_type: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          change_amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          new_balance?: number | null
+          previous_balance?: number | null
+          reference_id?: string | null
+          reference_type?: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          change_amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          new_balance?: number | null
+          previous_balance?: number | null
+          reference_id?: string | null
+          reference_type?: string | null
+          type?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_history_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          source_id: string | null
+          source_type: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          source_id?: string | null
+          source_type?: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          source_id?: string | null
+          source_type?: string | null
+          type?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallets: {
         Row: {
           balance: number
@@ -741,7 +780,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      adjust_wallet_balance: {
+        Args: { wallet_id_param: string; adjustment_param: number }
+        Returns: boolean
+      }
+      delete_loan_with_transactions: {
+        Args: { loan_id_param: string }
+        Returns: boolean
+      }
+      update_wallet_balance_directly: {
+        Args: { wallet_id_param: string; new_balance_param: number }
+        Returns: boolean
+      }
+      update_wallet_with_log: {
+        Args: {
+          wallet_id_param: string
+          amount_param: number
+          description_param: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

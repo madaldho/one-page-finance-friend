@@ -1,313 +1,326 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Loan, Wallet } from '@/types';
-import Layout from '@/components/Layout';
-import { ArrowLeft, Calendar, Wallet as WalletIcon, User, Info, CreditCard } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useUser } from '@/hooks/useUser';
+import { Wallet } from '@/types';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { formatCurrency } from '@/lib/utils';
-import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 import { CurrencyInput } from '@/components/ui/currency-input';
-
-interface ReceivableFormData {
-  amount: number;
-  due_date: string;
-  borrower: string;
-  description: string;
-  wallet_id: string;
-  installment: number; // jumlah cicilan
-}
+import { ArrowLeft } from 'lucide-react';
+import Layout from '@/components/Layout';
+import { formatCurrency } from '@/lib/utils';
 
 const AddReceivablePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { user } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
   const [wallets, setWallets] = useState<Wallet[]>([]);
-
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<ReceivableFormData>({
-    defaultValues: {
-      amount: 0,
-      due_date: new Date().toISOString().split('T')[0],
-      borrower: '',
-      description: '',
-      wallet_id: '',
-      installment: 0
-    }
+  const [formData, setFormData] = useState({
+    description: '',
+    amount: 0,
+    borrower: '',
+    due_date: '',
+    wallet_id: '',
   });
+  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
 
   useEffect(() => {
-    if (user) {
-      fetchWallets();
-    }
+    // Fetch wallets when component mounts
+    const fetchWallets = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('wallets')
+          .select('*')
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error("Error fetching wallets:", error);
+          toast.error("Gagal memuat daftar wallet");
+        } else if (data) {
+          setWallets(data);
+        }
+      }
+    };
+
+    fetchWallets();
   }, [user]);
 
-  const fetchWallets = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user?.id);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
-      if (error) throw error;
-      setWallets(data || []);
-      
-      // Set default wallet if available
-      if (data && data.length > 0) {
-        const defaultWallet = data.find(w => w.is_default) || data[0];
-        setValue('wallet_id', defaultWallet.id);
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value,
+    }));
+    
+    // Jika yang diubah adalah wallet_id, update selectedWallet
+    if (name === 'wallet_id') {
+      const wallet = wallets.find(w => w.id === value);
+      setSelectedWallet(wallet || null);
+    }
+  };
+  
+  const handleAmountChange = (value: number) => {
+    setFormData(prevData => ({
+      ...prevData,
+      amount: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Validate required fields
+      if (!formData.wallet_id) {
+        toast.error("Pilih dompet terlebih dahulu");
+        setIsLoading(false);
+        return;
       }
-    } catch (error: any) {
-      console.error('Error fetching wallets:', error);
-      toast({
-        title: 'Gagal memuat dompet',
-        description: error.message,
-        variant: 'destructive'
-      });
+
+      // Make sure we have a numeric amount
+      if (!formData.amount || formData.amount <= 0) {
+        toast.error("Masukkan jumlah piutang yang valid");
+        setIsLoading(false);
+        return;
+      }
+
+      // Create loan data with correct type
+      const loanData = {
+        description: formData.description,
+        amount: formData.amount,
+        lender: formData.borrower, // We store borrower in lender field for receivables
+        due_date: formData.due_date || null,
+        wallet_id: formData.wallet_id,
+        type: 'receivable',
+        status: 'unpaid',
+        user_id: user!.id
+      };
+
+      // 1. Create the loan record
+      const { data: loanResult, error: loanError } = await supabase
+        .from('loans')
+        .insert(loanData)
+        .select();
+
+      if (loanError) throw loanError;
+      
+      // 2. Create transaction record for this receivable
+      try {
+        const transactionData = {
+          user_id: user!.id,
+          title: formData.description,
+          amount: formData.amount,
+          type: 'expense', // Receivable reduces wallet balance initially
+          date: new Date().toISOString().split('T')[0], // Today's date
+          category: 'Piutang',
+          wallet_id: formData.wallet_id,
+          description: `Pinjaman kepada ${formData.borrower}`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // Coba update saldo wallet secara manual jika transaksi gagal dibuat
+        const { data: walletData, error: walletFetchError } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('id', formData.wallet_id)
+          .single();
+          
+        if (!walletFetchError && walletData) {
+          // Update saldo wallet dengan mengurangi jumlah piutang (karena ini expense)
+          await supabase
+            .from('wallets')
+            .update({ balance: walletData.balance - formData.amount })
+            .eq('id', formData.wallet_id);
+        }
+        
+        // Coba buat transaksi (mungkin akan gagal karena trigger)
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .insert(transactionData);
+          
+        if (transactionError) {
+          console.error("Error creating transaction record:", transactionError);
+          toast.warning("Piutang berhasil ditambahkan tetapi gagal mencatatnya sebagai transaksi. Saldo dompet sudah diperbarui.");
+        }
+      } catch (transactionErr) {
+        console.error("Error in transaction processing:", transactionErr);
+        toast.warning("Piutang berhasil ditambahkan tetapi gagal mencatatnya sebagai transaksi");
+      }
+
+      toast.success("Piutang berhasil ditambahkan");
+      navigate('/loans');
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Gagal menambahkan piutang");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const onSubmit = async (data: ReceivableFormData) => {
-    if (!user) return;
-    setLoading(true);
-
-    try {
-      // Prepare loan data
-      const loanData: Partial<Loan> = {
-        user_id: user.id,
-        amount: data.amount,
-        due_date: data.due_date,
-        type: 'receivable', // piutang = receivable
-        status: 'unpaid',
-        description: data.description,
-        borrower: data.borrower
-      };
-
-      // Insert to database
-      const { data: newLoan, error } = await supabase
-        .from('loans')
-        .insert(loanData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update wallet balance (uang keluar dari dompet)
-      if (data.wallet_id) {
-        const selectedWallet = wallets.find(w => w.id === data.wallet_id);
-        if (selectedWallet) {
-          // Store wallet ID and name in the loan record
-          const { error: updateLoanError } = await supabase
-            .from('loans')
-            .update({ 
-              wallet_id: data.wallet_id,
-              wallet_name: selectedWallet.name
-            })
-            .eq('id', newLoan.id);
-            
-          if (updateLoanError) {
-            console.error("Error updating loan with wallet info:", updateLoanError);
-          }
-          
-          // Catat transaksi - ini akan otomatis memperbarui saldo wallet melalui trigger database
-          const transactionData = {
-            user_id: user.id,
-            title: data.description,
-            amount: data.amount,
-            type: 'expense',
-            date: format(new Date(), 'yyyy-MM-dd'),
-            category: 'Piutang',
-            wallet_id: data.wallet_id,
-            description: `Pinjaman kepada ${data.borrower}`
-          };
-          
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert(transactionData);
-            
-          if (transactionError) throw transactionError;
-        }
+  // Generate gradient or color style sesuai data dompet
+  const getWalletStyle = (wallet: Wallet) => {
+    // Menggunakan type assertion untuk mengatasi masalah TypeScript
+    const walletWithGradient = wallet as { gradient?: string; color?: string };
+    
+    if (walletWithGradient.gradient && typeof walletWithGradient.gradient === 'string') {
+      // Coba ekstrak warna pertama dari gradient jika ada
+      const match = walletWithGradient.gradient.match(/rgba?\([\d\s,.]+\)|#[a-f\d]{3,8}/i);
+      if (match) {
+        // Gunakan warna pertama yang ditemukan dalam gradient
+        return { backgroundColor: match[0] };
       }
-
-      toast({
-        title: 'Berhasil',
-        description: 'Piutang baru telah ditambahkan',
-      });
-
-      navigate('/loans');
-    } catch (error: any) {
-      console.error('Error saving loan:', error);
-      toast({
-        title: 'Gagal Menyimpan',
-        description: error.message,
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
+      // Jika tidak bisa ekstrak warna, tetap gunakan gradient
+      return { background: walletWithGradient.gradient };
     }
+    
+    // Fallback ke warna solid
+    return { backgroundColor: wallet.color || '#94a3b8' };
   };
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 max-w-xl pb-24">
+      <div className="container mx-auto p-4 pb-32 max-w-md">
         <div className="flex items-center mb-6">
           <Link to="/loans" className="mr-2">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-xl font-bold">Tambah Piutang Baru</h1>
+          <h1 className="text-xl font-bold">Tambah Piutang</h1>
         </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mb-24">
-          <div className="bg-white rounded-lg p-5 shadow-sm">
-            <div className="flex items-center mb-4">
-              <CreditCard className="text-green-500 mr-2 h-5 w-5" />
-              <h2 className="text-lg font-medium">Detail Piutang</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Jumlah</label>
-                <CurrencyInput
-                  showPrefix={true}
-                  value={watch('amount')}
-                  onChange={(value) => setValue('amount', value)}
-                  placeholder="0"
-                  error={errors.amount?.message}
+        
+        <Card className="shadow-sm border-0">
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="description">Deskripsi</Label>
+                <Input
+                  type="text"
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="Pinjaman untuk apa"
+                  required
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Peminjam</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input
-                    className="pl-10"
-                    {...register('borrower', { 
-                      required: 'Peminjam harus diisi'
-                    })}
-                    placeholder="Nama peminjam"
-                    error={errors.borrower?.message}
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="amount">Jumlah</Label>
+                <CurrencyInput
+                  id="amount"
+                  value={formData.amount}
+                  onChange={handleAmountChange}
+                  showPrefix={true}
+                  placeholder="0"
+                  required
+                />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Catatan / Judul Piutang</label>
-                <div className="relative">
-                  <Info className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input
-                    className="pl-10"
-                    {...register('description', { required: 'Catatan harus diisi sebagai judul piutang' })}
-                    placeholder="Tambahkan catatan (akan digunakan sebagai judul)"
-                    error={errors.description?.message}
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="borrower">Peminjam</Label>
+                <Input
+                  type="text"
+                  id="borrower"
+                  name="borrower"
+                  value={formData.borrower}
+                  onChange={handleChange}
+                  placeholder="Nama peminjam"
+                  required
+                />
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-5 shadow-sm">
-            <div className="flex items-center mb-4">
-              <Calendar className="text-green-500 mr-2 h-5 w-5" />
-              <h2 className="text-lg font-medium">Jangka Waktu</h2>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Jatuh Tempo</label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
-                  <Input
-                    type="date"
-                    className="pl-10"
-                    {...register('due_date', { required: 'Tanggal jatuh tempo harus diisi' })}
-                    error={errors.due_date?.message}
-                  />
-                </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="due_date">Tanggal Jatuh Tempo</Label>
+                <Input
+                  type="date"
+                  id="due_date"
+                  name="due_date"
+                  value={formData.due_date}
+                  onChange={handleChange}
+                />
+                <p className="text-xs text-gray-500">Opsional</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Cicilan (Opsional)</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">Rp</span>
-                  <Input
-                    type="number"
-                    className="pl-10"
-                    {...register('installment')}
-                    placeholder="1"
-                    error={errors.installment?.message}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Jumlah cicilan yang harus dibayar (kosongkan jika tidak ada cicilan)</p>
+              
+              <div className="space-y-2">
+                <Label htmlFor="wallet_id">Pilih Dompet</Label>
+                <Select
+                  value={formData.wallet_id}
+                  onValueChange={(value) => handleSelectChange('wallet_id', value)}
+                >
+                  <SelectTrigger id="wallet_id" className="w-full">
+                    <SelectValue placeholder="Pilih dompet">
+                      {selectedWallet && (
+                        <div className="flex items-center">
+                          <div 
+                            className="w-4 h-4 rounded-full mr-2" 
+                            style={getWalletStyle(selectedWallet)}
+                          />
+                          <span>{selectedWallet.name}</span>
+                          <span className="ml-2 text-gray-500">
+                            ({formatCurrency(selectedWallet.balance)})
+                          </span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wallets.map(wallet => (
+                      <SelectItem key={wallet.id} value={wallet.id}>
+                        <div className="flex items-center">
+                          <div 
+                            className="w-4 h-4 rounded-full mr-2" 
+                            style={getWalletStyle(wallet)}
+                          />
+                          <span>{wallet.name}</span>
+                          <span className="ml-2 text-gray-500">
+                            ({formatCurrency(wallet.balance)})
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">
+                  Piutang akan mengurangi saldo dompet yang dipilih
+                </p>
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-5 shadow-sm">
-            <div className="flex items-center mb-4">
-              <WalletIcon className="text-green-500 mr-2 h-5 w-5" />
-              <h2 className="text-lg font-medium">Dompet Sumber</h2>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Pilih Dompet</label>
-              <Select
-                onValueChange={(value) => setValue('wallet_id', value)}
-                defaultValue={watch('wallet_id')}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih Dompet" />
-                </SelectTrigger>
-                <SelectContent>
-                  {wallets.map(wallet => (
-                    <SelectItem key={wallet.id} value={wallet.id}>
-                      <div className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2" 
-                          style={{ backgroundColor: wallet.color || '#10b981' }}
-                        ></div>
-                        <span>{wallet.name} ({formatCurrency(wallet.balance)})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.wallet_id && (
-                <p className="text-sm text-red-500 mt-1">{errors.wallet_id.message}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Dompet darimana uang pinjaman akan diambil
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate('/loans')}
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-rose-600 hover:bg-rose-700"
-            >
-              {loading ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </div>
-        </form>
+              
+              <div className="pt-4 grid grid-cols-2 gap-3">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate('/loans')}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Batal
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  {isLoading ? "Memproses..." : "Simpan Piutang"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
 };
 
-export default AddReceivablePage; 
+export default AddReceivablePage;

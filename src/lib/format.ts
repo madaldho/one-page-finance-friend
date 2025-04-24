@@ -1,3 +1,4 @@
+
 import { format as fnsFormat, parseISO } from 'date-fns';
 
 export const formatCurrency = (amount: number): string => {

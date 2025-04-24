@@ -431,14 +431,27 @@ export default function WalletForm() {
                                   <button
                                     type="button"
                                     className={cn(
-                                      "w-full aspect-square rounded-full border-2", 
+                                      "w-full aspect-square rounded-full border-2 overflow-hidden relative", 
                                       field.value === 'custom' ? "border-black shadow-sm scale-110" : "border-transparent"
                                     )}
-                                    style={{ backgroundColor: customColor }}
                                     onClick={() => handleColorChange('custom')}
                                     aria-label="Pilih warna kustom"
                                     title="Warna kustom"
-                                  />
+                                  >
+                                    <div 
+                                      className="w-full h-full absolute top-0 left-0"
+                                      style={{ 
+                                        background: field.value === 'custom' 
+                                          ? customColor 
+                                          : "linear-gradient(45deg, #ff0000, #ff9a00, #d0de21, #4fdc4a, #3fdad8, #2fc9e2, #1c7fee, #5f15f2, #ba0cf8, #fb07d9)" 
+                                      }}
+                                    ></div>
+                                    {field.value === 'custom' && (
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="h-1/2 w-1/2 rounded-full" style={{ backgroundColor: customColor }}></div>
+                                      </div>
+                                    )}
+                                  </button>
                         </div>
                                 
                                 {field.value === 'custom' && (

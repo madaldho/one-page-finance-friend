@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loan, Payment, Wallet, Category } from '@/types';
+import { Loan as LoanType, Payment, Wallet as WalletType, Category } from '@/types/index';
 import { ChevronLeft, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +23,45 @@ interface PaymentFormData {
   mark_as_paid: boolean;
 }
 
+// Tipe yang disesuaikan dengan struktur data dari database - tidak menggunakan Omit untuk menghindari title required
+interface LoanData {
+  id: string;
+  user_id: string;
+  amount: number;
+  type: 'payable' | 'receivable';
+  description: string;
+  lender?: string | null;
+  borrower?: string | null;
+  status: string;
+  due_date: string | null;
+  paid_amount?: number | null;
+  wallet_id?: string | null;
+  wallet_name?: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+// Tipe yang disesuaikan untuk wallet yang benar-benar sesuai dengan data Supabase
+interface Wallet {
+  id: string;
+  name: string;
+  balance: number;
+  color?: string | null;
+  gradient?: string | null;
+  is_default?: boolean | null;
+  type: string;
+  user_id: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 const LoanPaymentPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [loan, setLoan] = useState<Loan | null>(null);
+  const [loan, setLoan] = useState<LoanData | null>(null);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -58,7 +89,12 @@ const LoanPaymentPage = () => {
         .single();
 
       if (loanError) throw loanError;
-      setLoan(loanData);
+      // Memastikan tipe loan adalah 'payable' atau 'receivable'
+      const typedLoanData: LoanData = {
+        ...loanData,
+        type: loanData.type as 'payable' | 'receivable'
+      };
+      setLoan(typedLoanData);
 
       // Fetch wallets
       const { data: walletsData, error: walletsError } = await supabase
@@ -82,11 +118,12 @@ const LoanPaymentPage = () => {
       if (loanData) {
         setValue('amount', loanData.amount - (loanData.paid_amount || 0));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching data:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat memuat data';
       toast({
         title: 'Gagal memuat data',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive'
       });
       navigate('/loans');
@@ -106,42 +143,9 @@ const LoanPaymentPage = () => {
         throw new Error('Saldo wallet tidak mencukupi');
       }
 
-      // Find appropriate category
-      let categoryId;
-      if (loan.type === 'payable') {
-        // Untuk pembayaran hutang, cari kategori pengeluaran khusus pembayaran hutang
-        const debtPaymentCategory = categories.find(cat => 
-          cat.name.toLowerCase().includes('pembayaran hutang') ||
-          cat.name.toLowerCase().includes('bayar hutang') ||
-          cat.name.toLowerCase() === 'hutang');
-        
-        if (!debtPaymentCategory) {
-          // Gunakan kategori pengeluaran default jika tidak ada yang spesifik
-          const defaultExpenseCategory = categories.find(cat => cat.type === 'expense');
-          categoryId = defaultExpenseCategory?.id;
-        } else {
-          categoryId = debtPaymentCategory?.id;
-        }
-      } else {
-        // Untuk penerimaan piutang, cari kategori pemasukan khusus penerimaan piutang
-        const receivablePaymentCategory = categories.find(cat => 
-          cat.name.toLowerCase().includes('penerimaan piutang') ||
-          cat.name.toLowerCase().includes('terima piutang') ||
-          cat.name.toLowerCase() === 'piutang');
-        
-        if (!receivablePaymentCategory) {
-          // Gunakan kategori pemasukan default jika tidak ada yang spesifik
-          const defaultIncomeCategory = categories.find(cat => cat.type === 'income');
-          categoryId = defaultIncomeCategory?.id;
-        } else {
-          categoryId = receivablePaymentCategory?.id;
-        }
-      }
-
-      // Jika tidak ada kategori yang sesuai, throw error
-      if (!categoryId) {
-        throw new Error(`Mohon tambahkan kategori ${loan.type === 'payable' ? 'pengeluaran' : 'pemasukan'} terlebih dahulu.`);
-      }
+      // Gunakan kategori sesuai dengan tipe loan
+      // Untuk konsistensi dengan proses penambahan hutang/piutang
+      const categoryName = loan.type === 'payable' ? 'Hutang' : 'Piutang';
 
       // Start transaction
       const { data: payment, error: paymentError } = await supabase
@@ -173,36 +177,59 @@ const LoanPaymentPage = () => {
         .eq('id', loan.id);
 
       if (loanError) throw loanError;
-
-      // Update wallet balance
-      const newBalance = loan.type === 'payable' 
-        ? selectedWallet.balance - data.amount 
-        : selectedWallet.balance + data.amount;
-
-      const { error: walletError } = await supabase
-        .from('wallets')
-        .update({ balance: newBalance })
-        .eq('id', data.wallet_id);
-
-      if (walletError) throw walletError;
       
-      // Catat transaksi
-      const transactionData = {
-        user_id: user.id,
-        title: loan.type === 'payable' ? 'Bayar Hutang' : 'Terima Pembayaran Piutang',
-        amount: data.amount,
-        type: loan.type === 'payable' ? 'expense' : 'income',
-        date: data.payment_date,
-        category: categoryId, // Gunakan ID kategori
-        wallet_id: data.wallet_id,
-        description: `${loan.type === 'payable' ? 'Pembayaran hutang' : 'Penerimaan piutang'} untuk ${loan.description || ''}${data.description ? ': ' + data.description : ''}`
-      };
+      // Update saldo wallet secara manual
+      try {
+        const { data: walletData, error: walletFetchError } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('id', data.wallet_id)
+          .single();
+          
+        if (!walletFetchError && walletData) {
+          // Hutang (payable): pembayaran = mengurangi saldo (expense)
+          // Piutang (receivable): pembayaran = menambah saldo (income)
+          const newBalance = loan.type === 'payable' 
+            ? walletData.balance - data.amount 
+            : walletData.balance + data.amount;
+            
+          await supabase
+            .from('wallets')
+            .update({ balance: newBalance })
+            .eq('id', data.wallet_id);
+            
+          console.log(`Updated wallet balance from ${walletData.balance} to ${newBalance}`);
+        }
+      } catch (walletErr) {
+        console.error("Error updating wallet balance:", walletErr);
+        toast.warning("Pembayaran berhasil tetapi gagal mengupdate saldo dompet. Silakan refresh halaman.");
+      }
       
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert(transactionData);
+      // Catat transaksi dengan kategori yang sama seperti saat penambahan hutang/piutang
+      try {
+        const transactionData = {
+          user_id: user.id,
+          title: loan.type === 'payable' ? 'Bayar Hutang' : 'Terima Pembayaran Piutang',
+          amount: data.amount,
+          type: loan.type === 'payable' ? 'expense' : 'income',
+          date: data.payment_date,
+          category: categoryName, // Gunakan nama kategori yang sama dengan saat penambahan hutang/piutang
+          wallet_id: data.wallet_id,
+          description: `${loan.type === 'payable' ? 'Pembayaran hutang' : 'Penerimaan piutang'} untuk ${loan.description || ''}${data.description ? ': ' + data.description : ''}`
+        };
         
-      if (transactionError) throw transactionError;
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .insert(transactionData);
+          
+        if (transactionError) {
+          console.error("Error creating payment transaction:", transactionError);
+          toast.warning("Pembayaran berhasil tetapi gagal mencatat transaksi. Saldo dompet telah diperbarui.");
+        }
+      } catch (transactionErr) {
+        console.error("Error in payment transaction:", transactionErr);
+        toast.warning("Pembayaran berhasil tetapi gagal mencatat transaksi");
+      }
 
       toast({
         title: 'Pembayaran Berhasil',
@@ -210,11 +237,12 @@ const LoanPaymentPage = () => {
       });
 
       navigate('/loans');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error processing payment:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat memproses pembayaran';
       toast({
         title: 'Gagal Memproses Pembayaran',
-        description: error.message,
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

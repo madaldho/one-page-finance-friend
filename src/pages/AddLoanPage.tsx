@@ -1,256 +1,222 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
 import { supabase } from '@/integrations/supabase/client';
-import { Loan, Wallet } from '@/types';
-import { ChevronLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useUser } from '@/hooks/useUser';
+import { useEffect } from 'react';
+import { Wallet } from '@/types';
+import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { formatCurrency } from '@/lib/utils';
-import { format } from 'date-fns';
-import { CurrencyInput } from '@/components/ui/currency-input';
-
-interface LoanFormData {
-  amount: number;
-  due_date: string;
-  status: 'unpaid' | 'paid' | 'partial';
-  lender?: string;  // untuk hutang
-  borrower?: string;  // untuk piutang
-  description: string;
-  wallet_id: string;
-}
 
 const AddLoanPage = () => {
-  const { type } = useParams<{ type: 'debt' | 'receivable' }>();  // debt = hutang, receivable = piutang
+  const [formData, setFormData] = useState({
+    description: '',
+    amount: '',
+    borrower: '',
+    dueDate: '',
+    wallet_id: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { user } = useUser();
   const [wallets, setWallets] = useState<Wallet[]>([]);
 
-  const { register, handleSubmit, setValue, formState: { errors }, watch } = useForm<LoanFormData>({
-    defaultValues: {
-      amount: 0,
-      due_date: new Date().toISOString().split('T')[0],
-      status: 'unpaid',
-      description: '',
-      wallet_id: ''
-    }
-  });
-
   useEffect(() => {
-    if (user) {
-      fetchWallets();
-    }
-  }, [user]);
+    const fetchWallets = async () => {
+      if (user) {
+        const { data, error } = await supabase
+          .from('wallets')
+          .select('*')
+          .eq('user_id', user.id);
 
-  const fetchWallets = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user?.id);
+        if (error) {
+          console.error("Error fetching wallets:", error);
+        }
 
-      if (error) throw error;
-      setWallets(data || []);
-    } catch (error: any) {
-      console.error('Error fetching wallets:', error);
-      toast({
-        title: 'Gagal memuat dompet',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const onSubmit = async (data: LoanFormData) => {
-    if (!user) return;
-    setLoading(true);
-
-    try {
-      // Prepare loan data
-      const loanData: Partial<Loan> = {
-        user_id: user.id,
-        amount: data.amount,
-        due_date: data.due_date,
-        type: type === 'debt' ? 'payable' : 'receivable',
-        status: 'unpaid',
-        description: data.description || '',
-        ...(type === 'debt' ? { lender: data.lender } : { borrower: data.borrower })
-      };
-
-      // Insert to database
-      const { data: newLoan, error } = await supabase
-        .from('loans')
-        .insert(loanData)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update wallet balance if debt (uang masuk ke dompet) or receivable (uang keluar dari dompet)
-      if (data.wallet_id) {
-        const selectedWallet = wallets.find(w => w.id === data.wallet_id);
-        if (selectedWallet) {
-          // Untuk hutang, tambah saldo karena menerima uang
-          // Untuk piutang, kurangi saldo karena memberi uang
-          const newBalance = type === 'debt' 
-            ? selectedWallet.balance + data.amount 
-            : selectedWallet.balance - data.amount;
-          
-          const { error: walletError } = await supabase
-            .from('wallets')
-            .update({ balance: newBalance })
-            .eq('id', data.wallet_id);
-            
-          if (walletError) throw walletError;
-          
-          // Catat transaksi
-          const transactionData = {
-            user_id: user.id,
-            title: data.description,
-            amount: data.amount,
-            type: type === 'debt' ? 'income' : 'expense',
-            date: format(new Date(), 'yyyy-MM-dd'),
-            category: type === 'debt' ? 'Hutang' : 'Piutang',
-            wallet_id: data.wallet_id,
-            description: type === 'debt' 
-              ? `Pinjaman dari ${data.lender}`
-              : `Pinjaman kepada ${data.borrower}`
-          };
-          
-          const { error: transactionError } = await supabase
-            .from('transactions')
-            .insert(transactionData);
-            
-          if (transactionError) throw transactionError;
+        if (data) {
+          setWallets(data);
         }
       }
+    };
 
-      toast({
-        title: 'Berhasil',
-        description: `${type === 'debt' ? 'Hutang' : 'Piutang'} baru telah ditambahkan`,
-      });
+    fetchWallets();
+  }, [user]);
 
+  const handleChange = (e: any) => {
+    const { name, value } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Make sure we have a numeric amount
+      if (!formData.amount || isNaN(parseFloat(formData.amount.toString()))) {
+        toast.error("Please enter a valid amount");
+        setIsLoading(false);
+        return;
+      }
+
+      const amount = parseFloat(formData.amount.toString());
+
+      // Ensure we send required fields and convert amount to number
+      const loanData = {
+        ...formData,
+        amount: amount,
+        type: 'receivable',
+        status: 'unpaid',
+        user_id: user!.id
+      };
+
+      const { data, error } = await supabase
+        .from('loans')
+        .insert(loanData)
+        .select();
+
+      if (error) throw error;
+      
+      // Buat transaksi untuk mencatat piutang ini ke dalam daftar transaksi
+      // Gunakan try-catch terpisah agar kegagalan transaksi tidak menggagalkan seluruh proses
+      try {
+        const transactionData = {
+          user_id: user!.id,
+          title: formData.description,
+          amount: amount,
+          type: 'expense', // Piutang adalah expense untuk wallet (uang keluar)
+          date: new Date().toISOString().split('T')[0], // Today's date
+          category: 'Piutang', 
+          wallet_id: formData.wallet_id,
+          description: `Pinjaman kepada ${formData.borrower}`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        // Coba update saldo wallet secara manual jika transaksi gagal dibuat
+        const { data: walletData, error: walletFetchError } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('id', formData.wallet_id)
+          .single();
+          
+        if (!walletFetchError && walletData) {
+          // Update saldo wallet dengan mengurangkan jumlah piutang (expense)
+          await supabase
+            .from('wallets')
+            .update({ balance: walletData.balance - amount })
+            .eq('id', formData.wallet_id);
+        }
+        
+        // Coba buat transaksi (mungkin akan gagal karena trigger)
+        const { error: transactionError } = await supabase
+          .from('transactions')
+          .insert(transactionData);
+          
+        if (transactionError) {
+          console.error("Error creating transaction record:", transactionError);
+          toast.warning("Piutang berhasil ditambahkan tetapi gagal mencatatnya sebagai transaksi. Saldo dompet sudah diperbarui.");
+        }
+      } catch (transactionErr) {
+        console.error("Error in transaction processing:", transactionErr);
+        toast.warning("Piutang berhasil ditambahkan tetapi gagal mencatatnya sebagai transaksi");
+      }
+      
+      toast.success("Piutang berhasil ditambahkan");
       navigate('/loans');
-    } catch (error: any) {
-      console.error('Error saving loan:', error);
-      toast({
-        title: 'Gagal Menyimpan',
-        description: error.message,
-        variant: 'destructive'
-      });
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Gagal menambahkan piutang");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex flex-col z-50">
-      <div className="bg-white rounded-t-xl flex-1 overflow-y-auto">
-        <div className="sticky top-0 bg-white z-10 flex items-center justify-between border-b p-4">
-          <button onClick={() => navigate(-1)} className="p-1" title="Kembali">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h2 className="font-semibold">
-            Tambah {type === 'debt' ? 'Hutang' : 'Piutang'} Baru
-          </h2>
-          <div className="w-6"></div>
+    <div className="container mx-auto mt-10">
+      <h2 className="text-2xl font-bold mb-5">Add Receivable</h2>
+      <form onSubmit={handleSubmit} className="max-w-md">
+        <div className="mb-4">
+          <Label htmlFor="description">Description</Label>
+          <Input
+            type="text"
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+        </div>
+        <div className="mb-4">
+          <Label htmlFor="amount">Amount</Label>
+          <Input
+            type="number"
+            id="amount"
+            name="amount"
+            value={formData.amount}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+        </div>
+        <div className="mb-4">
+          <Label htmlFor="borrower">Borrower</Label>
+          <Input
+            type="text"
+            id="borrower"
+            name="borrower"
+            value={formData.borrower}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
+        </div>
+        <div className="mb-4">
+          <Label htmlFor="dueDate">Due Date</Label>
+          <Input
+            type="date"
+            id="dueDate"
+            name="dueDate"
+            value={formData.dueDate}
+            onChange={handleChange}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          />
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Jumlah</label>
-            <CurrencyInput
-              showPrefix={true}
-              value={watch('amount')}
-              onChange={(value) => setValue('amount', value)}
-              placeholder="0"
-              error={errors.amount?.message}
-            />
-          </div>
+        <div className="mb-4">
+          <Label htmlFor="wallet_id">Wallet</Label>
+          <Select onValueChange={(value) => setFormData({ ...formData, wallet_id: value })}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select a wallet" />
+            </SelectTrigger>
+            <SelectContent>
+              {wallets.map((wallet) => (
+                <SelectItem key={wallet.id} value={wallet.id}>
+                  {wallet.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Dompet {type === 'debt' ? 'Tujuan' : 'Sumber'}</label>
-            <Select
-              onValueChange={(value) => setValue('wallet_id', value)}
-              {...register('wallet_id', { required: 'Pilih dompet' })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih Dompet" />
-              </SelectTrigger>
-              <SelectContent>
-                {wallets.map(wallet => (
-                  <SelectItem key={wallet.id} value={wallet.id}>
-                    {wallet.name} ({formatCurrency(wallet.balance)})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.wallet_id && (
-              <p className="text-sm text-red-500 mt-1">{errors.wallet_id.message}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              {type === 'debt' 
-                ? 'Dompet dimana uang pinjaman masuk' 
-                : 'Dompet yang digunakan untuk memberikan pinjaman'}
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Jatuh Tempo</label>
-            <Input
-              type="date"
-              {...register('due_date', { required: 'Tanggal jatuh tempo harus diisi' })}
-              error={errors.due_date?.message}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              {type === 'debt' ? 'Pemberi Pinjaman' : 'Peminjam'}
-            </label>
-            <Input
-              {...register(type === 'debt' ? 'lender' : 'borrower', { 
-                required: `${type === 'debt' ? 'Pemberi pinjaman' : 'Peminjam'} harus diisi` 
-              })}
-              placeholder={type === 'debt' ? 'Nama pemberi pinjaman' : 'Nama peminjam'}
-              error={errors[type === 'debt' ? 'lender' : 'borrower']?.message}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Catatan</label>
-            <Input
-              {...register('description', { required: 'Catatan harus diisi sebagai judul hutang/piutang' })}
-              placeholder="Tambahkan catatan (akan digunakan sebagai judul)"
-              error={errors.description?.message}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate(-1)}
-            >
-              Batal
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className={type === 'debt' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}
-            >
-              {loading ? 'Menyimpan...' : 'Simpan'}
-            </Button>
-          </div>
-        </form>
-      </div>
+        <div className="flex items-center justify-between">
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            {isLoading ? 'Adding...' : 'Add Receivable'}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 };
 
-export default AddLoanPage; 
+export default AddLoanPage;

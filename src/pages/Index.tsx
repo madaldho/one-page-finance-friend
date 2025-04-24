@@ -19,8 +19,22 @@ import {
   User,
   DollarSign,
   CircleDollarSign,
+  Loader2,
+  ArrowUpRight,
+  ArrowDownRight,
+  ListFilter,
+  Store,
+  Coffee,
+  Car,
+  ShoppingBag,
+  Film,
+  Heart,
+  GraduationCap,
+  FileText,
+  Umbrella,
+  Percent
 } from "lucide-react";
-import { Transaction, Wallet, Budget, Loan, Saving } from "@/types";
+import { Transaction, Wallet, Budget, Loan, Saving, Category } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
@@ -43,6 +57,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 interface UserSettings {
   id: string;
@@ -64,6 +86,7 @@ const Index = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [savings, setSavings] = useState<Saving[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,6 +104,25 @@ const Index = () => {
   });
 
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
+
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [currentStats, setCurrentStats] = useState<Array<{
+    id?: string;
+    name?: string;
+    title?: string;
+    category?: string;
+    category_id?: string;
+    amount?: number;
+    count?: number;
+    percentage?: number;
+    date?: string;
+    type?: string;
+    wallet_id?: string;
+    wallet_name?: string;
+    icon?: string;
+    color?: string;
+  }>>([]);
+  const [currentStatType, setCurrentStatType] = useState<string>("expenses");
 
   useEffect(() => {
     if (!user) return;
@@ -168,6 +210,18 @@ const Index = () => {
         console.error("Loans fetch error:", loansError);
       } else {
         setLoans(loansData as Loan[]);
+      }
+
+      // Ambil data kategori
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (categoriesError) {
+        console.error("Categories fetch error:", categoriesError);
+      } else {
+        setCategories(categoriesData as Category[]);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -293,6 +347,178 @@ const Index = () => {
 
   const handleEditWallet = (wallet: Wallet) => {
     navigate(`/wallet/edit/${wallet.id}`);
+  };
+
+  const loadTopStatistics = async (type: string) => {
+    setIsLoadingStats(true);
+    setCurrentStatType(type);
+
+    try {
+      let statsData: Array<{
+        id?: string;
+        name?: string;
+        description?: string;
+        title?: string;
+        category?: string;
+        category_id?: string;
+        amount?: number;
+        count?: number;
+        percentage?: number;
+        date?: string;
+        type?: string;
+        wallet_id?: string;
+        wallet_name?: string;
+        icon?: string;
+        color?: string;
+      }> = [];
+
+      // Menggunakan if-else sebagai pengganti switch-case
+      if (type === "expenses") {
+        // Ambil pengeluaran terbesar
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("type", "expense")
+          .order("amount", { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+        statsData = data || [];
+      } 
+      else if (type === "income") {
+        // Ambil pemasukan terbesar
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("type", "income")
+          .order("amount", { ascending: false })
+          .limit(5);
+
+        if (error) throw error;
+        statsData = data || [];
+      } 
+      else if (type === "wallets") {
+        // Hitung manual jumlah transaksi per dompet
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("user_id", user.id)
+          .not("wallet_id", "is", null);
+
+        if (error) throw error;
+        
+        // Hitung jumlah transaksi untuk setiap dompet
+        const walletCount: Record<string, number> = {};
+        data.forEach(tx => {
+          if (tx.wallet_id) {
+            walletCount[tx.wallet_id] = (walletCount[tx.wallet_id] || 0) + 1;
+          }
+        });
+        
+        // Konversi ke array, urutkan, dan ambil 5 teratas
+        const topWallets = Object.entries(walletCount)
+          .map(([walletId, count]) => {
+            // Temukan nama dompet berdasarkan ID
+            const wallet = wallets.find(w => w.id === walletId);
+            return {
+              id: walletId,
+              name: wallet?.name || "Dompet tidak ditemukan",
+              count,
+              color: wallet?.color || null
+            };
+          })
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        statsData = topWallets;
+      }
+
+      // Konversi data ke format yang seragam untuk ditampilkan
+      const formattedStats = statsData.map(item => ({
+        id: item.id,
+        name: item.name || item.description || item.category || item.title || "Tidak ada nama",
+        amount: item.amount,
+        count: item.count,
+        percentage: item.percentage || null,
+        date: item.date,
+        type: item.type,
+        wallet_id: item.wallet_id,
+        wallet_name: item.wallet_name,
+        category: item.category,
+        icon: item.icon,
+        color: item.color
+      }));
+
+      setCurrentStats(formattedStats);
+    } catch (error) {
+      console.error("Error loading top statistics:", error);
+      toast({
+        title: "Gagal Memuat Statistik",
+        description: "Terjadi kesalahan saat memuat statistik",
+        variant: "destructive",
+      });
+      setCurrentStats([]);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  // Load statistik saat pertama kali komponen dimuat
+  useEffect(() => {
+    if (user) {
+      loadTopStatistics("expenses");
+    }
+  }, [user]);
+
+  const getStatItemColor = (item: typeof currentStats[0], type: string) => {
+    if (type === "expenses") {
+      return "#ef4444"; // merah
+    } else if (type === "income") {
+      return "#10b981"; // hijau
+    } else if (type === "wallets") {
+      // Gunakan warna dari item jika tersedia
+      if (item.color) {
+        return item.color;
+      }
+      
+      // Cari warna dari wallet berdasarkan ID
+      const walletId = item.id || item.wallet_id;
+      if (walletId) {
+        const wallet = wallets.find(w => w.id === walletId);
+        if (wallet) {
+          return wallet.color || "#3b82f6"; // Gunakan warna dompet jika ada
+        }
+      }
+      return "#3b82f6"; // Default biru
+    } else {
+      return "#f59e0b"; // amber
+    }
+  };
+
+  const getStatItemIcon = (item: typeof currentStats[0], type: string) => {
+    if (type === "expenses") {
+      return <ArrowUpRight className="w-4 h-4" />;
+    } else if (type === "income") {
+      return <ArrowDownRight className="w-4 h-4" />;
+    } else if (type === "wallets") {
+      // Gunakan ikon default untuk dompet
+      return <WalletIcon className="w-4 h-4" />;
+    } else {
+      return <Store className="w-4 h-4" />;
+    }
+  };
+
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return "";
+    
+    const date = new Date(dateStr);
+    return new Intl.DateTimeFormat('id-ID', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    }).format(date);
   };
 
   return (
@@ -516,35 +742,100 @@ const Index = () => {
             </section>
           )}
 
-          {/* Transactions List Section */}
+          {/* Transactions List Section menjadi Top Statistics Section */}
           <section className="mb-20">
             <Card>
               <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b p-4 flex flex-row items-center justify-between">
                 <div className="flex items-center">
-                  <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center mr-2">
-                    <span className="text-xs text-gray-700 font-bold">T</span>
+                  <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
+                    <span className="text-xs text-blue-700 font-bold">S</span>
                   </div>
                   <CardTitle className="text-base font-medium text-gray-800">
-                    Transaksi Terbaru
+                    Statistik Teratas
                   </CardTitle>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-gray-600 hover:text-gray-700 p-0 flex items-center"
-                  onClick={() => navigate("/transactions")}>
-                  Lihat Semua <ChevronRight className="h-3 w-3 ml-1" />
-                </Button>
+                <Select
+                  defaultValue="expenses"
+                  onValueChange={(value) => loadTopStatistics(value)}
+                >
+                  <SelectTrigger className="w-[180px] h-8 text-xs">
+                    <SelectValue placeholder="Pilih statistik" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expenses">Pengeluaran Terbesar</SelectItem>
+                    <SelectItem value="income">Pemasukan Terbesar</SelectItem>
+                    <SelectItem value="wallets">Dompet Paling Sering Digunakan</SelectItem>
+                  </SelectContent>
+                </Select>
               </CardHeader>
-              <CardContent className="p-1 sm:p-4">
-                <TransactionList
-                  transactions={transactions.slice(0, 5)}
-                  onFilter={handleFilterTransactions}
-                  onDelete={handleDeleteTransaction}
-                  onEdit={handleEditTransaction}
-                  onDateRangeChange={handleDateRangeChange}
-                  hideHeader={true}
-                />
+              <CardContent className="p-4">
+                {isLoadingStats ? (
+                  <div className="flex justify-center items-center h-32">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  </div>
+                ) : currentStats.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Tidak ada data statistik yang tersedia</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
+                      {currentStatType === "expenses" && <ArrowUpRight className="w-4 h-4 mr-1.5 text-red-500" />}
+                      {currentStatType === "income" && <ArrowDownRight className="w-4 h-4 mr-1.5 text-green-500" />}
+                      {currentStatType === "wallets" && <WalletIcon className="w-4 h-4 mr-1.5 text-blue-500" />}
+                      {currentStatType === "expenses" && "5 Pengeluaran Terbesar"}
+                      {currentStatType === "income" && "5 Pemasukan Terbesar"}
+                      {currentStatType === "wallets" && "5 Dompet Paling Sering Digunakan"}
+                    </h3>
+                    {currentStats.map((item, index) => (
+                      <div 
+                        key={index} 
+                        className={`flex items-center justify-between p-3.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors`}
+                      >
+                        <div className="flex items-center w-3/4">
+                          <div 
+                            className={`w-11 h-11 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm`}
+                            style={{ 
+                              background: `linear-gradient(to right, ${getStatItemColor(item, currentStatType)}, ${getStatItemColor(item, currentStatType)}dd)`,
+                              color: 'white'
+                            }}
+                          >
+                            {getStatItemIcon(item, currentStatType)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className={`font-medium text-gray-800 truncate`}>
+                              {item.name || item.title || item.category || "Tidak ada nama"}
+                            </p>
+                            {item.date && (
+                              <p className="text-xs text-gray-500 mt-0.5">{formatDate(item.date)}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right w-1/4 flex-shrink-0">
+                          <p className={cn(
+                            "font-semibold text-sm sm:text-base whitespace-nowrap",
+                            currentStatType === 'expenses' ? "text-red-600" : 
+                            currentStatType === 'income' ? "text-green-600" :
+                            currentStatType === 'wallets' ? "text-blue-600" : "text-gray-900"
+                          )}>
+                            {item.amount 
+                              ? formatCurrency(item.amount) 
+                              : <>
+                                  <span className={`font-bold`}>
+                                    {item.count || 0}
+                                  </span>
+                                  <span className="text-xs text-gray-500 ml-1">transaksi</span>
+                                </>
+                            }
+                          </p>
+                          {item.percentage && (
+                            <p className="text-xs text-gray-500 mt-0.5">{item.percentage}% dari total</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </section>

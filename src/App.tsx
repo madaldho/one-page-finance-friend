@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
@@ -37,6 +36,8 @@ import AssetDetailPage from './pages/AssetDetailPage';
 import AddAssetPage from './pages/AddAssetPage';
 import EditAssetPage from './pages/EditAssetPage';
 import UpdateAssetValuePage from './pages/UpdateAssetValuePage';
+import SellAssetPage from './pages/SellAssetPage';
+import AssetTransactionsPage from './pages/AssetTransactionsPage';
 
 // Create a wrapper component to handle auth redirects
 const AuthRedirect = () => {
@@ -250,6 +251,21 @@ function App() {
           <Route path="/assets/:id/update" element={
             <ProtectedRoute>
               <UpdateAssetValuePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/assets/sell/:id" element={
+            <ProtectedRoute>
+              <SellAssetPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/assets/transactions/:id" element={
+            <ProtectedRoute>
+              <AssetTransactionsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/assets/transactions" element={
+            <ProtectedRoute>
+              <AssetTransactionsPage />
             </ProtectedRoute>
           } />
           <Route path="*" element={<NotFound />} />

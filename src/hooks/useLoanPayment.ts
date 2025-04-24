@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loan } from '@/types';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/format';
+import { toast as sonnerToast } from 'sonner';
 
 export const useLoanPayment = () => {
   const { user } = useAuth();
@@ -169,4 +171,4 @@ export const useLoanPayment = () => {
     paymentProcessing,
     handlePayment
   };
-}; 
+};

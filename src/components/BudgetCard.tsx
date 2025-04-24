@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Budget } from "@/types";
+import { Budget } from "@/types/index";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
 import { ChevronRight, X, AlertCircle, Wallet, BarChart3, ArrowUpDown, Plus } from "lucide-react";
@@ -51,13 +51,19 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
         const startDate = new Date(budget.start_date);
         const endDate = budget.end_date ? new Date(budget.end_date) : new Date();
         
-        const { data, error } = await supabase
+        let query = supabase
           .from("transactions")
           .select("amount")
-          .eq("category", budget.category)
           .eq("type", "expense")
           .gte("date", startDate.toISOString().split('T')[0])
           .lte("date", endDate.toISOString().split('T')[0]);
+        
+        // Hanya filter berdasarkan kategori jika bukan "all"
+        if (budget.category !== "all") {
+          query = query.eq("category", budget.category);
+        }
+        
+        const { data, error } = await query;
           
         if (error) throw error;
         
