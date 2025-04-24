@@ -1,78 +1,42 @@
-import { useState } from "react";
+import React from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  ArrowUpRight,
-  Check,
-  Lock,
-  X,
-  Award,
-  CalendarClock,
-  CreditCard,
-  Wallet,
-  PiggyBank,
-  BarChart3,
-  ArrowRightLeft,
-  FileText,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, Lock, Star, ArrowUpRight, X, Award, CheckCheck } from "lucide-react";
 
 interface UpgradeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  feature?: "savings" | "budget" | "loans" | "analysis" | "wallets" | "transactions";
-  onContinueWithFree?: () => void;
+  feature: "budget" | "loan" | "saving" | "analysis" | "assets";
+  onUpgrade: () => void;
+  onStayFree?: () => void;
 }
 
 const UpgradeModal = ({
   open,
   onOpenChange,
   feature,
-  onContinueWithFree,
+  onUpgrade,
+  onStayFree,
 }: UpgradeModalProps) => {
-  const navigate = useNavigate();
-  const [selectedPlan, setSelectedPlan] = useState<"pro_6m" | "pro_12m">("pro_12m");
-
-  const getFeatureIcon = (feature: string) => {
-    switch (feature) {
-      case "savings":
-        return <PiggyBank className="h-5 w-5 text-blue-500" />;
-      case "budget":
-        return <BarChart3 className="h-5 w-5 text-purple-500" />;
-      case "loans":
-        return <ArrowRightLeft className="h-5 w-5 text-amber-500" />;
-      case "analysis":
-        return <FileText className="h-5 w-5 text-green-500" />;
-      case "wallets":
-        return <Wallet className="h-5 w-5 text-indigo-500" />;
-      case "transactions":
-        return <CreditCard className="h-5 w-5 text-pink-500" />;
-      default:
-        return <Award className="h-5 w-5 text-blue-500" />;
-    }
-  };
-
   const getFeatureTitle = () => {
     switch (feature) {
-      case "savings":
-        return "Fitur Tabungan";
       case "budget":
-        return "Fitur Penganggaran";
-      case "loans":
-        return "Fitur Hutang & Piutang";
+        return "Budget Management";
+      case "loan":
+        return "Hutang & Piutang";
+      case "saving":
+        return "Tabungan";
       case "analysis":
-        return "Fitur Analisis Lanjutan";
-      case "wallets":
-        return "Dompet Tak Terbatas";
-      case "transactions":
-        return "Riwayat Transaksi Lengkap";
+        return "Analisis Keuangan Lanjutan";
+      case "assets":
+        return "Manajemen Aset";
       default:
         return "Fitur Premium";
     }
@@ -80,162 +44,137 @@ const UpgradeModal = ({
 
   const getFeatureDescription = () => {
     switch (feature) {
-      case "savings":
-        return "Kelola dan pantau target tabungan Anda untuk mencapai tujuan finansial.";
       case "budget":
-        return "Atur anggaran pengeluaran untuk mengontrol keuangan dengan lebih baik.";
-      case "loans":
-        return "Catat dan kelola hutang serta piutang Anda agar tidak terlewat.";
+        return "Rencanakan keuangan Anda dengan lebih baik menggunakan fitur Budget Management yang membantu mengontrol pengeluaran dan mencapai target finansial Anda.";
+      case "loan":
+        return "Kelola hutang dan piutang dengan mudah, termasuk pengingat jatuh tempo, histori pembayaran, dan perhitungan bunga otomatis.";
+      case "saving":
+        return "Buat target tabungan dengan progres visual, jadwal menabung otomatis, dan notifikasi ketika target hampir tercapai.";
       case "analysis":
-        return "Akses analisis keuangan tanpa batasan untuk mengevaluasi kondisi finansial.";
-      case "wallets":
-        return "Buat dan kelola lebih dari 3 dompet untuk mengorganisir keuangan lebih rapi.";
-      case "transactions":
-        return "Lihat dan analisis riwayat transaksi lengkap tanpa batasan waktu.";
+        return "Dapatkan wawasan mendalam tentang pola keuangan Anda dengan grafik dan analisis lanjutan untuk pengambilan keputusan yang lebih baik.";
+      case "assets":
+        return "Pantau semua aset Anda seperti properti, investasi, dan lainnya dalam satu tampilan yang komprehensif dengan perhitungan nilai kekayaan bersih.";
       default:
-        return "Nikmati semua fitur premium untuk mengelola keuangan dengan lebih efektif.";
+        return "Akses fitur premium ini untuk mengoptimalkan pengelolaan keuangan Anda dengan lebih baik.";
     }
-  };
-
-  const handleUpgrade = (plan: "pro_6m" | "pro_12m") => {
-    // Kirim via WhatsApp
-    const planText = plan === "pro_6m" ? "6 Bulan" : "12 Bulan";
-    const message = `Halo, saya ingin upgrade ke paket Pro ${planText} untuk menggunakan fitur premium di aplikasi Money Friend.`;
-    const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-    onOpenChange(false);
-  };
-
-  const handleContinueWithFree = () => {
-    if (onContinueWithFree) {
-      onContinueWithFree();
-    }
-    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md md:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-2 mb-2">
-            {getFeatureIcon(feature || "")}
-            <DialogTitle className="text-lg">{getFeatureTitle()}</DialogTitle>
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        <div className="bg-gradient-to-br from-purple-600 to-indigo-600 pt-6 pb-8 px-5 text-white">
+          <div className="absolute top-3 right-3">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="text-white/70 hover:text-white transition-colors rounded-full"
+              title="Tutup dialog"
+              aria-label="Tutup dialog"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
-          <DialogDescription className="text-base">
+          
+          <div className="flex items-center gap-3 mb-3">
+            <div className="bg-white/20 p-2 rounded-full">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <Badge className="bg-white/25 hover:bg-white/30 text-white border-0 mb-1">
+                Premium Feature
+              </Badge>
+              <h2 className="text-xl font-bold">{getFeatureTitle()}</h2>
+            </div>
+          </div>
+
+          <p className="text-white/80 text-sm leading-relaxed">
             {getFeatureDescription()}
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </div>
 
-        <div className="py-3">
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-3 rounded-lg mb-5 border border-indigo-100">
-            <h3 className="font-semibold text-indigo-800 mb-2 flex items-center gap-2">
-              <Lock className="w-4 h-4" /> Fitur Ini Hanya Untuk Pengguna Pro
-            </h3>
-            <p className="text-sm text-indigo-700">
-              Upgrade ke Pro untuk membuka semua fitur premium dan meningkatkan
-              pengalaman pengelolaan keuangan Anda.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {/* Plan 12 Bulan */}
-            <div 
-              className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
-                selectedPlan === "pro_12m" 
-                  ? "border-2 border-orange-500 ring-2 ring-orange-200" 
-                  : "border-gray-200 hover:border-orange-200"
-              }`}
-              onClick={() => setSelectedPlan("pro_12m")}
-            >
-              <div className="relative">
-                <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white py-1 px-3 absolute right-0 top-0 text-xs font-bold transform rotate-0 origin-top-right">
-                  HEMAT 30%
-                </div>
-                <div className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-lg">Pro 12 Bulan</h3>
-                      <p className="text-sm text-gray-500 mt-1">Paket lengkap setahun</p>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <div className="text-sm text-gray-500 line-through">Rp214.800</div>
-                      <div className="text-xl font-bold">Rp150.000</div>
-                      <div className="text-xs text-orange-600 font-medium">Rp12.500/bulan</div>
-                    </div>
-                  </div>
+        <div className="p-5 space-y-5">
+          <div className="space-y-4">
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-4 rounded-lg border border-amber-100 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-20 h-20">
+                <div className="absolute transform rotate-45 bg-amber-500 text-white text-xs font-bold py-1 right-[-35px] top-[12px] w-[120px] text-center">
+                  POPULER
                 </div>
               </div>
+              
+              <h3 className="font-semibold flex items-center gap-1.5">
+                <Award className="h-4 w-4 text-amber-600" />
+                <span>Pro 12 Bulan</span>
+              </h3>
+              <div className="mt-1 mb-3">
+                <span className="text-2xl font-bold">Rp150.000</span>
+                <span className="text-sm text-gray-500 ml-1">/ tahun</span>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-xs bg-amber-100 text-amber-700 px-1 py-0.5 rounded-sm">HEMAT 50%</span>
+                  <p className="text-xs text-amber-600 font-medium">Hanya Rp12.500 per bulan</p>
+                </div>
+              </div>
+              <Button 
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={onUpgrade}
+              >
+                <span>Pilih Paket Ini</span>
+                <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
-
-            {/* Plan 6 Bulan */}
-            <div 
-              className={`border rounded-lg overflow-hidden cursor-pointer transition-all ${
-                selectedPlan === "pro_6m" 
-                  ? "border-2 border-orange-500 ring-2 ring-orange-200" 
-                  : "border-gray-200 hover:border-orange-200"
-              }`}
-              onClick={() => setSelectedPlan("pro_6m")}
-            >
-              <div className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-lg">Pro 6 Bulan</h3>
-                    <p className="text-sm text-gray-500 mt-1">Paket 6 bulan</p>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <div className="text-xl font-bold">Rp99.000</div>
-                    <div className="text-xs text-gray-500">Rp16.500/bulan</div>
-                  </div>
-                </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="font-semibold flex items-center gap-1.5">
+                <Star className="h-4 w-4 text-blue-600" />
+                <span>Pro 6 Bulan</span>
+              </h3>
+              <div className="mt-1 mb-3">
+                <span className="text-2xl font-bold">Rp99.000</span>
+                <span className="text-sm text-gray-500 ml-1">/ 6 bulan</span>
+                <p className="text-xs text-gray-500 mt-0.5">Rp16.500 per bulan</p>
               </div>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={onUpgrade}
+              >
+                Pilih Paket Ini
+              </Button>
             </div>
           </div>
 
-          <div className="mt-5 space-y-2">
-            <h4 className="font-medium text-gray-700">Keuntungan Paket Pro:</h4>
-            <ul className="space-y-2 text-sm">
-              <li className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <span>Dompet tak terbatas (tidak dibatasi 3)</span>
+          <div className="pt-2">
+            <h4 className="text-base font-medium mb-3">Semua Fitur Pro:</h4>
+            <ul className="space-y-2">
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
+                <span className="text-sm">Budget management untuk mengontrol keuangan</span>
               </li>
-              <li className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <span>Akses fitur Tabungan & Target</span>
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
+                <span className="text-sm">Kelola hutang & piutang dengan otomatis</span>
               </li>
-              <li className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <span>Akses fitur Penganggaran/Budgeting</span>
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
+                <span className="text-sm">Tabungan dengan target progress & reward</span>
               </li>
-              <li className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <span>Akses fitur Hutang & Piutang</span>
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
+                <span className="text-sm">Analisis lanjutan dan grafik performa keuangan</span>
               </li>
-              <li className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <span>Analisis keuangan tanpa batas</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                <span>Riwayat transaksi lengkap</span>
+              <li className="flex items-start">
+                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 mr-2 shrink-0" />
+                <span className="text-sm">Manajemen aset untuk melacak kekayaan</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col gap-3 sm:gap-0">
-          <Button 
-            onClick={() => handleUpgrade(selectedPlan)} 
-            className="bg-orange-500 hover:bg-orange-600 w-full text-white"
-          >
-            Upgrade Sekarang <ArrowUpRight className="ml-2 h-4 w-4" />
-          </Button>
-          
+        <DialogFooter className="bg-gray-50 px-5 py-3 border-t">
           <Button 
             variant="ghost" 
-            onClick={handleContinueWithFree}
-            className="text-gray-500 text-sm w-full"
+            className="text-gray-600 hover:text-gray-800 hover:bg-gray-200 text-xs"
+            onClick={onStayFree}
           >
-            Lanjutkan dengan Versi Gratis
+            Lanjutkan dengan versi gratis
           </Button>
         </DialogFooter>
       </DialogContent>

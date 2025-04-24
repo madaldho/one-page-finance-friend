@@ -32,17 +32,17 @@ const AddReceivablePage = () => {
     // Fetch wallets when component mounts
     const fetchWallets = async () => {
       if (user) {
-        const { data, error } = await supabase
-          .from('wallets')
+      const { data, error } = await supabase
+        .from('wallets')
           .select('*')
-          .eq('user_id', user.id);
+        .eq('user_id', user.id);
 
-        if (error) {
-          console.error("Error fetching wallets:", error);
+      if (error) {
+        console.error("Error fetching wallets:", error);
           toast.error("Gagal memuat daftar wallet");
         } else if (data) {
           setWallets(data);
-        }
+      }
       }
     };
 
@@ -159,7 +159,7 @@ const AddReceivablePage = () => {
         console.error("Error in transaction processing:", transactionErr);
         toast.warning("Piutang berhasil ditambahkan tetapi gagal mencatatnya sebagai transaksi");
       }
-
+      
       toast.success("Piutang berhasil ditambahkan");
       navigate('/loans');
     } catch (error) {
@@ -204,42 +204,42 @@ const AddReceivablePage = () => {
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="description">Deskripsi</Label>
-                <Input
-                  type="text"
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
+            <Label htmlFor="description">Deskripsi</Label>
+            <Input
+              type="text"
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
                   placeholder="Pinjaman untuk apa"
-                  required
-                />
-              </div>
+              required
+            />
+          </div>
               
               <div className="space-y-2">
-                <Label htmlFor="amount">Jumlah</Label>
+            <Label htmlFor="amount">Jumlah</Label>
                 <CurrencyInput
-                  id="amount"
-                  value={formData.amount}
+              id="amount"
+              value={formData.amount}
                   onChange={handleAmountChange}
                   showPrefix={true}
                   placeholder="0"
-                  required
-                />
-              </div>
+              required
+            />
+          </div>
               
               <div className="space-y-2">
-                <Label htmlFor="borrower">Peminjam</Label>
-                <Input
-                  type="text"
-                  id="borrower"
-                  name="borrower"
-                  value={formData.borrower}
-                  onChange={handleChange}
+            <Label htmlFor="borrower">Peminjam</Label>
+            <Input
+              type="text"
+              id="borrower"
+              name="borrower"
+              value={formData.borrower}
+              onChange={handleChange}
                   placeholder="Nama peminjam"
-                  required
-                />
-              </div>
+              required
+            />
+          </div>
               
               <div className="space-y-2">
                 <Label htmlFor="due_date">Tanggal Jatuh Tempo</Label>
@@ -271,12 +271,12 @@ const AddReceivablePage = () => {
                           <span className="ml-2 text-gray-500">
                             ({formatCurrency(selectedWallet.balance)})
                           </span>
-                        </div>
+          </div>
                       )}
                     </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {wallets.map(wallet => (
+              </SelectTrigger>
+              <SelectContent>
+                {wallets.map(wallet => (
                       <SelectItem key={wallet.id} value={wallet.id}>
                         <div className="flex items-center">
                           <div 
@@ -289,13 +289,13 @@ const AddReceivablePage = () => {
                           </span>
                         </div>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                ))}
+              </SelectContent>
+            </Select>
                 <p className="text-xs text-gray-500">
                   Piutang akan mengurangi saldo dompet yang dipilih
                 </p>
-              </div>
+          </div>
               
               <div className="pt-4 grid grid-cols-2 gap-3">
                 <Button 
@@ -313,12 +313,12 @@ const AddReceivablePage = () => {
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   {isLoading ? "Memproses..." : "Simpan Piutang"}
-                </Button>
-              </div>
-            </form>
+          </Button>
+        </div>
+      </form>
           </CardContent>
         </Card>
-      </div>
+    </div>
     </Layout>
   );
 };

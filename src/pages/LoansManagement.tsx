@@ -83,7 +83,7 @@ const LoansManagement = () => {
         
         // Refresh data after all updates are complete
         await fetchData();
-      } catch (error) {
+    } catch (error) {
         console.error("Error syncing wallet names:", error);
       }
     }
@@ -220,20 +220,20 @@ const LoansManagement = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button 
-            size="sm"
+            <Button 
+              size="sm"
             className={cn(
               "text-white",
               activeTab === "hutang" ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
             )}
-            asChild
-          >
+              asChild
+            >
             <Link to={activeTab === "hutang" ? "/loans/add-debt" : "/loans/add-receivable"}>
-              <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-4 w-4 mr-1" />
               {activeTab === "hutang" ? "Tambah Hutang" : "Tambah Piutang"}
-            </Link>
-          </Button>
-        </div>
+              </Link>
+            </Button>
+          </div>
 
         {/* Content Container */}
         <div 
@@ -250,28 +250,28 @@ const LoansManagement = () => {
               }
             </h2>
 
-            {loading ? (
-              <div className="text-center py-8">
+          {loading ? (
+            <div className="text-center py-8">
                 <p>Memuat data...</p>
-              </div>
+            </div>
             ) : emptyList ? (
-              <div className="text-center py-8 bg-white rounded-lg">
-                <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+            <div className="text-center py-8 bg-white rounded-lg">
+              <FileText className="h-12 w-12 mx-auto text-gray-300 mb-3" />
                 <p>Tidak ada {activeTab === "hutang" ? "hutang" : "piutang"} yang ditemukan.</p>
-              </div>
-            ) : (
+            </div>
+          ) : (
               <div className="space-y-3">
                 {filteredLoansList.map((loan) => (
                   <LoanCard
-                    key={loan.id} 
+                      key={loan.id} 
                     loan={loan}
                     onDelete={handleDeleteClick}
                     isExpanded={expandedLoanId === loan.id}
                     onToggleExpand={handleToggleExpand}
                   />
                 ))}
-              </div>
-            )}
+            </div>
+          )}
           </div>
         </div>
 
@@ -287,21 +287,21 @@ const LoansManagement = () => {
               <p className="text-sm text-gray-500 mt-2">
                 {selectedLoan?.description} - {selectedLoan?.amount.toLocaleString()}
               </p>
-            </div>
+                            </div>
             <div className="flex justify-end gap-2">
-              <Button 
+                              <Button 
                 variant="outline"
                 onClick={() => setDeleteDialogOpen(false)}
               >
                 Batal
-              </Button>
-              <Button 
-                variant="destructive"
+                              </Button>
+                            <Button 
+                              variant="destructive"
                 onClick={handleConfirmDelete}
-              >
-                Hapus
-              </Button>
-            </div>
+                            >
+                              Hapus
+                            </Button>
+                          </div>
           </DialogContent>
         </Dialog>
       </div>
