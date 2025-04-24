@@ -8,6 +8,7 @@ import { Transaction, Category, Wallet } from "@/types";
 import { AnalysisHeader } from "@/components/analysis/AnalysisHeader";
 import { AnalysisFilters } from "@/components/analysis/AnalysisFilters";
 import FinancialSummary from "@/components/FinancialSummary";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 
 interface TransactionWithNames extends Transaction {
   wallet_name?: string;
@@ -227,32 +228,32 @@ const Analysis = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-24 max-w-7xl">
-        <AnalysisHeader
-          onRefresh={handleRefresh}
-          onExport={handleExportCSV}
-        />
+      <SubscriptionGuard feature="analysis">
+        <div className="container mx-auto p-4 pb-24 max-w-7xl">
+          <AnalysisHeader
+            onRefresh={handleRefresh}
+            onExport={handleExportCSV}
+          />
 
-        <AnalysisFilters
-          period={period}
-          setPeriod={setPeriod}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          transactionCount={filteredTransactions.length}
-        />
+          <AnalysisFilters
+            period={period}
+            setPeriod={setPeriod}
+            dateRange={dateRange}
+            setDateRange={setDateRange}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            transactionCount={filteredTransactions.length}
+          />
 
-    
-
-        <FinancialSummary
-          transactions={filteredTransactions}
-          categories={categories}
-          wallets={wallets}
-          showWalletData={true}
-          dateRange={dateRange}
-        />
-      </div>
+          <FinancialSummary
+            transactions={filteredTransactions}
+            categories={categories}
+            wallets={wallets}
+            showWalletData={true}
+            dateRange={dateRange}
+          />
+        </div>
+      </SubscriptionGuard>
     </Layout>
   );
 };

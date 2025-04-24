@@ -178,7 +178,7 @@ const WalletDetail = () => {
       const initialDateRange = getDateRangeFromPeriod('last-30');
       setDateRange(initialDateRange);
       setTempDateRange(initialDateRange);
-      fetchWalletAndTransactions();
+    fetchWalletAndTransactions();
     }
     
     // Handler untuk event perubahan saldo wallet
@@ -191,6 +191,7 @@ const WalletDetail = () => {
       
       // Periksa apakah wallet yang berubah adalah wallet yang sedang ditampilkan
       if (id === walletId) {
+        console.log(`Wallet balance updated: ${newBalance}`);
         // Perbarui state wallet dengan saldo baru
         setWallet(prevWallet => {
           if (!prevWallet) return null;
@@ -249,16 +250,16 @@ const WalletDetail = () => {
 
       // Semua query secara parallel untuk mempercepat loading
       const [categoriesResult, transactionsResult] = await Promise.all([
-        // Fetch categories
+      // Fetch categories
         supabase
-          .from('categories')
-          .select('*')
+        .from('categories')
+        .select('*')
           .eq('user_id', walletData?.user_id || ''),
 
-        // Fetch transactions
+      // Fetch transactions
         supabase
-          .from('transactions')
-          .select('*')
+        .from('transactions')
+        .select('*')
           .eq('wallet_id', id || '')
           .eq(filterType !== 'all' ? 'type' : 'user_id', filterType !== 'all' ? filterType : walletData.user_id)
           .order('date', { ascending: false })
@@ -304,9 +305,10 @@ const WalletDetail = () => {
       // Gunakan tipe yang sesuai dengan definisi Transaction
       setTransactions(transactionsWithCategories as Transaction[]);
     } catch (error) {
+      console.error('Error fetching data:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data wallet dan transaksi",
+        description: "Gagal memuat data wallet",
         variant: "destructive"
       });
     } finally {
@@ -353,6 +355,7 @@ const WalletDetail = () => {
       // Navigate back to home
       navigate('/home');
     } catch (error) {
+      console.error('Error deleting wallet:', error);
       toast({
         title: "Error",
         description: "Gagal menghapus dompet",
@@ -449,6 +452,7 @@ const WalletDetail = () => {
         .single();
         
       if (error) {
+        if (!quietMode) console.error("Error refreshing wallet balance:", error);
         if (showFeedback) toast({
           title: "Gagal menyegarkan saldo",
           description: "Terjadi kesalahan saat memuat saldo terbaru",
@@ -459,6 +463,8 @@ const WalletDetail = () => {
       
       // Jika saldo berubah, perbarui state
       if (data && wallet && data.balance !== wallet.balance) {
+        if (!quietMode) console.log(`Wallet balance changed: ${wallet.balance} -> ${data.balance}`);
+        
         // Update saldo wallet
         setWallet(prev => prev ? {...prev, balance: data.balance} : null);
         
@@ -473,11 +479,7 @@ const WalletDetail = () => {
         });
       }
     } catch (err) {
-      if (showFeedback) toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat menyegarkan saldo",
-        variant: "destructive"
-      });
+      if (!quietMode) console.error("Error in refreshWalletBalance:", err);
     } finally {
       if (showFeedback) setRefreshing(false);
     }
@@ -682,16 +684,16 @@ const WalletDetail = () => {
                     {/* Jenis Transaksi */}
                     <div className="space-y-2">
                       <label className="text-sm font-medium">Jenis Transaksi</label>
-                      <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense') => setFilterType(value)}>
+          <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense') => setFilterType(value)}>
                         <SelectTrigger className="bg-white border border-gray-200 rounded-lg h-9 w-full">
                           <SelectValue placeholder="Filter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Semua Transaksi</SelectItem>
-                          <SelectItem value="income">Pemasukan</SelectItem>
-                          <SelectItem value="expense">Pengeluaran</SelectItem>
-                        </SelectContent>
-                      </Select>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Transaksi</SelectItem>
+              <SelectItem value="income">Pemasukan</SelectItem>
+              <SelectItem value="expense">Pengeluaran</SelectItem>
+            </SelectContent>
+          </Select>
                     </div>
                     
                     {/* Filter Periode */}
@@ -730,17 +732,17 @@ const WalletDetail = () => {
                             <p className="text-xs text-gray-500">Dari</p>
                             <div className="relative">
                               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              <Input 
-                                type="date" 
+            <Input
+              type="date"
                                 className="pl-10"
                                 value={formatDateForInput(tempDateRange?.from)}
-                                onChange={(e) => {
+              onChange={(e) => {
                                   const from = e.target.value ? new Date(e.target.value) : undefined;
                                   setTempDateRange(prev => ({
                                     from: from,
-                                    to: prev?.to
-                                  }));
-                                }}
+                  to: prev?.to 
+                }));
+              }}
                               />
                             </div>
                           </div>
@@ -748,17 +750,17 @@ const WalletDetail = () => {
                             <p className="text-xs text-gray-500">Sampai</p>
                             <div className="relative">
                               <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                              <Input 
-                                type="date" 
+            <Input
+              type="date"
                                 className="pl-10"
                                 value={formatDateForInput(tempDateRange?.to)}
-                                onChange={(e) => {
+              onChange={(e) => {
                                   const to = e.target.value ? new Date(e.target.value) : undefined;
                                   setTempDateRange(prev => ({
-                                    from: prev?.from,
+                  from: prev?.from, 
                                     to: to
-                                  }));
-                                }}
+                }));
+              }}
                               />
                             </div>
                           </div>
@@ -838,6 +840,7 @@ const WalletDetail = () => {
 
                 fetchWalletAndTransactions();
               } catch (error) {
+                console.error("Error deleting transaction:", error);
                 toast({
                   variant: "destructive",
                   title: "Error",

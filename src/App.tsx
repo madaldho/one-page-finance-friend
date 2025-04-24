@@ -39,6 +39,12 @@ import UpdateAssetValuePage from './pages/UpdateAssetValuePage';
 import SellAssetPage from './pages/SellAssetPage';
 import AssetTransactionsPage from './pages/AssetTransactionsPage';
 
+// Admin Pages
+import AdminLogin from './pages/admin/Login';
+import AdminLayout from './components/admin/AdminLayout';
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminUsers from './pages/admin/Users';
+
 // Create a wrapper component to handle auth redirects
 const AuthRedirect = () => {
   const { user, isLoading } = useAuth();
@@ -103,6 +109,14 @@ function App() {
               <Index />
             </ProtectedRoute>
           } />
+          
+          {/* Admin Routes */}
+          <Route path="/admin123" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+          </Route>
+          
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />

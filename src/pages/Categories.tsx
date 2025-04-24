@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Pencil, Trash2, ArrowLeft, ChevronLeft, MoreHorizontal, Search, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowLeft, ChevronLeft, MoreHorizontal, Search, X, LockIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -34,6 +34,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 type Category = Database['public']['Tables']['categories']['Row'];
 
+interface UserProfile {
+  subscription_type?: string;
+  [key: string]: any;
+}
+
+const MAX_FREE_CATEGORIES = 10;
+
 const Categories = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -46,10 +53,34 @@ const Categories = () => {
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [upgradeDialog, setUpgradeDialog] = useState(false);
 
   useEffect(() => {
-    fetchCategories();
+    if (user) {
+      fetchCategories();
+      fetchUserProfile();
+    }
   }, [user]);
+
+  const fetchUserProfile = async () => {
+    try {
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  const isProUser = userProfile?.subscription_type === 'pro_6m' || userProfile?.subscription_type === 'pro_12m';
 
   const fetchCategories = async () => {
     try {
@@ -140,6 +171,24 @@ const Categories = () => {
       cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleAddCategory = () => {
+    // Jika user free dan sudah mencapai batas kategori
+    if (!isProUser && categories.length >= MAX_FREE_CATEGORIES) {
+      setUpgradeDialog(true);
+      return;
+    }
+    
+    // Jika pro user atau masih dalam batas, lanjutkan
+    navigate('/categories/add');
+  };
+
+  const handleUpgrade = () => {
+    const message = "Halo, saya ingin upgrade ke paket Pro untuk mendapatkan kategori tanpa batas di aplikasi Keuangan Pribadi.";
+    const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+    setUpgradeDialog(false);
+  };
+
   return (
     <Layout>
       <div className="container mx-auto p-4 pb-24 max-w-3xl">
@@ -192,7 +241,7 @@ const Categories = () => {
             <Button 
               size="sm"
                     className="h-9 rounded-full px-4"
-                    onClick={() => navigate('/categories/add')}
+                    onClick={handleAddCategory}
                   >
                     <Plus className="w-4 h-4 mr-1" />
               Tambah
@@ -250,7 +299,7 @@ const Categories = () => {
                 </p>
               {!searchQuery && (
                 <Button 
-                  onClick={() => navigate('/categories/add')}
+                  onClick={handleAddCategory}
                   className="rounded-full"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -318,7 +367,7 @@ const Categories = () => {
           <Button 
             size="icon" 
             className="h-12 w-12 rounded-full shadow-lg"
-            onClick={() => navigate('/categories/add')}
+            onClick={handleAddCategory}
           >
             <Plus className="h-5 w-5" />
           </Button>
@@ -350,6 +399,29 @@ const Categories = () => {
                 {deleting === categoryToDelete?.id ? 'Menghapus...' : 'Hapus'}
               </AlertDialogAction>
               <AlertDialogCancel onClick={handleCloseDeleteDialog} className="w-full mt-0">Batal</AlertDialogCancel>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Upgrade Dialog */}
+        <AlertDialog open={upgradeDialog} onOpenChange={setUpgradeDialog}>
+          <AlertDialogContent className="max-w-xs mx-auto rounded-lg">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Upgrade Akun</AlertDialogTitle>
+              <AlertDialogDescription>
+                Anda telah mencapai batas kategori gratis.
+                <br />
+                Silakan upgrade ke paket Pro untuk mendapatkan kategori tanpa batas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-col gap-2">
+              <AlertDialogAction
+                onClick={handleUpgrade}
+                className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
+              >
+                Upgrade
+              </AlertDialogAction>
+              <AlertDialogCancel onClick={() => setUpgradeDialog(false)} className="w-full mt-0">Batal</AlertDialogCancel>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

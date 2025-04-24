@@ -4,6 +4,19 @@ export interface Category {
   color?: string;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  avatar_url?: string;
+  email?: string;
+  is_admin?: boolean;
+  subscription_type?: 'free' | 'pro_6m' | 'pro_12m';
+  trial_start?: string;
+  trial_end?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Wallet {
   id: string;
   name: string;
