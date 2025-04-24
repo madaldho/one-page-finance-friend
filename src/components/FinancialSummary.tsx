@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import { format, subDays } from "date-fns";
 import { Category, Wallet } from "@/types";
 import { WalletTransactionsChart } from './analysis/charts/WalletTransactionsChart';
 import { DailyExpensesChart } from './analysis/charts/DailyExpensesChart';
@@ -22,10 +24,11 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight, TrendingUp, TrendingDown, DollarSign, CalendarClock } from "lucide-react";
-import { format, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 
-// Definisikan TransactionWithNames karena tidak diekspor dari types
+// Import type dari types/index.ts
+import type { TransactionWithNames as ImportedTransactionWithNames, Wallet, Category } from "@/types";
+
 interface Transaction {
   id: string;
   title: string;
@@ -38,13 +41,12 @@ interface Transaction {
   destination_wallet_id?: string;
 }
 
-interface TransactionWithNames extends Transaction {
-  category_name?: string;
-  wallet_name?: string;
+// Gunakan type yang diimport dengan sedikit modifikasi untuk backward compatibility
+type TransactionWithNames = ImportedTransactionWithNames & {
   category_data?: Category;
   wallet_data?: Wallet;
   destination_wallet?: Wallet | null;
-}
+};
 
 interface FinancialSummaryProps {
   transactions: TransactionWithNames[];
@@ -136,30 +138,30 @@ const FinancialSummary = ({
     .filter(t => t.type === 'expense')
     .reduce((acc: Record<string, number>, transaction) => {
       // Lihat format tanggal yang disimpan
-      // Format: "2025-04-18T00:00:00.000Z" atau "2025-04-17T00:00:00.000Z"
       const originalDate = transaction.date;
-      console.log("Transaksi:", transaction.title);
-      console.log("  Original date:", originalDate);
       
-      // Cek apakah format tanggal mengandung waktu atau hanya tanggal
-      let hours = 0;
+      // Default ke siang hari jika tidak ada info waktu yang jelas
+      let hours = 12; // Default ke jam 12 siang
       
-      // Jika tanggal berakhiran "T00:00:00.000Z", berarti tidak ada info waktu
-      // Dalam kasus ini, kita gunakan waktu berdasarkan field lain jika ada,
-      // atau waktu saat ini jika transaksi dibuat hari ini
-      if (originalDate.includes("T00:00:00")) {
-        // Tidak ada info waktu, kita asumsikan waktu transaksi adalah saat ini
-        const now = new Date();
-        hours = now.getHours();
-        console.log("  Tidak ada info waktu, menggunakan waktu saat ini:", hours);
-      } else {
-        // Ada info waktu, gunakan waktu dari tanggal
-        const date = new Date(originalDate);
-        hours = date.getHours();
-        console.log("  Parsed date:", date.toLocaleString());
+      try {
+        // Prioritaskan created_at jika tersedia
+        if (transaction.created_at) {
+          const createdDate = new Date(transaction.created_at);
+          if (!isNaN(createdDate.getTime())) {
+            hours = createdDate.getHours();
+          }
+        } 
+        // Jika tidak ada created_at atau tidak valid, coba gunakan date
+        else {
+          const date = new Date(originalDate);
+          if (!isNaN(date.getTime()) && !originalDate.includes("T00:00:00")) {
+            hours = date.getHours();
+          }
+        }
+      } catch (e) {
+        // Jika terjadi error, gunakan default
+        console.error("Error processing date for transaction:", transaction.title);
       }
-      
-      console.log("  Hours:", hours);
       
       let timeSlot: string;
       // Kategori waktu:
@@ -176,8 +178,6 @@ const FinancialSummary = ({
       } else {
         timeSlot = 'Malam';
       }
-      
-      console.log("  Kategori waktu:", timeSlot);
       
       if (!acc[timeSlot]) {
         acc[timeSlot] = 0;

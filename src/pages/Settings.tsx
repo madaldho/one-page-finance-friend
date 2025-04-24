@@ -22,9 +22,9 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [settings, setSettings] = useState<UserSettingsForm>({
-    show_budgeting: true,
-    show_savings: true,
-    show_loans: true,
+    show_budgeting: false,
+    show_savings: false,
+    show_loans: false,
   });
   const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
 
@@ -137,7 +137,7 @@ const Settings = () => {
             user_id: session.user.id,
             show_budgeting: setting === 'show_budgeting' ? !settings.show_budgeting : settings.show_budgeting,
             show_savings: setting === 'show_savings' ? !settings.show_savings : settings.show_savings,
-            show_loans: setting === 'show_loans' ? !settings.show_savings : settings.show_savings,
+            show_loans: setting === 'show_loans' ? !settings.show_loans : settings.show_loans,
           });
           
         if (insertError) throw insertError;

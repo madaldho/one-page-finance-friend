@@ -1109,7 +1109,6 @@ const BudgetManagement = () => {
                             >
                               <option value="weekly">Mingguan</option>
                               <option value="monthly">Bulanan</option>
-                              <option value="yearly">Tahunan</option>
                               <option value="date_range">Rentang Waktu Kustom</option>
                             </select>
                           </div>

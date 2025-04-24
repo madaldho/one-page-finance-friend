@@ -2,10 +2,20 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://pjwmfyvknbtoofxfuwjm.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd21meXZrbmJ0b29meGZ1d2ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3OTQ2NTgsImV4cCI6MjA2MDM3MDY1OH0.yrje_gdq9gODnMZbxUO6giRz4ID4SOpcmBlBOIDOK1U";
+// Menggunakan environment variables untuk kredensial
+// CATATAN: Untuk aplikasi ini, kredensial harus ditambahkan ke file .env
+// Contoh .env:
+// VITE_SUPABASE_URL=https://your-project-url.supabase.co
+// VITE_SUPABASE_ANON_KEY=your-anon-key
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+
+// Jika kredensial tidak tersedia di environment, tampilkan pesan error
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('Supabase URL dan Anon Key harus disediakan melalui environment variables!');
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY);

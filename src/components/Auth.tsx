@@ -112,7 +112,7 @@ const Auth = () => {
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden">
       {/* Animated background with multiple gradients */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 z-0">
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 via-5urple-900 to-blue-600 z-0">
         {/* Moving gradient orbs */}
         <div 
           className="absolute w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-[80px] opacity-60 animate-blob"

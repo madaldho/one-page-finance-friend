@@ -69,10 +69,8 @@ const AddBudget = () => {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   const periodOptions = [
-    { value: 'daily', label: 'Harian' },
     { value: 'weekly', label: 'Mingguan' },
     { value: 'monthly', label: 'Bulanan' },
-    { value: 'yearly', label: 'Tahunan' },
     { value: 'custom_range', label: 'Rentang Kustom' },
   ];
 
