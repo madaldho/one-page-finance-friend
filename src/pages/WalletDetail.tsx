@@ -20,7 +20,8 @@ import {
   RotateCcw,
   X,
   Check,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Lock
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { format, subDays, subMonths, subYears, startOfDay, endOfDay, Locale } from 'date-fns';
@@ -58,6 +59,8 @@ import { DateRange } from 'react-day-picker';
 import { DateRangePicker } from '@/components/DateRangePicker';
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import PremiumFeatureCounter from '@/components/premium/PremiumFeatureCounter';
+import { UserSubscriptionProfile } from '@/utils/subscription';
 
 interface Transaction {
   id: string;
@@ -128,6 +131,7 @@ const WalletDetail = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
   
   // State untuk filter periode
   const [period, setPeriod] = useState<'last-7' | 'last-30' | 'last-90' | 'last-365' | 'custom'>('last-30');
@@ -155,6 +159,7 @@ const WalletDetail = () => {
   };
 
   useEffect(() => {
+    fetchUserProfile();
     fetchWalletAndTransactions();
     
     // Set interval untuk refresh wallet balance secara berkala dengan interval yang lebih lama
@@ -231,6 +236,25 @@ const WalletDetail = () => {
       fetchWalletAndTransactions();
     }
   }, [filterType, dateRange]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data as UserSubscriptionProfile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const fetchWalletAndTransactions = async () => {
     try {
@@ -560,6 +584,44 @@ const WalletDetail = () => {
     setFilterType('all');
   };
 
+  // Fallback content untuk pengguna free yang telah mencapai batas
+  const walletDetailFallback = (
+    <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
+      <div className="flex items-center gap-4 mb-6">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate(-1)}
+          className="rounded-full"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </Button>
+        <h1 className="text-2xl font-semibold">Detail Dompet</h1>
+      </div>
+
+      <div className="bg-orange-50 p-6 rounded-lg border border-orange-100 my-4">
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <div className="p-4 bg-orange-100 rounded-full">
+            <Lock className="h-8 w-8 text-orange-500" />
+          </div>
+          <div className="text-center md:text-left">
+            <h2 className="text-xl font-bold mb-2">Batas Harian Tercapai</h2>
+            <p className="text-gray-600 mb-4">
+              Anda telah mencapai batas melihat detail dompet untuk hari ini (5x). 
+              Upgrade ke Pro untuk akses tak terbatas ke detail dompet dan fitur lainnya!
+            </p>
+            <Button 
+              onClick={() => navigate('/upgrade')}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-2"
+            >
+              Upgrade ke Pro
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading && !wallet) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -593,279 +655,287 @@ const WalletDetail = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate(-1)}
-            className="rounded-full"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-          <h1 className="text-2xl font-semibold">Detail Dompet</h1>
-        </div>
-
-        {/* Wallet Card */}
-        <Card className="mb-6 p-6" style={getCardStyle()}>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">{wallet.name}</h2>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="text-white hover:bg-white/20"
-                    size="icon"
-                    aria-label="Menu dompet"
-                  >
-                    <MoreVertical className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => navigate(`/wallet/edit/${wallet.id}`)}
-                    className="cursor-pointer"
-                  >
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Edit Dompet
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setShowDeleteDialog(true)}
-                    className="cursor-pointer text-red-600 focus:text-red-600"
-                    disabled={wallet.is_default}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Hapus Dompet
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <p className="text-sm opacity-90">
-              {wallet.type === "bank"
-                ? "Rekening Bank"
-                : wallet.type === "savings"
-                ? "Tabungan"
-                : "Uang Tunai"}
-            </p>
-            <div className="mt-4">
-              <p className="text-sm opacity-90">Saldo Saat Ini</p>
-              <p className="text-3xl font-bold">{formatCurrency(wallet.balance)}</p>
-            </div>
+      <PremiumFeatureCounter
+        feature="wallet_detail"
+        walletId={id}
+        userProfile={userProfile}
+        maxDailyCount={5}
+        fallback={walletDetailFallback}
+      >
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-6">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate(-1)}
+              className="rounded-full"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <h1 className="text-2xl font-semibold">Detail Dompet</h1>
           </div>
-        </Card>
 
-        {/* Filter Bar - Yang lebih sederhana */}
-        <div className="bg-white rounded-xl shadow-sm border mb-4 overflow-hidden">
-          <div className="p-3 flex items-center justify-between">
-            {/* Tombol Filter - Buka Sheet */}
-            <Sheet open={showFilters} onOpenChange={setShowFilters}>
-              <SheetTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="h-9 border-gray-200 px-3"
-                  onClick={() => setShowFilters(true)}
-                >
-                  <SlidersHorizontal className="h-4 w-4 mr-2" />
-                  Filter Transaksi
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="p-0 w-[85vw] sm:max-w-md">
-                <div className="flex flex-col h-full">
-                  <SheetHeader className="p-4 border-b">
-                    <SheetTitle className="flex items-center">
-                      <Filter className="h-4 w-4 mr-2 text-primary" />
-                      Filter Transaksi
-                    </SheetTitle>
-                  </SheetHeader>
-                  
-                  <div className="p-4 flex-1 overflow-auto space-y-5">
-                    {/* Jenis Transaksi */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Jenis Transaksi</label>
-          <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense') => setFilterType(value)}>
-                        <SelectTrigger className="bg-white border border-gray-200 rounded-lg h-9 w-full">
-                          <SelectValue placeholder="Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Transaksi</SelectItem>
-              <SelectItem value="income">Pemasukan</SelectItem>
-              <SelectItem value="expense">Pengeluaran</SelectItem>
-            </SelectContent>
-          </Select>
-                    </div>
+          {/* Wallet Card */}
+          <Card className="mb-6 p-6" style={getCardStyle()}>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">{wallet.name}</h2>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="text-white hover:bg-white/20"
+                      size="icon"
+                      aria-label="Menu dompet"
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={() => navigate(`/wallet/edit/${wallet.id}`)}
+                      className="cursor-pointer"
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit Dompet
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="cursor-pointer text-red-600 focus:text-red-600"
+                      disabled={wallet.is_default}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Hapus Dompet
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <p className="text-sm opacity-90">
+                {wallet.type === "bank"
+                  ? "Rekening Bank"
+                  : wallet.type === "savings"
+                  ? "Tabungan"
+                  : "Uang Tunai"}
+              </p>
+              <div className="mt-4">
+                <p className="text-sm opacity-90">Saldo Saat Ini</p>
+                <p className="text-3xl font-bold">{formatCurrency(wallet.balance)}</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Filter Bar - Yang lebih sederhana */}
+          <div className="bg-white rounded-xl shadow-sm border mb-4 overflow-hidden">
+            <div className="p-3 flex items-center justify-between">
+              {/* Tombol Filter - Buka Sheet */}
+              <Sheet open={showFilters} onOpenChange={setShowFilters}>
+                <SheetTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="h-9 border-gray-200 px-3"
+                    onClick={() => setShowFilters(true)}
+                  >
+                    <SlidersHorizontal className="h-4 w-4 mr-2" />
+                    Filter Transaksi
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="p-0 w-[85vw] sm:max-w-md">
+                  <div className="flex flex-col h-full">
+                    <SheetHeader className="p-4 border-b">
+                      <SheetTitle className="flex items-center">
+                        <Filter className="h-4 w-4 mr-2 text-primary" />
+                        Filter Transaksi
+                      </SheetTitle>
+                    </SheetHeader>
                     
-                    {/* Filter Periode */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Periode Waktu</label>
-                      <Select 
-                        value={period} 
-                        onValueChange={(value: 'last-7' | 'last-30' | 'last-90' | 'last-365' | 'custom') => {
-                          setPeriod(value);
-                          // Jika bukan custom, langsung terapkan range tanggal
-                          if (value !== 'custom') {
-                            const newRange = getDateRangeFromPeriod(value);
-                            setTempDateRange(newRange);
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="bg-white border border-gray-200 rounded-lg h-9 w-full">
-                          <SelectValue placeholder="Pilih periode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="last-7">7 hari terakhir</SelectItem>
-                          <SelectItem value="last-30">30 hari terakhir</SelectItem>
-                          <SelectItem value="last-90">3 bulan terakhir</SelectItem>
-                          <SelectItem value="last-365">1 tahun terakhir</SelectItem>
-                          <SelectItem value="custom">Rentang kustom</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {/* Rentang Tanggal Kustom */}
-                    {period === 'custom' && (
+                    <div className="p-4 flex-1 overflow-auto space-y-5">
+                      {/* Jenis Transaksi */}
                       <div className="space-y-2">
-                        <label className="text-sm font-medium">Rentang Tanggal</label>
+                        <label className="text-sm font-medium">Jenis Transaksi</label>
+                        <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense') => setFilterType(value)}>
+                          <SelectTrigger className="bg-white border border-gray-200 rounded-lg h-9 w-full">
+                            <SelectValue placeholder="Filter" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Semua Transaksi</SelectItem>
+                            <SelectItem value="income">Pemasukan</SelectItem>
+                            <SelectItem value="expense">Pengeluaran</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Filter Periode */}
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Periode Waktu</label>
+                        <Select 
+                          value={period} 
+                          onValueChange={(value: 'last-7' | 'last-30' | 'last-90' | 'last-365' | 'custom') => {
+                            setPeriod(value);
+                            // Jika bukan custom, langsung terapkan range tanggal
+                            if (value !== 'custom') {
+                              const newRange = getDateRangeFromPeriod(value);
+                              setTempDateRange(newRange);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bg-white border border-gray-200 rounded-lg h-9 w-full">
+                            <SelectValue placeholder="Pilih periode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="last-7">7 hari terakhir</SelectItem>
+                            <SelectItem value="last-30">30 hari terakhir</SelectItem>
+                            <SelectItem value="last-90">3 bulan terakhir</SelectItem>
+                            <SelectItem value="last-365">1 tahun terakhir</SelectItem>
+                            <SelectItem value="custom">Rentang kustom</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Rentang Tanggal Kustom */}
+                      {period === 'custom' && (
                         <div className="space-y-2">
-                          <div className="space-y-1">
-                            <p className="text-xs text-gray-500">Dari</p>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="date"
-                                className="pl-10"
-                                value={formatDateForInput(tempDateRange?.from)}
-              onChange={(e) => {
-                                  const from = e.target.value ? new Date(e.target.value) : undefined;
-                                  setTempDateRange(prev => ({
-                                    from: from,
-                  to: prev?.to 
-                }));
-              }}
-                              />
+                          <label className="text-sm font-medium">Rentang Tanggal</label>
+                          <div className="space-y-2">
+                            <div className="space-y-1">
+                              <p className="text-xs text-gray-500">Dari</p>
+                              <div className="relative">
+                                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                  type="date"
+                                  className="pl-10"
+                                  value={formatDateForInput(tempDateRange?.from)}
+                                  onChange={(e) => {
+                                    const from = e.target.value ? new Date(e.target.value) : undefined;
+                                    setTempDateRange(prev => ({
+                                      from: from,
+                                      to: prev?.to 
+                                    }));
+                                  }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs text-gray-500">Sampai</p>
-                            <div className="relative">
-                              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="date"
-                                className="pl-10"
-                                value={formatDateForInput(tempDateRange?.to)}
-              onChange={(e) => {
-                                  const to = e.target.value ? new Date(e.target.value) : undefined;
-                                  setTempDateRange(prev => ({
-                  from: prev?.from, 
-                                    to: to
-                }));
-              }}
-                              />
+                            <div className="space-y-1">
+                              <p className="text-xs text-gray-500">Sampai</p>
+                              <div className="relative">
+                                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                  type="date"
+                                  className="pl-10"
+                                  value={formatDateForInput(tempDateRange?.to)}
+                                  onChange={(e) => {
+                                    const to = e.target.value ? new Date(e.target.value) : undefined;
+                                    setTempDateRange(prev => ({
+                                      from: prev?.from, 
+                                      to: to
+                                    }));
+                                  }}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
+                      )}
+                    </div>
+                    
+                    {/* Footer dengan tombol aksi */}
+                    <div className="p-4 border-t">
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={resetFilters}
+                        >
+                          <RotateCcw className="h-4 w-4 mr-2" /> 
+                          Reset
+                        </Button>
+                        <Button 
+                          className="flex-1"
+                          onClick={applyCustomDateFilter}
+                        >
+                          <Check className="h-4 w-4 mr-2" />
+                          Terapkan
+                        </Button>
                       </div>
-                    )}
-                  </div>
-                  
-                  {/* Footer dengan tombol aksi */}
-                  <div className="p-4 border-t">
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1"
-                        onClick={resetFilters}
-                      >
-                        <RotateCcw className="h-4 w-4 mr-2" /> 
-                        Reset
-                      </Button>
-                      <Button 
-                        className="flex-1"
-                        onClick={applyCustomDateFilter}
-                      >
-                        <Check className="h-4 w-4 mr-2" />
-                        Terapkan
-                      </Button>
                     </div>
                   </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-            
-            {/* Badge status filter aktif */}
-            <div className="flex items-center gap-2">
-              {filterType !== 'all' && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-100">
-                  {filterType === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                </SheetContent>
+              </Sheet>
+              
+              {/* Badge status filter aktif */}
+              <div className="flex items-center gap-2">
+                {filterType !== 'all' && (
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-100">
+                    {filterType === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100">
+                  {getPeriodLabel(period)}
                 </Badge>
-              )}
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100">
-                {getPeriodLabel(period)}
-              </Badge>
+              </div>
             </div>
+            
+            {/* Info tanggal untuk periode yang dipilih */}
+            {dateRange?.from && dateRange?.to && (
+              <div className="bg-gray-50 px-3 py-1.5 text-xs text-gray-500 border-t flex items-center">
+                <Calendar className="h-3 w-3 mr-2 flex-shrink-0" />
+                <span>
+                  {formatDateRange(dateRange.from, dateRange.to)}
+                </span>
+              </div>
+            )}
           </div>
+
+          {/* Transactions */}
+          <Card className="mb-24 p-1">
+            <TransactionList
+              transactions={transactions as (Transaction & { wallet_name?: string })[]}
+              isLoading={loading}
+              onFilter={(query) => setSearchTerm(query)}
+              onDateRangeChange={handleDateRangeChange}
+              onDelete={async (id) => {
+                try {
+                  const { error } = await supabase
+                    .from("transactions")
+                    .delete()
+                    .eq("id", id[0]);
+
+                  if (error) throw error;
+
+                  toast({
+                    title: "Transaksi dihapus",
+                    description: "Transaksi berhasil dihapus",
+                  });
+
+                  fetchWalletAndTransactions();
+                } catch (error) {
+                  console.error("Error deleting transaction:", error);
+                  toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Gagal menghapus transaksi",
+                  });
+                }
+              }}
+              onEdit={(transaction) => {
+                navigate(`/transaction/${transaction.type}/${transaction.id}`);
+              }}
+            />
+          </Card>
           
-          {/* Info tanggal untuk periode yang dipilih */}
-          {dateRange?.from && dateRange?.to && (
-            <div className="bg-gray-50 px-3 py-1.5 text-xs text-gray-500 border-t flex items-center">
-              <Calendar className="h-3 w-3 mr-2 flex-shrink-0" />
-              <span>
-                {formatDateRange(dateRange.from, dateRange.to)}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Transactions */}
-        <Card className="mb-24 p-1">
-          <TransactionList
-            transactions={transactions as any}
-            isLoading={loading}
-            onFilter={(query) => setSearchTerm(query)}
-            onDateRangeChange={handleDateRangeChange}
-            onDelete={async (id) => {
-              try {
-                const { error } = await supabase
-                  .from("transactions")
-                  .delete()
-                  .eq("id", id[0]);
-
-                if (error) throw error;
-
-                toast({
-                  title: "Transaksi dihapus",
-                  description: "Transaksi berhasil dihapus",
-                });
-
-                fetchWalletAndTransactions();
-              } catch (error) {
-                console.error("Error deleting transaction:", error);
-                toast({
-                  variant: "destructive",
-                  title: "Error",
-                  description: "Gagal menghapus transaksi",
-                });
-              }
-            }}
-            onEdit={(transaction) => {
-              navigate(`/transaction/${transaction.type}/${transaction.id}`);
-            }}
+          {/* Delete Confirmation Dialog */}
+          <DeleteConfirmationDialog
+            open={showDeleteDialog}
+            onOpenChange={setShowDeleteDialog}
+            onConfirm={handleDeleteWallet}
+            title="Hapus Dompet"
+            description="Apakah Anda yakin ingin menghapus dompet"
+            itemName={wallet.name}
+            confirmLabel="Hapus"
+            cancelLabel="Batal"
           />
-        </Card>
-        
-        {/* Delete Confirmation Dialog */}
-        <DeleteConfirmationDialog
-          open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          onConfirm={handleDeleteWallet}
-          title="Hapus Dompet"
-          description="Apakah Anda yakin ingin menghapus dompet"
-          itemName={wallet.name}
-          confirmLabel="Hapus"
-          cancelLabel="Batal"
-        />
-      </div>
+        </div>
+      </PremiumFeatureCounter>
     </Layout>
   );
 };

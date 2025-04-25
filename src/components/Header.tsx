@@ -13,6 +13,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { getSubscriptionLabel, getSubscriptionStatus, UserSubscriptionProfile } from '@/utils/subscription';
+import { differenceInDays, parseISO } from 'date-fns';
 
 interface Particle {
   x: number;
@@ -108,36 +110,44 @@ const Header = () => {
   const [profileName, setProfileName] = useState("User");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [bio, setBio] = useState("Kelola keuangan Anda dengan mudah");
+  const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        if (!user?.id) return;
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
 
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('name, avatar_url')
-          .eq('id', user.id)
-          .single();
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
 
-        if (error && error.code !== 'PGRST116') throw error;
-
-        if (data) {
-          setProfileName(data.name || user.email || 'User');
-          setAvatarUrl(data.avatar_url || "");
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
+      if (error) {
         toast({
-          title: "Gagal Memuat Profil",
-          description: "Terjadi kesalahan saat mengambil data profil",
-          variant: "destructive"
+          title: "Error saat mengambil profil",
+          description: error.message,
+          variant: "destructive",
         });
+        return;
       }
-    };
 
-    fetchProfile();
-  }, [user, toast]);
+      if (data) {
+        setProfileName(data.name || user?.email?.split('@')[0] || "User");
+        setAvatarUrl(data.avatar_url || "");
+        setBio("Kelola keuangan Anda dengan mudah");
+        setUserProfile(data as UserSubscriptionProfile);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const subscriptionLabel = getSubscriptionLabel(userProfile);
+  const subscriptionStatus = getSubscriptionStatus(userProfile);
 
   return (
     <div className="container mx-auto relative mb-6 bg-white p-4 pt-6 rounded-lg shadow-md overflow-hidden ">
@@ -164,7 +174,17 @@ const Header = () => {
           </div>
           <div>
             <p className="font-medium text-base sm:text-lg">{profileName}</p>
-            <p className="text-sm text-gray-500">Akun Personal</p>
+            <div className="flex items-center gap-1">
+              <p className={`text-sm px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${subscriptionLabel.className}`}>
+                {subscriptionLabel.icon && <span>{subscriptionLabel.icon}</span>}
+                <span>Akun {subscriptionLabel.text}</span>
+              </p>
+              {subscriptionStatus === 'trial' && userProfile?.trial_end && (
+                <span className="text-xs text-blue-700 font-medium">
+                  ({Math.max(0, differenceInDays(parseISO(userProfile.trial_end), new Date()))} hari)
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

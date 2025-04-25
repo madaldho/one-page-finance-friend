@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   subscription_type?: string;
@@ -24,6 +25,7 @@ const UpgradeNotification = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [hasShownTodayKey] = useState<string>(`upgrade_notification_shown_${new Date().toISOString().split('T')[0]}`);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -73,10 +75,7 @@ const UpgradeNotification = () => {
   }, [user, hasShownTodayKey]);
 
   const handleUpgrade = (plan: string) => {
-    // Redirect ke WhatsApp
-    const message = `Halo, saya ingin upgrade ke paket ${plan === 'pro_6m' ? 'Pro 6 Bulan' : 'Pro 12 Bulan'} untuk aplikasi Keuangan Pribadi.`;
-    const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    navigate('/upgrade');
     setShowDialog(false);
   };
 

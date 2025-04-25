@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import UpgradeModal from "@/components/UpgradeModal";
 import { Lock } from "lucide-react";
+import { hasProAccess, UserSubscriptionProfile } from "@/utils/subscription";
 
 interface PremiumFeatureWrapperProps {
   children: React.ReactNode;
@@ -22,7 +22,7 @@ const PremiumFeatureWrapper = ({
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
 
   useEffect(() => {
     if (checkOnMount) {
@@ -46,22 +46,23 @@ const PremiumFeatureWrapper = ({
       // Dapatkan profil user
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("subscription_type, trial_end")
+        .select("*")
         .eq("id", user.id)
         .single();
         
       if (error) throw error;
       
-      // Periksa apakah pengguna memiliki langganan premium
-      const hasPremium = 
-        profile?.subscription_type === "pro_6m" || 
-        profile?.subscription_type === "pro_12m";
-        
-      setIsPremium(hasPremium);
+      // Simpan profil pengguna
+      setUserProfile(profile as UserSubscriptionProfile);
       
-      // Jika tidak premium dan checkOnMount true, tampilkan modal
-      if (!hasPremium && checkOnMount) {
-        setShowUpgradeModal(true);
+      // Periksa apakah pengguna memiliki akses pro (premium atau trial)
+      const hasPremiumAccess = hasProAccess(profile as UserSubscriptionProfile);
+      
+      setIsPremium(hasPremiumAccess);
+      
+      // Jika tidak premium dan checkOnMount true, arahkan ke halaman upgrade
+      if (!hasPremiumAccess && checkOnMount) {
+        navigate("/upgrade");
       }
     } catch (error) {
       console.error("Error checking premium status:", error);
@@ -76,19 +77,7 @@ const PremiumFeatureWrapper = ({
   };
 
   const handleUpgrade = () => {
-    // Buka WhatsApp dengan template pesan
-    const message = `Halo, saya ingin upgrade ke paket Pro untuk menggunakan fitur ${getFeatureName(feature)} di aplikasi Uang Pintar.`;
-    const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-    setShowUpgradeModal(false);
-  };
-
-  const handleStayFree = () => {
-    setShowUpgradeModal(false);
-    // Arahkan kembali ke halaman home jika diperlukan
-    if (checkOnMount) {
-      navigate("/home");
-    }
+    navigate("/upgrade");
   };
 
   const getFeatureName = (featureKey: string) => {
@@ -118,49 +107,28 @@ const PremiumFeatureWrapper = ({
 
   // Tampilkan custom fallback jika disediakan
   if (!isPremium && fallback) {
-    return (
-      <>
-        {fallback}
-        <UpgradeModal
-          open={showUpgradeModal}
-          onOpenChange={setShowUpgradeModal}
-          feature={feature}
-          onUpgrade={handleUpgrade}
-          onStayFree={handleStayFree}
-        />
-      </>
-    );
+    return fallback;
   }
 
   // Tampilkan fallback default jika tidak premium dan tidak ada fallback yang disediakan
   if (!isPremium) {
     return (
-      <>
-        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-8 border border-gray-200">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-            <Lock className="h-8 w-8 text-purple-600" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">Fitur Premium</h2>
-          <p className="text-gray-600 text-center mb-6 max-w-md">
-            Fitur {getFeatureName(feature)} hanya tersedia untuk pengguna premium.
-            Upgrade sekarang untuk mengakses semua fitur!
-          </p>
-          <button
-            onClick={() => setShowUpgradeModal(true)}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-          >
-            Upgrade ke Premium
-          </button>
+      <div className="flex flex-col items-center justify-center bg-gray-50 rounded-lg p-8 border border-gray-200">
+        <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+          <Lock className="h-8 w-8 text-purple-600" />
         </div>
-        
-        <UpgradeModal
-          open={showUpgradeModal}
-          onOpenChange={setShowUpgradeModal}
-          feature={feature}
-          onUpgrade={handleUpgrade}
-          onStayFree={handleStayFree}
-        />
-      </>
+        <h2 className="text-xl font-bold mb-2">Fitur Premium</h2>
+        <p className="text-gray-600 text-center mb-6 max-w-md">
+          Fitur {getFeatureName(feature)} hanya tersedia untuk pengguna premium.
+          Upgrade sekarang untuk mengakses semua fitur!
+        </p>
+        <button
+          onClick={handleUpgrade}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+        >
+          Upgrade ke Premium
+        </button>
+      </div>
     );
   }
 

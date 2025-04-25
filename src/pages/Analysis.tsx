@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +9,8 @@ import { Transaction, Category, Wallet } from "@/types";
 import { AnalysisHeader } from "@/components/analysis/AnalysisHeader";
 import { AnalysisFilters } from "@/components/analysis/AnalysisFilters";
 import FinancialSummary from "@/components/FinancialSummary";
+import PremiumFeatureCounter from "@/components/premium/PremiumFeatureCounter";
+import { UserSubscriptionProfile } from "@/utils/subscription";
 
 interface TransactionWithNames extends Transaction {
   wallet_name?: string;
@@ -17,6 +20,7 @@ interface TransactionWithNames extends Transaction {
 }
 
 const Analysis = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<TransactionWithNames[]>([]);
@@ -30,8 +34,10 @@ const Analysis = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
 
   useEffect(() => {
+    fetchUserProfile();
     const fetchTransactions = async () => {
       try {
         setLoading(true);
@@ -225,34 +231,133 @@ const Analysis = () => {
   const incomeTransactions = filteredTransactions.filter(t => t.type === "income").length;
   const expenseTransactions = filteredTransactions.filter(t => t.type === "expense").length;
 
+  // Fungsi untuk mengambil profil pengguna
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data as UserSubscriptionProfile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  // Fungsi untuk mengubah dateRange dengan type-safe
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    if (range && range.from) {
+      setDateRange(range);
+    }
+  };
+
+  // Fallback content untuk pengguna free yang telah mencapai batas
+  const analysisFallback = (
+    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl border border-purple-200 shadow-lg text-center max-w-2xl md:mx-auto mx-2 my-auto ">
+      <div className="relative ">
+        <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md animate-pulse">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        
+        <div className="absolute top-0 right-0 -mr-2 -mt-2 bg-purple-600 text-white text-xs font-medium px-2.5 py-1 rounded-full">3/3</div>
+      </div>
+      
+      <h2 className="text-2xl font-bold mb-3 text-gray-800">Batas Analisis Tercapai</h2>
+      
+      <p className="text-gray-600 mb-8 max-w-md mx-auto">
+        Anda telah mencapai batas melihat halaman Analisis (3x) untuk hari ini.
+        Upgrade ke Pro untuk akses tak terbatas ke semua fitur analisis keuangan!
+      </p>
+      
+      <div className="grid gap-4 sm:grid-cols-2 max-w-md mx-auto mb-6">
+        <div className="flex flex-col gap-1 bg-white p-4 rounded-xl shadow-sm border border-purple-100">
+          <span className="text-purple-600 font-semibold">Dengan Pro</span>
+          <ul className="text-left text-sm text-gray-600">
+            <li className="flex items-center gap-1.5 mb-1">
+              <div className="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+              </div>
+              <span>Akses tak terbatas</span>
+            </li>
+            <li className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+              </div>
+              <span>Laporan lengkap</span>
+            </li>
+          </ul>
+        </div>
+        
+        <div className="flex flex-col gap-1 bg-gray-50 p-4 rounded-xl shadow-sm border border-gray-200">
+          <span className="text-gray-500 font-semibold">Versi Gratis</span>
+          <ul className="text-left text-sm text-gray-500">
+            <li className="flex items-center gap-1.5 mb-1">
+              <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              </div>
+              <span>Hanya 3x per hari</span>
+            </li>
+            <li className="flex items-center gap-1.5">
+              <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
+                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+              </div>
+              <span>Fitur terbatas</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      
+      <button 
+        onClick={() => navigate('/upgrade')}
+        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium px-8 py-3 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105"
+      >
+        Upgrade ke Pro Sekarang
+      </button>
+    </div>
+  );
+
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-24 max-w-7xl">
-        <AnalysisHeader
-          onRefresh={handleRefresh}
-          onExport={handleExportCSV}
-        />
+      <PremiumFeatureCounter 
+        feature="analysis" 
+        userProfile={userProfile} 
+        maxDailyCount={3}
+        fallback={analysisFallback}
+      >
+        <div className="container mx-auto p-4 pb-24 max-w-7xl">
+          <AnalysisHeader
+            onRefresh={handleRefresh}
+            onExport={handleExportCSV}
+          />
 
-        <AnalysisFilters
-          period={period}
-          setPeriod={setPeriod}
-          dateRange={dateRange}
-          setDateRange={setDateRange}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          transactionCount={filteredTransactions.length}
-        />
+          <AnalysisFilters
+            period={period}
+            setPeriod={setPeriod}
+            dateRange={dateRange}
+            setDateRange={handleDateRangeChange}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            transactionCount={filteredTransactions.length}
+          />
 
-    
-
-        <FinancialSummary
-          transactions={filteredTransactions}
-          categories={categories}
-          wallets={wallets}
-          showWalletData={true}
-          dateRange={dateRange}
-        />
-      </div>
+          <FinancialSummary
+            transactions={filteredTransactions}
+            categories={categories}
+            wallets={wallets}
+            showWalletData={true}
+            dateRange={dateRange}
+          />
+        </div>
+      </PremiumFeatureCounter>
     </Layout>
   );
 };

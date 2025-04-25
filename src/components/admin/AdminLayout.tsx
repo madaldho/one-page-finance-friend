@@ -17,10 +17,33 @@ const AdminLayout = () => {
     const checkAdminStatus = async () => {
       try {
         if (!user) {
-          navigate('/admin123');
+          // Cek jika ada sesi yang tersimpan sebelumnya
+          const { data: sessionData } = await supabase.auth.getSession();
+          
+          if (!sessionData.session) {
+            navigate('/admin123');
+            return;
+          }
+          
+          // Ada sesi, tapi perlu memverifikasi apakah admin
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', sessionData.session.user.id)
+            .single();
+            
+          if (profileError || !profileData?.is_admin) {
+            navigate('/admin123');
+            return;
+          }
+          
+          // Pengguna adalah admin, set state sesuai
+          setIsAdmin(true);
+          setLoading(false);
           return;
         }
 
+        // Jika user sudah ada, cek apakah admin
         const { data, error } = await supabase
           .from('profiles')
           .select('is_admin')
@@ -39,20 +62,31 @@ const AdminLayout = () => {
           return;
         }
 
+        // Simpan status admin di localStorage untuk persistensi
+        localStorage.setItem('isAdmin', 'true');
         setIsAdmin(true);
       } catch (error) {
         console.error('Error checking admin status:', error);
+        localStorage.removeItem('isAdmin');
         navigate('/admin123');
       } finally {
         setLoading(false);
       }
     };
 
-    checkAdminStatus();
+    // Cek dulu di localStorage jika pengguna sudah login sebagai admin sebelumnya
+    const savedAdminStatus = localStorage.getItem('isAdmin') === 'true';
+    if (savedAdminStatus && user) {
+      setIsAdmin(true);
+      setLoading(false);
+    } else {
+      checkAdminStatus();
+    }
   }, [user, navigate, toast]);
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('isAdmin');
       await supabase.auth.signOut();
       navigate('/admin123');
     } catch (error) {

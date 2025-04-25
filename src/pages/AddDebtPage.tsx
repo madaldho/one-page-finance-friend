@@ -119,19 +119,19 @@ const AddDebtPage = () => {
       // 2. Create transaction record for this loan (untuk riwayat transaksi)
       // Gunakan try-catch terpisah agar kegagalan transaksi tidak menggagalkan seluruh proses
       try {
-        const transactionData = {
-          user_id: user!.id,
-          title: formData.description,
+      const transactionData = {
+        user_id: user!.id,
+        title: formData.description,
           amount: formData.amount,
-          type: 'income', // Debt is an income for the wallet
-          date: new Date().toISOString().split('T')[0], // Today's date
-          category: 'Hutang', // Using a category name that makes sense
-          wallet_id: formData.wallet_id,
-          description: `Pinjaman dari ${formData.lender}`,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
+        type: 'income', // Debt is an income for the wallet
+        date: new Date().toISOString().split('T')[0], // Today's date
+        category: 'Hutang', // Using a category name that makes sense
+        wallet_id: formData.wallet_id,
+        description: `Pinjaman dari ${formData.lender}`,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
         // Coba update saldo wallet secara manual jika transaksi gagal dibuat
         const { data: walletData, error: walletFetchError } = await supabase
           .from('wallets')
@@ -148,12 +148,12 @@ const AddDebtPage = () => {
         }
         
         // Coba buat transaksi (mungkin akan gagal karena trigger)
-        const { error: transactionError } = await supabase
-          .from('transactions')
-          .insert(transactionData);
-          
-        if (transactionError) {
-          console.error("Error creating transaction record:", transactionError);
+      const { error: transactionError } = await supabase
+        .from('transactions')
+        .insert(transactionData);
+        
+      if (transactionError) {
+        console.error("Error creating transaction record:", transactionError);
           toast.warning("Hutang berhasil ditambahkan tetapi gagal mencatatnya sebagai transaksi. Saldo dompet sudah diperbarui.");
         }
       } catch (transactionErr) {
@@ -205,61 +205,61 @@ const AddDebtPage = () => {
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="description">Deskripsi</Label>
-                <Input
-                  type="text"
-                  id="description"
-                  name="description"
-                  value={formData.description}
-                  onChange={handleChange}
+              <Label htmlFor="description">Deskripsi</Label>
+              <Input
+                type="text"
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
                   placeholder="Pinjaman untuk apa"
-                  required
-                />
-              </div>
+                required
+              />
+            </div>
               
               <div className="space-y-2">
-                <Label htmlFor="amount">Jumlah</Label>
+              <Label htmlFor="amount">Jumlah</Label>
                 <CurrencyInput
-                  id="amount"
-                  value={formData.amount}
+                id="amount"
+                value={formData.amount}
                   onChange={handleAmountChange}
                   showPrefix={true}
                   placeholder="0"
-                  required
-                />
-              </div>
+                required
+              />
+            </div>
               
               <div className="space-y-2">
-                <Label htmlFor="lender">Pemberi Hutang</Label>
-                <Input
-                  type="text"
-                  id="lender"
-                  name="lender"
-                  value={formData.lender}
-                  onChange={handleChange}
+              <Label htmlFor="lender">Pemberi Hutang</Label>
+              <Input
+                type="text"
+                id="lender"
+                name="lender"
+                value={formData.lender}
+                onChange={handleChange}
                   placeholder="Nama pemberi pinjaman"
-                  required
-                />
-              </div>
+                required
+              />
+            </div>
               
               <div className="space-y-2">
-                <Label htmlFor="due_date">Tanggal Jatuh Tempo</Label>
-                <Input
-                  type="date"
-                  id="due_date"
-                  name="due_date"
-                  value={formData.due_date}
-                  onChange={handleChange}
-                />
+              <Label htmlFor="due_date">Tanggal Jatuh Tempo</Label>
+              <Input
+                type="date"
+                id="due_date"
+                name="due_date"
+                value={formData.due_date}
+                onChange={handleChange}
+              />
                 <p className="text-xs text-gray-500">Opsional</p>
-              </div>
+            </div>
               
               <div className="space-y-2">
-                <Label htmlFor="wallet_id">Pilih Dompet</Label>
-                <Select
-                  value={formData.wallet_id}
-                  onValueChange={(value) => handleSelectChange('wallet_id', value)}
-                >
+              <Label htmlFor="wallet_id">Pilih Dompet</Label>
+              <Select
+                value={formData.wallet_id}
+                onValueChange={(value) => handleSelectChange('wallet_id', value)}
+              >
                   <SelectTrigger id="wallet_id" className="w-full">
                     <SelectValue placeholder="Pilih dompet">
                       {selectedWallet && (
@@ -275,10 +275,10 @@ const AddDebtPage = () => {
                         </div>
                       )}
                     </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {wallets.map(wallet => (
-                      <SelectItem key={wallet.id} value={wallet.id}>
+                </SelectTrigger>
+                <SelectContent>
+                  {wallets.map(wallet => (
+                    <SelectItem key={wallet.id} value={wallet.id}>
                         <div className="flex items-center">
                           <div 
                             className="w-4 h-4 rounded-full mr-2" 
@@ -289,14 +289,14 @@ const AddDebtPage = () => {
                             ({formatCurrency(wallet.balance)})
                           </span>
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
                 <p className="text-xs text-gray-500">
-                  Hutang akan menambah saldo dompet yang dipilih
-                </p>
-              </div>
+                Hutang akan menambah saldo dompet yang dipilih
+              </p>
+            </div>
               
               <div className="pt-4 grid grid-cols-2 gap-3">
                 <Button 
@@ -314,12 +314,12 @@ const AddDebtPage = () => {
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   {isLoading ? "Memproses..." : "Simpan Hutang"}
-                </Button>
+            </Button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
     </Layout>
   );
 };

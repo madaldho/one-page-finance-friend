@@ -1,10 +1,24 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { getSubscriptionLabel, UserSubscriptionProfile } from '@/utils/subscription';
+import { differenceInDays, parseISO } from 'date-fns';
+
+interface UserWithProfile {
+  email?: string;
+  profile?: {
+    name?: string;
+    avatar_url?: string;
+    subscription_type?: string;
+    trial_start?: string;
+    trial_end?: string;
+    is_admin?: boolean;
+    [key: string]: unknown;
+  };
+}
 
 interface ProfileSectionProps {
-  user: any;
+  user: UserWithProfile;
 }
 
 const ProfileSection = ({ user }: ProfileSectionProps) => {
@@ -13,6 +27,10 @@ const ProfileSection = ({ user }: ProfileSectionProps) => {
   const handleEditProfile = () => {
     navigate('/profile');
   };
+  
+  // Menggunakan getSubscriptionLabel untuk mendapatkan label status langganan
+  const profile = user?.profile as UserSubscriptionProfile || null;
+  const subscriptionLabel = getSubscriptionLabel(profile);
   
   return (
     <section className="mb-8 bg-white p-4 rounded-lg shadow-sm">
@@ -34,7 +52,17 @@ const ProfileSection = ({ user }: ProfileSectionProps) => {
           <p className="font-medium">
             {user?.profile?.name || user?.email || 'User'}
           </p>
-          <p className="text-sm text-gray-500">Akun Personal</p>
+          <div className="flex items-center gap-1">
+            <p className={`text-sm px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${subscriptionLabel.className}`}>
+              {subscriptionLabel.icon && <span>{subscriptionLabel.icon}</span>}
+              <span>Akun {subscriptionLabel.text}</span>
+            </p>
+            {profile?.trial_end && subscriptionLabel.text === 'Trial Pro' && (
+              <span className="text-xs text-blue-700 font-medium">
+                ({Math.max(0, differenceInDays(parseISO(profile.trial_end), new Date()))} hari)
+              </span>
+            )}
+          </div>
         </div>
       </div>
       <Button 

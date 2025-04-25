@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -11,16 +11,49 @@ const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Periksa jika sudah ada sesi admin saat komponen dimuat
+  useEffect(() => {
+    const checkAdminSession = async () => {
+      try {
+        // Cek jika sudah login sebagai admin
+        const savedAdminStatus = localStorage.getItem('isAdmin') === 'true';
+        if (savedAdminStatus) {
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            // Cek apakah user benar-benar admin
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('is_admin')
+              .eq('id', data.session.user.id)
+              .single();
+
+            if (!profileError && profileData?.is_admin) {
+              // Jika masih admin, arahkan ke dashboard
+              navigate('/admin/dashboard');
+              return;
+            }
+          }
+          // Jika tidak valid, hapus flag admin
+          localStorage.removeItem('isAdmin');
+        }
+      } catch (error) {
+        console.error('Error checking admin session:', error);
+        localStorage.removeItem('isAdmin');
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+
+    checkAdminSession();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Tetapkan email admin dan password
-    const adminEmail = 'cupsip01@gmail.com';
-    const adminPassword = 'Test1234';
 
     try {
       // Authenticate dengan Supabase
@@ -47,6 +80,9 @@ const AdminLogin = () => {
           throw new Error('Anda tidak memiliki akses ke dashboard admin');
         }
 
+        // Simpan status admin di localStorage
+        localStorage.setItem('isAdmin', 'true');
+
         toast({
           title: "Login Berhasil",
           description: "Selamat datang di dashboard admin",
@@ -55,6 +91,8 @@ const AdminLogin = () => {
         navigate('/admin/dashboard');
       }
     } catch (error: any) {
+      localStorage.removeItem('isAdmin');
+      
       toast({
         title: "Login Gagal",
         description: error.message || "Terjadi kesalahan saat login",
@@ -64,6 +102,14 @@ const AdminLogin = () => {
       setLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">

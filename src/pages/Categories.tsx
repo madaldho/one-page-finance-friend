@@ -31,11 +31,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { hasProAccess, UserSubscriptionProfile } from "@/utils/subscription";
 
 type Category = Database['public']['Tables']['categories']['Row'];
 
 interface UserProfile {
   subscription_type?: string;
+  trial_start?: string | null;
+  trial_end?: string | null;
   [key: string]: any;
 }
 
@@ -74,13 +77,13 @@ const Categories = () => {
         .single();
 
       if (error) throw error;
-      setUserProfile(data);
+      setUserProfile(data as UserSubscriptionProfile);
     } catch (error) {
       console.error('Error fetching user profile:', error);
     }
   };
 
-  const isProUser = userProfile?.subscription_type === 'pro_6m' || userProfile?.subscription_type === 'pro_12m';
+  const isProUser = hasProAccess(userProfile as UserSubscriptionProfile);
 
   const fetchCategories = async () => {
     try {
@@ -183,9 +186,7 @@ const Categories = () => {
   };
 
   const handleUpgrade = () => {
-    const message = "Halo, saya ingin upgrade ke paket Pro untuk mendapatkan kategori tanpa batas di aplikasi Keuangan Pribadi.";
-    const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    navigate('/upgrade');
     setUpgradeDialog(false);
   };
 

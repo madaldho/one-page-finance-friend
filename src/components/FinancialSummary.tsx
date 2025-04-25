@@ -153,9 +153,9 @@ const FinancialSummary = ({
         } 
         // Jika tidak ada created_at atau tidak valid, coba gunakan date
         else {
-          const date = new Date(originalDate);
+        const date = new Date(originalDate);
           if (!isNaN(date.getTime()) && !originalDate.includes("T00:00:00")) {
-            hours = date.getHours();
+        hours = date.getHours();
           }
         }
       } catch (e) {

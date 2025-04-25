@@ -13,6 +13,7 @@ interface FeatureToggleProps {
   managementLink?: string;
   disabled?: boolean;
   loading?: boolean;
+  extraElement?: React.ReactNode;
 }
 
 const FeatureToggle = ({ 
@@ -23,7 +24,8 @@ const FeatureToggle = ({
   onToggle, 
   managementLink,
   disabled = false,
-  loading = false
+  loading = false,
+  extraElement
 }: FeatureToggleProps) => {
   const canNavigate = checked && managementLink;
   
@@ -34,7 +36,10 @@ const FeatureToggle = ({
           {icon}
         </div>
         <div>
-          <Label htmlFor={`toggle-${title}`} className="cursor-pointer">{title}</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor={`toggle-${title}`} className="cursor-pointer">{title}</Label>
+            {extraElement && extraElement}
+          </div>
           {description && (
             <p className="text-xs text-gray-500 mt-0.5">{description}</p>
           )}

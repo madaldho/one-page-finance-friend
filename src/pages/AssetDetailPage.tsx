@@ -307,31 +307,31 @@ export default function AssetDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+          <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Package className="text-gray-400 h-4 w-4" />
                     <span className="text-sm text-gray-500">Kategori</span>
                   </div>
-                  <p className="font-medium">{getCategoryLabel(asset.category)}</p>
-                </div>
-                <div>
+            <p className="font-medium">{getCategoryLabel(asset.category)}</p>
+          </div>
+          <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Calendar className="text-gray-400 h-4 w-4" />
                     <span className="text-sm text-gray-500">Tahun Pembelian</span>
                   </div>
-                  <p className="font-medium">{asset.purchase_year}</p>
-                </div>
+            <p className="font-medium">{asset.purchase_year}</p>
+          </div>
                 
-                {asset.purchase_date && (
+          {asset.purchase_date && (
                   <div className="col-span-2">
                     <div className="flex items-center gap-2 mb-1">
                       <Clock className="text-gray-400 h-4 w-4" />
                       <span className="text-sm text-gray-500">Tanggal Pembelian</span>
                     </div>
-                    <p className="font-medium">{formatDate(asset.purchase_date)}</p>
-                  </div>
-                )}
-              </div>
+              <p className="font-medium">{formatDate(asset.purchase_date)}</p>
+            </div>
+          )}
+        </div>
             </CardContent>
           </Card>
 
@@ -347,15 +347,15 @@ export default function AssetDetailPage() {
               />
               
               <div className="mt-4 text-center">
-                <Button 
-                  onClick={() => navigate(`/assets/${asset.id}/update`)}
+        <Button
+          onClick={() => navigate(`/assets/${asset.id}/update`)}
                   className="w-full"
                   variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Update Nilai Aset
-                </Button>
-              </div>
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Update Nilai Aset
+        </Button>
+      </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -367,53 +367,53 @@ export default function AssetDetailPage() {
               <CardTitle className="text-base">Riwayat Perubahan Nilai</CardTitle>
             </CardHeader>
             <CardContent>
-              {historyData.length > 0 ? (
-                <div className="divide-y divide-gray-100">
+        {historyData.length > 0 ? (
+          <div className="divide-y divide-gray-100">
                   <div className="grid grid-cols-3 text-sm text-gray-500 py-2 font-medium">
-                    <div>Tanggal</div>
-                    <div>Nilai</div>
-                    <div>Perubahan</div>
-                  </div>
-                  
-                  {/* Initial value entry */}
-                  <div className="grid grid-cols-3 py-3">
+              <div>Tanggal</div>
+              <div>Nilai</div>
+              <div>Perubahan</div>
+            </div>
+            
+            {/* Initial value entry */}
+            <div className="grid grid-cols-3 py-3">
                     <div className="text-sm">{formatDate(initialDate)}</div>
                     <div className="text-sm font-medium">{formatCurrency(asset.initial_value)}</div>
                     <div className="text-sm text-gray-500">-</div>
-                  </div>
-                  
-                  {/* History entries */}
-                  {historyData
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .map((entry) => {
-                      // Find previous value to calculate change percentage
-                      let prevValue = asset.initial_value;
-                      const entryDate = new Date(entry.date).getTime();
-                      
-                      // Find the most recent value before this entry
-                      for (const h of historyData) {
-                        const histDate = new Date(h.date).getTime();
-                        if (histDate < entryDate && h.id !== entry.id) {
-                          prevValue = h.value;
-                          break;
-                        }
-                      }
-                      
-                      const changePercent = ((entry.value - prevValue) / prevValue) * 100;
-                      const isValuePositive = changePercent >= 0;
-                      
-                      return (
-                        <div key={entry.id} className="grid grid-cols-3 py-3">
+            </div>
+            
+            {/* History entries */}
+            {historyData
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .map((entry) => {
+                // Find previous value to calculate change percentage
+                let prevValue = asset.initial_value;
+                const entryDate = new Date(entry.date).getTime();
+                
+                // Find the most recent value before this entry
+                for (const h of historyData) {
+                  const histDate = new Date(h.date).getTime();
+                  if (histDate < entryDate && h.id !== entry.id) {
+                    prevValue = h.value;
+                    break;
+                  }
+                }
+                
+                const changePercent = ((entry.value - prevValue) / prevValue) * 100;
+                const isValuePositive = changePercent >= 0;
+                
+                return (
+                  <div key={entry.id} className="grid grid-cols-3 py-3">
                           <div className="text-sm">{formatDate(entry.date)}</div>
                           <div className="text-sm font-medium">{formatCurrency(entry.value)}</div>
                           <div className={`text-sm ${isValuePositive ? "text-green-600" : "text-red-600"} font-medium`}>
-                            {isValuePositive ? "+" : ""}{changePercent.toFixed(2)}%
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              ) : (
+                      {isValuePositive ? "+" : ""}{changePercent.toFixed(2)}%
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        ) : (
                 <div className="text-center py-8 text-gray-500">
                   <p className="mb-3">Belum ada riwayat nilai.</p>
                   <Button 
@@ -424,8 +424,8 @@ export default function AssetDetailPage() {
                     <Plus className="h-4 w-4 mr-2" />
                     Update Nilai Aset
                   </Button>
-                </div>
-              )}
+          </div>
+        )}
             </CardContent>
           </Card>
         </TabsContent>

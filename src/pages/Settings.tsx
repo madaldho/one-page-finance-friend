@@ -10,6 +10,12 @@ import ActionSection from "@/components/settings/ActionSection";
 import Footer from "@/components/settings/Footer";
 import { Button } from "@/components/ui/button";
 
+interface UserWithProfile {
+  id?: string;
+  email?: string;
+  profile?: Record<string, unknown>;
+}
+
 interface UserSettingsForm {
   show_budgeting: boolean;
   show_savings: boolean;
@@ -20,7 +26,7 @@ const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UserWithProfile | null>(null);
   const [settings, setSettings] = useState<UserSettingsForm>({
     show_budgeting: false,
     show_savings: false,
@@ -244,9 +250,10 @@ const Settings = () => {
         <ProfileSection user={user} />
         
         <FeaturesSection 
+          user={user}
           settings={settings} 
           toggleLoading={toggleLoading} 
-          onToggleChange={handleToggleChange} 
+          onToggleFeature={handleToggleChange} 
         />
         
         <section className="mb-6 bg-white rounded-lg shadow-sm overflow-hidden">

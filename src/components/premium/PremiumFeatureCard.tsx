@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Lock, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import UpgradeModal from "@/components/UpgradeModal";
+import { useNavigate } from "react-router-dom";
 
 interface PremiumFeatureCardProps {
   feature: "budget" | "loan" | "saving" | "analysis" | "assets";
@@ -24,22 +24,14 @@ const PremiumFeatureCard = ({
   cardColor = "bg-blue-50",
   textColor = "text-blue-600",
 }: PremiumFeatureCardProps) => {
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const navigate = useNavigate();
 
   const handleUpgrade = () => {
     if (onUpgrade) {
       onUpgrade();
     } else {
-      // Default fallback: kirim pesan WhatsApp
-      const message = `Halo, saya ingin upgrade ke paket Pro untuk menggunakan fitur ${title} di aplikasi Uang Pintar.`;
-      const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+      navigate("/upgrade");
     }
-    setShowUpgradeModal(false);
-  };
-
-  const handleStayFree = () => {
-    setShowUpgradeModal(false);
   };
 
   return (
@@ -62,21 +54,13 @@ const PremiumFeatureCard = ({
             variant="outline"
             size="sm"
             className={`mt-2 ${textColor} border-current hover:bg-opacity-10 hover:bg-current`}
-            onClick={() => setShowUpgradeModal(true)}
+            onClick={handleUpgrade}
           >
             <span>Upgrade ke Pro</span>
             <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
-
-      <UpgradeModal
-        open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
-        feature={feature}
-        onUpgrade={handleUpgrade}
-        onStayFree={handleStayFree}
-      />
     </>
   );
 };
