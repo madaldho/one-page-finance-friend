@@ -213,26 +213,36 @@ const TransactionList = ({
     // Periksa apakah transaksi memiliki category_id atau category
     const categoryId = transaction.category_id || transaction.category;
     
+    // Jika tidak ada ID kategori sama sekali
     if (!categoryId) return "-";
     
+    // Coba dapatkan kategori dari daftar yang telah di-fetch
     const category = categories[categoryId];
-    if (!category) {
-      // Jika data kategori belum dimuat, tampilkan loading placeholder
+    
+    // Jika kategori ditemukan, tampilkan dengan format normal
+    if (category) {
       return (
-        <div className="flex items-center gap-1.5">
-          <div className="h-3 w-10 bg-gray-200 animate-pulse rounded-sm"></div>
-        </div>
+        <span className="flex items-center gap-1.5">
+          {category.icon && (
+            <i className={`fas fa-${category.icon} text-xs`}></i>
+          )}
+          {category.name}
+        </span>
       );
     }
     
-    return (
-      <span className="flex items-center gap-1.5">
-        {category.icon && (
-          <i className={`fas fa-${category.icon} text-xs`}></i>
-        )}
-        {category.name}
-      </span>
-    );
+    // Fallback: jika category sudah ada tapi sebagai string (dari data asli)
+    if (typeof transaction.category === 'string' && transaction.category.length > 0) {
+      return transaction.category;
+    }
+    
+    // Fallback: jika category_name tersedia
+    if (transaction.category_name) {
+      return transaction.category_name;
+    }
+    
+    // Fallback paling akhir: tampilkan sebagian ID kategori
+    return categoryId.slice(0, 6);
   };
 
   // Handle search

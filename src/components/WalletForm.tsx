@@ -417,13 +417,13 @@ export default function WalletForm() {
                       <SelectItem value="investment">
                         <div className="flex items-center gap-2">
                           <CreditCard className="h-4 w-4" />
-                          <span>Investasi</span>
+                          <span>E-Wallet</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="savings">
                         <div className="flex items-center gap-2">
                           <PiggyBank className="h-4 w-4" />
-                          <span>Tabungan</span>
+                          <span>Lainnya</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
