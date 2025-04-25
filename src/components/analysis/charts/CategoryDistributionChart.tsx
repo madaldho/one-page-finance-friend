@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -71,8 +70,36 @@ export function CategoryDistributionChart({
   }, [transactions, dateRange]);
 
   const chartData = useMemo(() => {
+    // Daftar warna preset yang cerah dan berbeda untuk kategori
+    const categoryColors = [
+      "#FF6384", // Pink
+      "#36A2EB", // Biru
+      "#FFCE56", // Kuning
+      "#4BC0C0", // Teal
+      "#9966FF", // Ungu
+      "#FF9F40", // Oranye
+      "#2ECC71", // Hijau
+      "#E74C3C", // Merah
+      "#3498DB", // Biru Muda
+      "#9B59B6", // Ungu Tua
+      "#1ABC9C", // Turquoise
+      "#F1C40F", // Kuning Tua
+      "#E67E22", // Oranye Tua
+      "#95A5A6", // Abu-abu
+      "#34495E", // Navy
+      "#7F8C8D", // Abu-abu Tua
+      "#D35400", // Oranye Gelap
+      "#27AE60", // Hijau Tua
+      "#C0392B", // Merah Tua
+      "#8E44AD"  // Ungu Gelap
+    ];
+    
+    // Simpan indeks warna yang sudah digunakan
+    const usedColorIndexes = new Set<number>();
+    
     if (viewType === "category") {
       const dataMap = new Map<string, { value: number, color: string, id: string }>();
+      let colorIndex = 0;
       
       filteredTransactions.forEach(transaction => {
         if (
@@ -83,9 +110,32 @@ export function CategoryDistributionChart({
           const categoryId = transaction.category_id || "";
           
           const category = categories.find(cat => cat.id === categoryId);
-          const color = category?.color || `#${Math.floor(Math.random()*16777215).toString(16)}`;
           
+          // Jika kategori belum ada di dataMap, tentukan warnanya
           if (!dataMap.has(categoryName)) {
+            let color;
+            
+            // Prioritas 1: Gunakan warna dari database jika tersedia
+            if (category?.color) {
+              color = category.color;
+            } 
+            // Prioritas 2: Gunakan warna preset yang belum digunakan
+            else {
+              // Cari indeks warna yang belum digunakan
+              while (usedColorIndexes.has(colorIndex) && usedColorIndexes.size < categoryColors.length) {
+                colorIndex = (colorIndex + 1) % categoryColors.length;
+              }
+              
+              // Tambahkan ke daftar warna yang sudah digunakan
+              usedColorIndexes.add(colorIndex);
+              
+              // Gunakan warna dari preset
+              color = categoryColors[colorIndex];
+              
+              // Persiapkan untuk kategori berikutnya
+              colorIndex = (colorIndex + 1) % categoryColors.length;
+            }
+            
             dataMap.set(categoryName, { value: 0, color, id: categoryId });
           }
           
@@ -106,7 +156,32 @@ export function CategoryDistributionChart({
         }))
         .sort((a, b) => b.value - a.value);
     } else {
+      // Daftar warna preset untuk dompet
+      const walletColors = [
+        "#4CAF50", // Hijau
+        "#2196F3", // Biru
+        "#FFC107", // Kuning
+        "#9C27B0", // Ungu
+        "#E91E63", // Pink
+        "#F44336", // Merah
+        "#00BCD4", // Biru Muda
+        "#795548", // Coklat
+        "#607D8B", // Biru Abu-abu
+        "#FF5722", // Oranye Dalam
+        "#CDDC39", // Hijau Lime
+        "#673AB7", // Deep Purple
+        "#3F51B5", // Indigo
+        "#03A9F4", // Light Blue
+        "#009688", // Teal
+        "#8BC34A", // Light Green
+        "#FFEB3B", // Yellow
+        "#FF9800", // Orange
+        "#9E9E9E", // Grey
+        "#000000"  // Black
+      ];
+      
       const dataMap = new Map<string, { value: number, color: string, id: string }>();
+      let colorIndex = 0;
       
       filteredTransactions.forEach(transaction => {
         if (
@@ -117,9 +192,37 @@ export function CategoryDistributionChart({
           const walletId = transaction.wallet_id || "";
           
           const wallet = wallets.find(w => w.id === walletId);
-          const color = wallet?.color || wallet?.gradient || `hsl(${walletName.charCodeAt(0) % 360}, 70%, 50%)`;
           
           if (!dataMap.has(walletName)) {
+            let color;
+            
+            // Prioritas 1: Gunakan warna dari database
+            if (wallet?.color) {
+              color = wallet.color;
+            } 
+            // Prioritas 2: Gunakan gradient dari wallet jika ada
+            else if (wallet?.gradient) {
+              // Ambil warna pertama dari gradient
+              const gradientColors = wallet.gradient.split(',');
+              color = gradientColors[0].trim();
+            } 
+            // Prioritas 3: Gunakan warna preset
+            else {
+              // Cari indeks warna yang belum digunakan
+              while (usedColorIndexes.has(colorIndex) && usedColorIndexes.size < walletColors.length) {
+                colorIndex = (colorIndex + 1) % walletColors.length;
+              }
+              
+              // Tambahkan ke daftar warna yang sudah digunakan
+              usedColorIndexes.add(colorIndex);
+              
+              // Gunakan warna dari preset
+              color = walletColors[colorIndex];
+              
+              // Persiapkan untuk dompet berikutnya
+              colorIndex = (colorIndex + 1) % walletColors.length;
+            }
+            
             dataMap.set(walletName, { value: 0, color, id: walletId });
           }
           
