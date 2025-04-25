@@ -750,7 +750,7 @@ const BudgetManagement = () => {
       <div className="container mx-auto p-4 pb-32 max-w-xl">
         {/* Header */}
         <div className="flex items-center mb-4">
-          <Link to="/home" className="mr-2">
+          <Link to="/settings" className="mr-2">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-xl font-bold">Manajemen Budget</h1>

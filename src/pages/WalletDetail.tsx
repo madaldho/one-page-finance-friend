@@ -21,7 +21,8 @@ import {
   X,
   Check,
   SlidersHorizontal,
-  Lock
+  Lock,
+  CheckCircle
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { format, subDays, subMonths, subYears, startOfDay, endOfDay, Locale } from 'date-fns';
@@ -586,37 +587,74 @@ const WalletDetail = () => {
 
   // Fallback content untuk pengguna free yang telah mencapai batas
   const walletDetailFallback = (
-    <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
-      <div className="flex items-center gap-4 mb-6">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => navigate(-1)}
-          className="rounded-full"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-        <h1 className="text-2xl font-semibold">Detail Dompet</h1>
-      </div>
+    <div className="container mx-auto py-2 px-2 md:px-6 my-auto max-w-5xl">
+     
 
-      <div className="bg-orange-50 p-6 rounded-lg border border-orange-100 my-4">
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          <div className="p-4 bg-orange-100 rounded-full">
-            <Lock className="h-8 w-8 text-orange-500" />
+      <div className="relative overflow-hidden bg-gradient-to-r from-amber-50 via-amber-100 to-yellow-50 p-8 rounded-2xl border border-amber-200 shadow-sm my-4 max-w-3xl mx-auto">
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-amber-300/20 to-yellow-300/20 rounded-full -mr-20 -mt-20"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-amber-300/20 to-yellow-300/20 rounded-full -ml-16 -mb-16"></div>
+        
+        <div className="flex flex-col md:flex-row items-center gap-6 relative z-10">
+          <div className="p-5 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl shadow-md border border-amber-400/30">
+            <Lock className="h-8 w-8 text-white" />
           </div>
-          <div className="text-center md:text-left">
-            <h2 className="text-xl font-bold mb-2">Batas Harian Tercapai</h2>
-            <p className="text-gray-600 mb-4">
-              Anda telah mencapai batas melihat detail dompet untuk hari ini (5x). 
-              Upgrade ke Pro untuk akses tak terbatas ke detail dompet dan fitur lainnya!
+          
+          <div className="text-center md:text-left flex-1">
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+              <h2 className="text-xl md:text-2xl font-bold text-amber-800">Batas Harian Tercapai</h2>
+              <Badge className="bg-amber-200 text-amber-700 hover:bg-amber-300 border-0">
+                5/5
+              </Badge>
+            </div>
+            
+            <p className="text-gray-700 mb-6 max-w-lg">
+              Anda telah mencapai batas melihat detail dompet untuk hari ini. 
+              Upgrade ke <span className="font-semibold">Pro</span> untuk akses tanpa batas ke semua fitur premium!
             </p>
-            <Button 
-              onClick={() => navigate('/upgrade')}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-6 py-2"
-            >
-              Upgrade ke Pro
-            </Button>
+            
+            <div className="flex flex-col sm:flex-row gap-3 mt-2">
+              <Button 
+                onClick={() => navigate('/upgrade')}
+                className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-medium px-6 py-5 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+              >
+                <span>Upgrade ke Pro Sekarang</span>
+                <ArrowUpRight className="ml-2 h-4 w-4" />
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(-1)}
+                className="border-gray-300 hover:bg-gray-50 text-gray-600"
+              >
+                Kembali
+              </Button>
+            </div>
           </div>
+          
+          <div className="hidden md:block bg-gradient-to-br from-amber-100 to-amber-50 p-4 rounded-xl border border-amber-200 shadow-sm">
+            <div className="grid gap-3">
+              <div className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <span className="text-sm text-gray-700">Lihat detail transaksi tanpa batas</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <span className="text-sm text-gray-700">Analisis pengeluaran mendalam</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                <span className="text-sm text-gray-700">Fitur tabungan dan anggaran</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Small testimonial at the bottom */}
+        <div className="mt-6 pt-4 border-t border-amber-200/50 text-center md:text-left">
+          <p className="text-sm text-gray-600 italic">
+            "Dengan Pro, saya bisa memantau semua transaksi tanpa batasan. Sangat membantu untuk mengelola keuangan!" — Budi S.
+          </p>
         </div>
       </div>
     </div>

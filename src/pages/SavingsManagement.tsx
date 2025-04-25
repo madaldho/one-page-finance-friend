@@ -620,7 +620,7 @@ const SavingsManagement = () => {
       <div className="container mx-auto p-4 pb-32 max-w-xl">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center">
-            <Link to="/home" className="mr-2">
+            <Link to="/settings" className="mr-2">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <h1 className="text-xl font-bold">Tabungan/Celengan</h1>

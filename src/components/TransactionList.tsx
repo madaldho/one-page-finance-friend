@@ -65,11 +65,18 @@ interface Wallet {
   is_default?: boolean;
 }
 
+// Menambahkan interface untuk Transaction dengan properti tambahan untuk mencegah error TypeScript
+interface ExtendedTransaction extends Transaction {
+  category?: string;
+  category_id?: string;
+  category_name?: string;
+}
+
 interface TransactionListProps {
-  transactions: (Transaction & { wallet_name?: string })[];
+  transactions: (ExtendedTransaction & { wallet_name?: string })[];
   onFilter: (query: string) => void;
   onDelete: (ids: string[]) => Promise<void>;
-  onEdit: (transaction: Transaction) => void;
+  onEdit: (transaction: ExtendedTransaction) => void;
   onDateRangeChange: (range: DateRange | undefined) => void;
   hideHeader?: boolean;
   isLoading?: boolean;
@@ -87,7 +94,7 @@ const TransactionList = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof Transaction;
+    key: keyof Transaction | 'category' | 'wallet_name';
     direction: 'asc' | 'desc';
   }>({ key: 'created_at', direction: 'desc' });
   const [categories, setCategories] = useState<Record<string, Category>>({});
@@ -143,7 +150,7 @@ const TransactionList = ({
   }, []);
 
   // Handle sort
-  const handleSort = (key: keyof Transaction) => {
+  const handleSort = (key: keyof Transaction | 'category' | 'wallet_name') => {
     setSortConfig(prev => ({
       key,
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
@@ -152,8 +159,28 @@ const TransactionList = ({
 
   // Sort transactions
   const sortedTransactions = [...transactions].sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
+    // Tambahkan special case untuk category
+    if (sortConfig.key === 'category') {
+      const aCategory = categories[a.category_id || a.category || '']?.name || '';
+      const bCategory = categories[b.category_id || b.category || '']?.name || '';
+      
+      return sortConfig.direction === 'asc'
+        ? aCategory.localeCompare(bCategory)
+        : bCategory.localeCompare(aCategory);
+    }
+    
+    // Tambahkan special case untuk wallet_name
+    if (sortConfig.key === 'wallet_name') {
+      const aWallet = a.wallet_name || wallets[a.wallet_id]?.name || '';
+      const bWallet = b.wallet_name || wallets[b.wallet_id]?.name || '';
+      
+      return sortConfig.direction === 'asc'
+        ? aWallet.localeCompare(bWallet)
+        : bWallet.localeCompare(aWallet);
+    }
+    
+    const aValue = a[sortConfig.key as keyof Transaction];
+    const bValue = b[sortConfig.key as keyof Transaction];
     
     // Special case for created_at which might be undefined
     if (sortConfig.key === 'created_at') {
@@ -181,6 +208,33 @@ const TransactionList = ({
     return 0;
   });
 
+  // Fungsi untuk mendapatkan tampilan kategori
+  const getCategoryDisplay = (transaction: ExtendedTransaction): React.ReactNode => {
+    // Periksa apakah transaksi memiliki category_id atau category
+    const categoryId = transaction.category_id || transaction.category;
+    
+    if (!categoryId) return "-";
+    
+    const category = categories[categoryId];
+    if (!category) {
+      // Jika data kategori belum dimuat, tampilkan loading placeholder
+      return (
+        <div className="flex items-center gap-1.5">
+          <div className="h-3 w-10 bg-gray-200 animate-pulse rounded-sm"></div>
+        </div>
+      );
+    }
+    
+    return (
+      <span className="flex items-center gap-1.5">
+        {category.icon && (
+          <i className={`fas fa-${category.icon} text-xs`}></i>
+        )}
+        {category.name}
+      </span>
+    );
+  };
+
   // Handle search
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -203,7 +257,10 @@ const TransactionList = ({
   };
 
   // Get category badge style
-  const getCategoryBadgeStyle = (categoryId: string) => {
+  const getCategoryBadgeStyle = (transaction: ExtendedTransaction) => {
+    const categoryId = transaction.category_id || transaction.category;
+    if (!categoryId) return {};
+    
     const category = categories[categoryId];
     if (!category) return {};
     
@@ -384,24 +441,19 @@ const TransactionList = ({
                 <TableCell className="font-medium">
                   {format(new Date(transaction.date), "dd/MM/yyyy", { locale: id })}
                 </TableCell>
-            <TableCell>
+                <TableCell>
                   <Badge 
                     variant="outline"
                     className={cn(
                       "rounded-md font-normal transition-colors",
                       getTransactionTypeColor(transaction.type)
                     )}
-                    style={getCategoryBadgeStyle(transaction.category)}
+                    style={getCategoryBadgeStyle(transaction)}
                   >
-                    <span className="flex items-center gap-1.5">
-                      {categories[transaction.category]?.icon && (
-                        <i className={`fas fa-${categories[transaction.category].icon} text-xs`}></i>
-                      )}
-                      {categories[transaction.category]?.name || transaction.category}
-                    </span>
+                    {getCategoryDisplay(transaction)}
                   </Badge>
-            </TableCell>
-            <TableCell>
+                </TableCell>
+                <TableCell>
                   <Badge 
                     variant="outline"
                     className="rounded-md font-normal"
@@ -412,41 +464,41 @@ const TransactionList = ({
                 </TableCell>
                 <TableCell className="max-w-[200px] truncate">
                   {transaction.description || "-"}
-            </TableCell>
+                </TableCell>
                 <TableCell className={cn(
                   "text-right font-medium",
                   transaction.type === "income" && "text-emerald-600",
                   transaction.type === "expense" && "text-rose-600",
-                transaction.type === "transfer" && "text-blue-600"
-              )}>
-                {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                {formatCurrency(transaction.amount)}
-            </TableCell>
-            <TableCell>
+                  transaction.type === "transfer" && "text-blue-600"
+                )}>
+                  {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
+                  {formatCurrency(transaction.amount)}
+                </TableCell>
+                <TableCell>
                   <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onEdit(transaction)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit(transaction)}
                       className="h-8 w-8 hover:bg-background"
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={(e) => {
                         e.stopPropagation();
                         setTransactionToDelete([transaction.id]);
                         setShowDeleteDialog(true);
                       }}
                       className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </TableCell>
-          </TableRow>
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
             );
           })}
       </TableBody>
@@ -534,7 +586,7 @@ const TransactionList = ({
                         )}
                         onClick={() => {
                           setSortConfig({
-                            key: key as keyof Transaction,
+                            key: key as keyof Transaction | 'category' | 'wallet_name',
                             direction: sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc'
                           });
                           setShowSortMenu(false);
@@ -629,14 +681,9 @@ const TransactionList = ({
                       "rounded-md font-normal text-xs",
                       getTransactionTypeColor(transaction.type)
                     )}
-                    style={getCategoryBadgeStyle(transaction.category)}
+                    style={getCategoryBadgeStyle(transaction)}
                   >
-                    <span className="flex items-center gap-1">
-                      {categories[transaction.category]?.icon && (
-                                  <i className={`fas fa-${categories[transaction.category].icon} text-[10px]`}></i>
-                      )}
-                      {categories[transaction.category]?.name || transaction.category}
-                    </span>
+                    {getCategoryDisplay(transaction)}
                   </Badge>
                 </div>
                 

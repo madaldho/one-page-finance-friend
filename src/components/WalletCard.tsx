@@ -87,72 +87,75 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
 
   return (
     <>
-      <Card 
-        className={cn(
-          "relative p-3 sm:p-4 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300",
-          "before:content-[''] before:absolute before:inset-0 before:bg-black/10 before:opacity-0 group-hover:before:opacity-100 before:transition-opacity"
-        )}
-        style={cardStyle}
-        onClick={handleCardClick}
-      >
-        <div className="flex justify-between items-start mb-2 sm:mb-4 ">
-          <div className="flex items-center gap-1 sm:gap-2 max-w-[70%] text-white">
-            {getWalletIcon(wallet.type || "cash")}
-            <h3 className="text-sm sm:text-lg font-semibold truncate ">{wallet.name} </h3>
-            {wallet.is_default && (
-              <span className="bg-white/20 text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
-                Default
-              </span>
-            )}
+      <div className="relative">
+        <Card 
+          className={cn(
+            "relative p-3 sm:p-4 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300",
+            "before:content-[''] before:absolute before:inset-0 before:bg-black/10 before:opacity-0 group-hover:before:opacity-100 before:transition-opacity"
+          )}
+          style={cardStyle}
+          onClick={handleCardClick}
+        >
+          <div className="flex justify-between items-start mb-2 sm:mb-4 ">
+            <div className="flex items-center gap-1 sm:gap-2 max-w-[70%] text-white">
+              {getWalletIcon(wallet.type || "cash")}
+              <h3 className="text-sm sm:text-lg font-semibold truncate ">{wallet.name} </h3>
+              {wallet.is_default && (
+                <span className="bg-white/20 text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
+                  Default
+                </span>
+              )}
+            </div>
+            <div className="z-10 relative" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-white hover:bg-white/20"
+                    size="icon"
+                    aria-label="Menu dompet"
+                  >
+                    <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    className="flex items-center gap-2 cursor-pointer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (onEdit) onEdit(wallet);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowDeleteDialog(true);
+                    }}
+                    disabled={wallet.is_default}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Hapus
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-white hover:bg-white/20"
-                size="icon"
-                aria-label="Menu dompet"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="flex items-center gap-2 cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onEdit) onEdit(wallet);
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowDeleteDialog(true);
-                }}
-                disabled={wallet.is_default}
-              >
-                <Trash2 className="h-4 w-4" />
-                Hapus
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
 
-        <div className="space-y-0 sm:space-y-1">
-          <p className="text-base sm:text-2xl font-bold leading-tight break-words text-white">
-            {formatCurrency(wallet.balance)}
-          </p>
-          <p className="text-xs sm:text-sm opacity-90 text-white">
-            {wallet.type === "bank" ? "Rekening Bank" : 
-             wallet.type === "savings" ? "Tabungan" : "Uang Tunai"}
-          </p>
-        </div>
-      </Card>
+          <div className="space-y-0 sm:space-y-1">
+            <p className="text-base sm:text-2xl font-bold leading-tight break-words text-white">
+              {formatCurrency(wallet.balance)}
+            </p>
+            <p className="text-xs sm:text-sm opacity-90 text-white">
+              {wallet.type === "bank" ? "Rekening Bank" : 
+               wallet.type === "savings" ? "Tabungan" : "Uang Tunai"}
+            </p>
+          </div>
+        </Card>
+      </div>
 
       <DeleteConfirmationDialog
         isOpen={showDeleteDialog}

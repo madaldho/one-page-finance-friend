@@ -39,6 +39,19 @@ const ActionSection = ({ loading, handleExportData }: ActionSectionProps) => {
     }
   };
   
+  const handleSendEmail = () => {
+    const emailAddress = "keuanganribadi@gmail.com";
+    const subject = "Bantuan Aplikasi Keuangan Pribadi";
+    const body = "Halo Tim Keuangan Pribadi,\n\nSaya membutuhkan bantuan terkait:";
+    
+    window.location.href = `mailto:${emailAddress}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    
+    toast({
+      title: "Membuka Aplikasi Email",
+      description: "Mengarahkan ke aplikasi email untuk mengirim pesan",
+    });
+  };
+  
   return (
     <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
       <Button 
@@ -58,10 +71,7 @@ const ActionSection = ({ loading, handleExportData }: ActionSectionProps) => {
       <Button 
         variant="ghost" 
         className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-        onClick={() => toast({ 
-          title: "Coming Soon", 
-          description: "Fitur ini akan segera tersedia" 
-        })}
+        onClick={handleSendEmail}
       >
         <div className="flex items-center">
           <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">

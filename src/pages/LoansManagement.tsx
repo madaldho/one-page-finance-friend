@@ -145,7 +145,7 @@ const LoansManagement = () => {
     <Layout>
       <div className="container mx-auto p-4 pb-32 max-w-lg">
         <div className="flex items-center mb-6">
-          <Link to="/home" className="mr-2">
+          <Link to="/settings" className="mr-2">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-xl font-bold">Hutang & Piutang</h1>
