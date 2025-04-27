@@ -9,6 +9,7 @@ import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
 import Footer from "@/components/settings/Footer";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface UserWithProfile {
   id?: string;
@@ -232,11 +233,73 @@ const Settings = () => {
   if (loading) {
     return (
       <Layout>
-        <div className="container mx-auto p-4 pb-32 max-w-2xl flex items-center justify-center h-full min-h-[60vh]">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-4" />
-            <p className="text-gray-500">Memuat pengaturan...</p>
-          </div>
+        <div className="container mx-auto p-4 pb-32 max-w-2xl">
+          <h1 className="text-xl font-bold mb-6">Pengaturan</h1>
+          
+          {/* Profile Section Skeleton */}
+          <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h2 className="font-semibold">Profil</h2>
+            </div>
+            <div className="p-4 flex items-center">
+              <Skeleton className="h-14 w-14 rounded-full" />
+              <div className="ml-4 flex-1">
+                <Skeleton className="h-5 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </div>
+          </section>
+          
+          {/* Features Section Skeleton */}
+          <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h2 className="font-semibold">Fitur</h2>
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <div className="p-4">
+              <div className="space-y-4">
+                {[1, 2, 3].map((index) => (
+                  <div key={index} className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div>
+                        <Skeleton className="h-4 w-24 mb-2" />
+                        <Skeleton className="h-3 w-36" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-6 w-12 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+          
+          {/* Configuration Section Skeleton */}
+          <section className="mb-6 bg-white rounded-lg shadow-sm overflow-hidden">
+            <h2 className="font-semibold p-4 border-b border-gray-100">Konfigurasi</h2>
+            {[1, 2].map((index) => (
+              <div key={index} className="border-b border-gray-100">
+                <div className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                    <div>
+                      <Skeleton className="h-4 w-16 mb-2" />
+                      <Skeleton className="h-3 w-40" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-5 w-5 rounded" />
+                </div>
+              </div>
+            ))}
+          </section>
+          
+          {/* Action Section Skeleton */}
+          <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
+            <h2 className="font-semibold p-4 border-b border-gray-100">Tindakan</h2>
+            <div className="p-4">
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          </section>
         </div>
       </Layout>
     );

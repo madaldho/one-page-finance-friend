@@ -3,6 +3,7 @@ import { Input } from "./input";
 import { formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
 import { NumericKeyboard } from "./NumericKeyboard";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDebounce } from "@/hooks/use-debounce";
 
 export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value?: number;
@@ -25,11 +26,23 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
   }, ref) => {
     const [showKeyboard, setShowKeyboard] = useState(false);
     const [displayValue, setDisplayValue] = useState<string>("");
+    const [inputValue, setInputValue] = useState<number>(value || 0);
     const isMobile = useIsMobile();
+    
+    // Menggunakan debounce untuk mengurangi lag saat input
+    const debouncedValue = useDebounce(inputValue, 150);
+
+    // Update ke parent hanya setelah debounce selesai
+    useEffect(() => {
+      if (onChange) {
+        onChange(debouncedValue);
+      }
+    }, [debouncedValue, onChange]);
 
     // Update display value when value changes from parent
     useEffect(() => {
       if (value !== undefined) {
+        setInputValue(value);
         setDisplayValue(formatNumberWithSeparator(value));
       }
     }, [value]);
@@ -45,10 +58,10 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       if (isMobile) return; // Tidak perlu handle di mobile karena menggunakan NumericKeyboard
       
       // Mengambil nilai dari input
-      const inputValue = e.target.value;
+      const inputStr = e.target.value;
       
       // Hapus semua karakter non-digit dan formatting sebelumnya (titik)
-      const rawValue = inputValue.replace(/[^\d]/g, '');
+      const rawValue = inputStr.replace(/[^\d]/g, '');
       
       // Konversi ke angka
       const numericValue = rawValue ? parseInt(rawValue, 10) : 0;
@@ -56,14 +69,12 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       // Format untuk tampilan dengan pemisah ribuan
       setDisplayValue(formatNumberWithSeparator(numericValue));
       
-      // Panggil onChange callback
-      if (onChange) {
-        onChange(numericValue);
-      }
+      // Update state lokal (akan di-debounce sebelum mengirim ke parent)
+      setInputValue(numericValue);
     };
 
     const handleSetAmount = (val: number) => {
-      if (onChange) onChange(val);
+      setInputValue(val);
     };
 
     return (

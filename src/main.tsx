@@ -6,7 +6,24 @@ import './index.css';
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const queryClient = new QueryClient();
+// Konfigurasi QueryClient yang dioptimalkan untuk performa
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Meningkatkan performa dengan cache
+      staleTime: 1000 * 60 * 5, // Data dianggap stale setelah 5 menit
+      gcTime: 1000 * 60 * 30, // Cache disimpan selama 30 menit (pengganti cacheTime)
+      refetchOnWindowFocus: false, // Tidak refetch otomatis saat focus window
+      refetchOnMount: false, // Tidak refetch otomatis saat komponen mount
+      retry: 1, // Hanya coba ulang 1 kali jika gagal
+    },
+    mutations: {
+      // Optimasi untuk mengurangi lag saat submit form atau klik tombol
+      retry: 1,
+      networkMode: 'always'
+    },
+  },
+});
 
 // Daftarkan service worker
 if ('serviceWorker' in navigator) {

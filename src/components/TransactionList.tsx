@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import DeleteConfirmationDialog from '@/components/DeleteConfirmationDialog';
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Category {
   id: string;
@@ -516,8 +517,56 @@ const TransactionList = ({
     </div>
   );
 
+  // Skeleton untuk tampilan mobile
+  const MobileSkeletonView = () => {
+    const months = ['APR 25', 'MAR 25']; // Contoh bulan untuk skeleton
+    
+    return (
+      <div className="space-y-4 animate-pulse">
+        {months.map((month, monthIndex) => (
+          <div key={month} className="space-y-px">
+            {/* Skeleton Month Header */}
+            <div className="bg-slate-700/20 text-transparent font-medium text-sm px-4 py-2 rounded-lg mb-1">
+              {month}
+            </div>
+            
+            {/* Skeleton Transactions */}
+            {Array.from({ length: monthIndex === 0 ? 3 : 2 }).map((_, index) => (
+              <div
+                key={`skeleton-${monthIndex}-${index}`}
+                className="bg-card border rounded-lg border-t-0 first:border-t p-3"
+              >
+                <div className="flex justify-between items-start">
+                  {/* Left Side Skeleton */}
+                  <div className="flex flex-col gap-1.5 max-w-[65%]">
+                    <div className="flex items-center gap-1.5">
+                      <Skeleton className="h-4 w-20" /> {/* Date */}
+                      <Skeleton className="h-5 w-16 rounded-md" /> {/* Category */}
+                    </div>
+                    <Skeleton className="h-3 w-32" /> {/* Description */}
+                  </div>
+                  
+                  {/* Right Side Skeleton */}
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Skeleton className="h-5 w-20" /> {/* Amount */}
+                    <Skeleton className="h-4 w-12 rounded-sm" /> {/* Wallet */}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Mobile view
   const MobileView = () => {
+    // Tampilkan skeleton jika loading
+    if (isLoading) {
+      return <MobileSkeletonView />;
+    }
+    
     // Group transactions by month and year
     const groupTransactionsByMonth = () => {
       const groupedTransactions: Record<string, Transaction[]> = {};
@@ -772,6 +821,27 @@ const TransactionList = ({
   );
   };
 
+  // Desktop Skeleton View
+  const DesktopSkeletonView = () => (
+    <div className="rounded-lg border bg-card animate-pulse">
+      <div className="p-4">
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={`skeleton-desktop-${index}`} className="flex items-center gap-4">
+              <Skeleton className="h-4 w-4 rounded-full" /> {/* Checkbox */}
+              <Skeleton className="h-4 w-20" /> {/* Date */}
+              <Skeleton className="h-6 w-24 rounded-md" /> {/* Category */}
+              <Skeleton className="h-6 w-24 rounded-md" /> {/* Wallet */}
+              <Skeleton className="h-4 w-32 flex-1" /> {/* Description */}
+              <Skeleton className="h-4 w-20" /> {/* Amount */}
+              <Skeleton className="h-8 w-16" /> {/* Actions */}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {!hideHeader && (
@@ -812,7 +882,10 @@ const TransactionList = ({
           </div>
       )}
 
-      {isDesktop ? <DesktopView /> : <MobileView />}
+      {isLoading 
+        ? (isDesktop ? <DesktopSkeletonView /> : <MobileSkeletonView />)
+        : (isDesktop ? <DesktopView /> : <MobileView />)
+      }
 
       <DeleteConfirmationDialog
         open={showDeleteDialog}
