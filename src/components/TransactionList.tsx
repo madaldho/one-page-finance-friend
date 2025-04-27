@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Transaction } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -66,15 +66,16 @@ interface Wallet {
   is_default?: boolean;
 }
 
-// Menambahkan interface untuk Transaction dengan properti tambahan untuk mencegah error TypeScript
-interface ExtendedTransaction extends Transaction {
+// Memperbaiki interface untuk Transaction dengan properti lengkap
+interface ExtendedTransaction extends Omit<Transaction, 'category_id'> {
   category?: string;
   category_id?: string;
   category_name?: string;
+  wallet_name?: string;
 }
 
 interface TransactionListProps {
-  transactions: (ExtendedTransaction & { wallet_name?: string })[];
+  transactions: ExtendedTransaction[];
   onFilter: (query: string) => void;
   onDelete: (ids: string[]) => Promise<void>;
   onEdit: (transaction: ExtendedTransaction) => void;
@@ -95,7 +96,7 @@ const TransactionList = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof Transaction | 'category' | 'wallet_name';
+    key: keyof ExtendedTransaction | 'category' | 'wallet_name';
     direction: 'asc' | 'desc';
   }>({ key: 'created_at', direction: 'desc' });
   const [categories, setCategories] = useState<Record<string, Category>>({});
@@ -113,115 +114,175 @@ const TransactionList = ({
   // Menambahkan state untuk lazy loading
   const [displayLimit, setDisplayLimit] = useState(40);
   const [hasMore, setHasMore] = useState(true);
+  // Menambahkan state untuk mengontrol apakah data sudah siap ditampilkan
+  const [dataIsReady, setDataIsReady] = useState(false);
 
-  // Fetch categories and wallets
+  // Fetch categories and wallets with caching
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch categories
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('*');
+        // Coba ambil data dari cache terlebih dahulu
+        const cachedCategories = localStorage.getItem('finance_categories');
+        const cachedWallets = localStorage.getItem('finance_wallets');
+        const cacheTimestamp = localStorage.getItem('finance_cache_timestamp');
         
-        if (categoriesError) throw categoriesError;
+        const now = Date.now();
+        const cacheExpired = !cacheTimestamp || (now - parseInt(cacheTimestamp)) > 15 * 60 * 1000; // Cache valid for 15 minutes
         
-        const categoryMap = categoriesData.reduce((acc, cat) => {
-          acc[cat.id] = cat as Category;
-          return acc;
-        }, {} as Record<string, Category>);
+        let categoryMap: Record<string, Category> = {};
+        let walletMap: Record<string, Wallet> = {};
         
-        setCategories(categoryMap);
-
-        // Fetch wallets
-        const { data: walletsData, error: walletsError } = await supabase
-          .from('wallets')
-          .select('*');
-        
-        if (walletsError) throw walletsError;
-        
-        const walletMap = walletsData.reduce((acc, wallet) => {
-          acc[wallet.id] = wallet;
-          return acc;
-        }, {} as Record<string, Wallet>);
-        
-        setWallets(walletMap);
+        // Jika cache masih valid dan tersedia, gunakan itu
+        if (!cacheExpired && cachedCategories && cachedWallets) {
+          categoryMap = JSON.parse(cachedCategories);
+          walletMap = JSON.parse(cachedWallets);
+          
+          setCategories(categoryMap);
+          setWallets(walletMap);
+          setDataIsReady(true);
+        } else {
+          // Fetch categories
+          const { data: categoriesData, error: categoriesError } = await supabase
+            .from('categories')
+            .select('*');
+          
+          if (categoriesError) throw categoriesError;
+          
+          categoryMap = categoriesData.reduce((acc, cat) => {
+            acc[cat.id] = cat as Category;
+            return acc;
+          }, {} as Record<string, Category>);
+          
+          setCategories(categoryMap);
+          
+          // Fetch wallets
+          const { data: walletsData, error: walletsError } = await supabase
+            .from('wallets')
+            .select('*');
+          
+          if (walletsError) throw walletsError;
+          
+          walletMap = walletsData.reduce((acc, wallet) => {
+            acc[wallet.id] = wallet;
+            return acc;
+          }, {} as Record<string, Wallet>);
+          
+          setWallets(walletMap);
+          
+          // Simpan ke cache
+          localStorage.setItem('finance_categories', JSON.stringify(categoryMap));
+          localStorage.setItem('finance_wallets', JSON.stringify(walletMap));
+          localStorage.setItem('finance_cache_timestamp', now.toString());
+          
+          setDataIsReady(true);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
+        // Jika ada error, tetap tandai sebagai siap agar UI tidak macet
+        setDataIsReady(true);
       }
     };
 
     fetchData();
+    
+    // Hapus cache saat ada perubahan signifikan pada transaksi
+    return () => {
+      // Tidak perlu menghapus cache di sini, akan dihapus di waktu lain
+    };
   }, []);
 
-  // Handle sort
-  const handleSort = (key: keyof Transaction | 'category' | 'wallet_name') => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
+  // Fungsi untuk memperbarui cache jika ada perubahan pada kategori atau dompet
+  const invalidateCache = () => {
+    localStorage.removeItem('finance_cache_timestamp');
   };
 
-  // Sort transactions
-  const sortedTransactions = [...transactions].sort((a, b) => {
-    // Tambahkan special case untuk category
-    if (sortConfig.key === 'category') {
-      const aCategory = categories[a.category_id || a.category || '']?.name || '';
-      const bCategory = categories[b.category_id || b.category || '']?.name || '';
+  // Run invalidateCache ketika komponen di-mount untuk memastikan data fresh saat navigasi
+  useEffect(() => {
+    // Invalidate cache hanya jika transaksi berubah
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        invalidateCache();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Optimize transaction sorting with useMemo
+  const sortedTransactions = useMemo(() => {
+    // Data belum siap, tampilkan array kosong
+    if (!dataIsReady && !isLoading) {
+      return [];
+    }
+    
+    return [...transactions].sort((a, b) => {
+      // Tambahkan special case untuk category
+      if (sortConfig.key === 'category') {
+        const aCategory = categories[a.category_id || a.category || '']?.name || '';
+        const bCategory = categories[b.category_id || b.category || '']?.name || '';
+        
+        return sortConfig.direction === 'asc'
+          ? aCategory.localeCompare(bCategory)
+          : bCategory.localeCompare(aCategory);
+      }
       
-      return sortConfig.direction === 'asc'
-        ? aCategory.localeCompare(bCategory)
-        : bCategory.localeCompare(aCategory);
-    }
-    
-    // Tambahkan special case untuk wallet_name
-    if (sortConfig.key === 'wallet_name') {
-      const aWallet = a.wallet_name || wallets[a.wallet_id]?.name || '';
-      const bWallet = b.wallet_name || wallets[b.wallet_id]?.name || '';
+      // Tambahkan special case untuk wallet_name
+      if (sortConfig.key === 'wallet_name') {
+        const aWallet = a.wallet_name || wallets[a.wallet_id]?.name || '';
+        const bWallet = b.wallet_name || wallets[b.wallet_id]?.name || '';
+        
+        return sortConfig.direction === 'asc'
+          ? aWallet.localeCompare(bWallet)
+          : bWallet.localeCompare(aWallet);
+      }
       
-      return sortConfig.direction === 'asc'
-        ? aWallet.localeCompare(bWallet)
-        : bWallet.localeCompare(aWallet);
-    }
-    
-    const aValue = a[sortConfig.key as keyof Transaction];
-    const bValue = b[sortConfig.key as keyof Transaction];
-    
-    // Special case for created_at which might be undefined
-    if (sortConfig.key === 'created_at') {
-      // Fallback to date if created_at is not available
-      const aCreatedAt = a.created_at ? new Date(a.created_at).getTime() : new Date(a.date).getTime();
-      const bCreatedAt = b.created_at ? new Date(b.created_at).getTime() : new Date(b.date).getTime();
+      // Untuk key lainnya
+      const aValue = a[sortConfig.key as keyof ExtendedTransaction];
+      const bValue = b[sortConfig.key as keyof ExtendedTransaction];
       
-      return sortConfig.direction === 'asc' 
-        ? aCreatedAt - bCreatedAt
-        : bCreatedAt - aCreatedAt;
-    }
-    
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortConfig.direction === 'asc' 
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    }
-    
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortConfig.direction === 'asc' 
-        ? aValue - bValue
-        : bValue - aValue;
-    }
-    
-    return 0;
-  });
+      // Special case for created_at which might be undefined
+      if (sortConfig.key === 'created_at') {
+        // Fallback to date if created_at is not available
+        const aCreatedAt = a.created_at ? new Date(a.created_at).getTime() : new Date(a.date).getTime();
+        const bCreatedAt = b.created_at ? new Date(b.created_at).getTime() : new Date(b.date).getTime();
+        
+        return sortConfig.direction === 'asc' 
+          ? aCreatedAt - bCreatedAt
+          : bCreatedAt - aCreatedAt;
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortConfig.direction === 'asc' 
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+      
+      return 0;
+    });
+  }, [transactions, sortConfig, categories, wallets, dataIsReady, isLoading]);
 
   // Terapkan batasan jumlah transaksi yang ditampilkan (lazy loading)
   useEffect(() => {
     // Reset display limit ketika data transaksi berubah
     setDisplayLimit(40);
     // Set hasMore berdasarkan jumlah transaksi yang tersedia
-    setHasMore(transactions.length > 40);
-  }, [transactions]);
+    setHasMore(sortedTransactions.length > 40);
+  }, [sortedTransactions]);
   
   // Batasi jumlah transaksi yang ditampilkan
-  const visibleTransactions = sortedTransactions.slice(0, displayLimit);
+  const visibleTransactions = useMemo(() => {
+    return sortedTransactions.slice(0, displayLimit);
+  }, [sortedTransactions, displayLimit]);
   
   // Fungsi untuk memuat lebih banyak transaksi
   const loadMoreTransactions = () => {
@@ -230,6 +291,9 @@ const TransactionList = ({
     setHasMore(newLimit < sortedTransactions.length);
   };
 
+  // Kondisi loading yang diperbarui - menampilkan loading saat data belum siap atau explicitly isLoading
+  const showLoading = isLoading || !dataIsReady;
+  
   // Fungsi untuk mendapatkan tampilan kategori
   const getCategoryDisplay = (transaction: ExtendedTransaction): React.ReactNode => {
     // Periksa apakah transaksi memiliki category_id atau category
@@ -385,11 +449,75 @@ const TransactionList = ({
     setSelectionMode(false);
   };
 
+  // Skeleton untuk tampilan mobile
+  const MobileSkeletonView = () => {
+    const months = ['APR 25', 'MAR 25']; // Contoh bulan untuk skeleton
+    
+    return (
+      <div className="space-y-4 animate-pulse">
+        {months.map((month, monthIndex) => (
+          <div key={month} className="space-y-px">
+            {/* Skeleton Month Header */}
+            <div className="bg-slate-700/20 text-transparent font-medium text-sm px-4 py-2 rounded-lg mb-1">
+              {month}
+            </div>
+            
+            {/* Skeleton Transactions */}
+            {Array.from({ length: monthIndex === 0 ? 3 : 2 }).map((_, index) => (
+              <div
+                key={`skeleton-${monthIndex}-${index}`}
+                className="bg-card border rounded-lg border-t-0 first:border-t p-3"
+              >
+                <div className="flex justify-between items-start">
+                  {/* Left Side Skeleton */}
+                  <div className="flex flex-col gap-1.5 max-w-[65%]">
+                    <div className="flex items-center gap-1.5">
+                      <Skeleton className="h-4 w-20" /> {/* Date */}
+                      <Skeleton className="h-5 w-16 rounded-md" /> {/* Category */}
+                    </div>
+                    <Skeleton className="h-3 w-32" /> {/* Description */}
+                  </div>
+                  
+                  {/* Right Side Skeleton */}
+                  <div className="flex flex-col items-end gap-1.5">
+                    <Skeleton className="h-5 w-20" /> {/* Amount */}
+                    <Skeleton className="h-4 w-12 rounded-sm" /> {/* Wallet */}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Desktop Skeleton View
+  const DesktopSkeletonView = () => (
+    <div className="rounded-lg border bg-card animate-pulse">
+      <div className="p-4">
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={`skeleton-desktop-${index}`} className="flex items-center gap-4">
+              <Skeleton className="h-4 w-4 rounded-full" /> {/* Checkbox */}
+              <Skeleton className="h-4 w-20" /> {/* Date */}
+              <Skeleton className="h-6 w-24 rounded-md" /> {/* Category */}
+              <Skeleton className="h-6 w-24 rounded-md" /> {/* Wallet */}
+              <Skeleton className="h-4 w-32 flex-1" /> {/* Description */}
+              <Skeleton className="h-4 w-20" /> {/* Amount */}
+              <Skeleton className="h-8 w-16" /> {/* Actions */}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   // Desktop view
   const DesktopView = () => (
     <div className="rounded-lg border bg-card">
-    <Table>
-      <TableHeader>
+      <Table>
+        <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="w-[40px]">
               <div 
@@ -413,7 +541,7 @@ const TransactionList = ({
                   sortConfig.direction === 'desc' && "rotate-180"
                 )} />
               }
-          </TableHead>
+            </TableHead>
             <TableHead onClick={() => handleSort('category')} className="cursor-pointer font-medium">
               Kategori {sortConfig.key === 'category' && 
                 <ChevronDown className={cn(
@@ -421,7 +549,7 @@ const TransactionList = ({
                   sortConfig.direction === 'desc' && "rotate-180"
                 )} />
               }
-          </TableHead>
+            </TableHead>
             <TableHead onClick={() => handleSort('wallet_id')} className="cursor-pointer font-medium">
               Dompet {sortConfig.key === 'wallet_id' && 
                 <ChevronDown className={cn(
@@ -429,7 +557,7 @@ const TransactionList = ({
                   sortConfig.direction === 'desc' && "rotate-180"
                 )} />
               }
-          </TableHead>
+            </TableHead>
             <TableHead className="font-medium">Deskripsi</TableHead>
             <TableHead onClick={() => handleSort('amount')} className="cursor-pointer text-right font-medium">
               Jumlah {sortConfig.key === 'amount' && 
@@ -438,11 +566,11 @@ const TransactionList = ({
                   sortConfig.direction === 'desc' && "rotate-180"
                 )} />
               }
-          </TableHead>
+            </TableHead>
             <TableHead className="w-[100px] text-center font-medium">Aksi</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {visibleTransactions.map((transaction) => {
             const wallet = wallets[transaction.wallet_id];
             const isSelected = selectedIds.includes(transaction.id);
@@ -533,64 +661,29 @@ const TransactionList = ({
               </TableRow>
             );
           })}
-      </TableBody>
-    </Table>
+          {visibleTransactions.length === 0 && !showLoading && (
+            <TableRow>
+              <TableCell colSpan={7} className="h-24 text-center">
+                <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="mb-2">
+                    <Search className="h-12 w-12 text-muted-foreground/50" />
+                  </div>
+                  <p>Tidak ada transaksi yang ditemukan</p>
+                  <p className="text-sm">Coba ubah filter pencarian</p>
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 
-  // Skeleton untuk tampilan mobile
-  const MobileSkeletonView = () => {
-    const months = ['APR 25', 'MAR 25']; // Contoh bulan untuk skeleton
-    
-    return (
-      <div className="space-y-4 animate-pulse">
-        {months.map((month, monthIndex) => (
-          <div key={month} className="space-y-px">
-            {/* Skeleton Month Header */}
-            <div className="bg-slate-700/20 text-transparent font-medium text-sm px-4 py-2 rounded-lg mb-1">
-              {month}
-            </div>
-            
-            {/* Skeleton Transactions */}
-            {Array.from({ length: monthIndex === 0 ? 3 : 2 }).map((_, index) => (
-              <div
-                key={`skeleton-${monthIndex}-${index}`}
-                className="bg-card border rounded-lg border-t-0 first:border-t p-3"
-              >
-                <div className="flex justify-between items-start">
-                  {/* Left Side Skeleton */}
-                  <div className="flex flex-col gap-1.5 max-w-[65%]">
-                    <div className="flex items-center gap-1.5">
-                      <Skeleton className="h-4 w-20" /> {/* Date */}
-                      <Skeleton className="h-5 w-16 rounded-md" /> {/* Category */}
-                    </div>
-                    <Skeleton className="h-3 w-32" /> {/* Description */}
-                  </div>
-                  
-                  {/* Right Side Skeleton */}
-                  <div className="flex flex-col items-end gap-1.5">
-                    <Skeleton className="h-5 w-20" /> {/* Amount */}
-                    <Skeleton className="h-4 w-12 rounded-sm" /> {/* Wallet */}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   // Mobile view
   const MobileView = () => {
-    // Tampilkan skeleton jika loading
-    if (isLoading) {
-      return <MobileSkeletonView />;
-    }
-    
     // Group transactions by month and year
-    const groupTransactionsByMonth = () => {
-      const groupedTransactions: Record<string, Transaction[]> = {};
+    const groupedTransactions = useMemo(() => {
+      const grouped: Record<string, ExtendedTransaction[]> = {};
       
       visibleTransactions.forEach(transaction => {
         const date = new Date(transaction.date);
@@ -602,17 +695,15 @@ const TransactionList = ({
         const twoDigitYear = (year % 100).toString();
         const key = `${monthLabel} ${twoDigitYear}`.toUpperCase();
         
-        if (!groupedTransactions[key]) {
-          groupedTransactions[key] = [];
+        if (!grouped[key]) {
+          grouped[key] = [];
         }
         
-        groupedTransactions[key].push(transaction);
+        grouped[key].push(transaction);
       });
       
-      return groupedTransactions;
-    };
-    
-    const groupedTransactions = groupTransactionsByMonth();
+      return grouped;
+    }, [visibleTransactions]);
     
     const sortLabels: Record<string, string> = {
       'created_at': 'Waktu',
@@ -666,7 +757,7 @@ const TransactionList = ({
                         )}
                         onClick={() => {
                           setSortConfig({
-                            key: key as keyof Transaction | 'category' | 'wallet_name',
+                            key: key as keyof ExtendedTransaction | 'category' | 'wallet_name',
                             direction: sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc'
                           });
                           setShowSortMenu(false);
@@ -708,45 +799,38 @@ const TransactionList = ({
               
               {/* Transactions for this month */}
               {monthTransactions.map((transaction, index) => {
-        const isExpanded = expandedTransaction === transaction.id;
-        const wallet = wallets[transaction.wallet_id];
-        const isSelected = selectedIds.includes(transaction.id);
+                const isExpanded = expandedTransaction === transaction.id;
+                const wallet = wallets[transaction.wallet_id];
+                const isSelected = selectedIds.includes(transaction.id);
                 
                 // Determine if transaction is first or last in its group
                 const isFirst = index === 0;
                 const isLast = index === monthTransactions.length - 1;
 
-        return (
-          <div
-            key={transaction.id}
-            className={cn(
+                return (
+                  <div
+                    key={transaction.id}
+                    className={cn(
                       "bg-card border border-t-0 first:border-t transition-all duration-200",
-                      isSelected && "bg-primary/5 border-red-500 border-3",
+                      isSelected && "bg-primary/5 border-primary border-opacity-50",
                       isFirst && "rounded-t-lg", 
                       isLast && "rounded-b-lg",
                       !isFirst && !isLast && "rounded-none"
-            )}
-            style={{
-              borderWidth: isSelected ? '3px' : '1px',
-              borderColor: isSelected ? '#ef4444' : '',
-              boxShadow: isSelected ? '0 0 0 1px rgba(239, 68, 68, 0.15)' : ''
-            }}
-            onTouchStart={() => handleTouchStart(transaction.id)}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchEnd}
-          >
-            <div 
+                    )}
+                    onTouchStart={() => handleTouchStart(transaction.id)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchCancel={handleTouchEnd}
+                  >
+                    <div 
                       className="p-3 cursor-pointer hover:bg-muted/30 transition-colors relative"
-              onClick={() => {
-                if (selectionMode) {
-                  handleToggleSelect(transaction.id, !isSelected);
-                } else {
-                  setExpandedTransaction(isExpanded ? null : transaction.id);
-                }
-              }}
-            >
-              {/* Remove the overlapping check icon */}
-              
+                      onClick={() => {
+                        if (selectionMode) {
+                          handleToggleSelect(transaction.id, !isSelected);
+                        } else {
+                          setExpandedTransaction(isExpanded ? null : transaction.id);
+                        }
+                      }}
+                    >
                       <div className="flex justify-between items-start">
                         {/* Left Side */}
                         <div className="flex flex-col gap-1.5 max-w-[65%]">
@@ -755,17 +839,17 @@ const TransactionList = ({
                               {format(new Date(transaction.date), "dd/MM/yyyy")}
                             </span>
                   
-                  <Badge 
-                    variant="outline"
-                    className={cn(
-                      "rounded-md font-normal text-xs",
-                      getTransactionTypeColor(transaction.type)
-                    )}
-                    style={getCategoryBadgeStyle(transaction)}
-                  >
-                    {getCategoryDisplay(transaction)}
-                  </Badge>
-                </div>
+                            <Badge 
+                              variant="outline"
+                              className={cn(
+                                "rounded-md font-normal text-xs",
+                                getTransactionTypeColor(transaction.type)
+                              )}
+                              style={getCategoryBadgeStyle(transaction)}
+                            >
+                              {getCategoryDisplay(transaction)}
+                            </Badge>
+                          </div>
                 
                           {/* Description */}
                           <p className="text-xs text-muted-foreground line-clamp-1">
@@ -775,93 +859,79 @@ const TransactionList = ({
                         
                         {/* Right Side */}
                         <div className="flex flex-col items-end gap-1.5">
-                <div className={cn(
+                          <div className={cn(
                             "font-medium",
-                  transaction.type === "income" && "text-emerald-600",
-                  transaction.type === "expense" && "text-rose-600",
-                  transaction.type === "transfer" && "text-blue-600"
-                )}>
-                  {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                  {formatCurrency(transaction.amount)}
-                </div>
+                            transaction.type === "income" && "text-emerald-600",
+                            transaction.type === "expense" && "text-rose-600",
+                            transaction.type === "transfer" && "text-blue-600"
+                          )}>
+                            {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
+                            {formatCurrency(transaction.amount)}
+                          </div>
                           
-                <Badge 
-                  variant="outline"
+                          <Badge 
+                            variant="outline"
                             className="rounded-sm text-[10px] py-0 px-1.5 font-normal"
-                  style={getWalletBadgeStyle(transaction.wallet_id)}
-                >
-                  {wallet?.name || transaction.wallet_name || '-'}
-                </Badge>
+                            style={getWalletBadgeStyle(transaction.wallet_id)}
+                          >
+                            {wallet?.name || transaction.wallet_name || '-'}
+                          </Badge>
                         </div>
-              </div>
-            </div>
+                      </div>
+                      
+                      {/* Selection indicator */}
+                      {isSelected && (
+                        <div className="absolute top-2 left-2 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                          <Check className="h-3 w-3 text-primary-foreground" />
+                        </div>
+                      )}
+                    </div>
             
-            <div 
-              className={cn(
-                "grid transition-all duration-200",
-                isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              )}
-            >
-              <div className="overflow-hidden">
-                <div className="flex items-center justify-end gap-2 p-3 border-t bg-muted/50">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(transaction);
-                    }}
+                    <div 
+                      className={cn(
+                        "grid transition-all duration-200",
+                        isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                      )}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="flex items-center justify-end gap-2 p-3 border-t bg-muted/50">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit(transaction);
+                            }}
                             className="h-8 text-xs"
-                  >
+                          >
                             <Edit2 className="h-3.5 w-3.5 mr-1.5" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTransactionToDelete([transaction.id]);
-                      setShowDeleteDialog(true);
-                    }}
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTransactionToDelete([transaction.id]);
+                              setShowDeleteDialog(true);
+                            }}
                             className="h-8 text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50"
-                  >
+                          >
                             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                    Hapus
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-            </div>
-          ))}
-        </div>
-    </div>
-  );
-  };
-
-  // Desktop Skeleton View
-  const DesktopSkeletonView = () => (
-    <div className="rounded-lg border bg-card animate-pulse">
-      <div className="p-4">
-        <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={`skeleton-desktop-${index}`} className="flex items-center gap-4">
-              <Skeleton className="h-4 w-4 rounded-full" /> {/* Checkbox */}
-              <Skeleton className="h-4 w-20" /> {/* Date */}
-              <Skeleton className="h-6 w-24 rounded-md" /> {/* Category */}
-              <Skeleton className="h-6 w-24 rounded-md" /> {/* Wallet */}
-              <Skeleton className="h-4 w-32 flex-1" /> {/* Description */}
-              <Skeleton className="h-4 w-20" /> {/* Amount */}
-              <Skeleton className="h-8 w-16" /> {/* Actions */}
+                            Hapus
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -903,13 +973,13 @@ const TransactionList = ({
           </div>
       )}
 
-      {isLoading 
+      {showLoading 
         ? (isDesktop ? <DesktopSkeletonView /> : <MobileSkeletonView />)
         : (isDesktop ? <DesktopView /> : <MobileView />)
       }
 
       {/* Tombol Load More */}
-      {hasMore && !isLoading && (
+      {hasMore && !showLoading && (
         <div className="flex justify-center mt-4">
           <button 
             onClick={loadMoreTransactions}

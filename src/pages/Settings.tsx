@@ -298,7 +298,7 @@ const Settings = () => {
             <h2 className="font-semibold p-4 border-b border-gray-100">Tindakan</h2>
             <div className="p-4">
               <Skeleton className="h-10 w-full rounded-md" />
-            </div>
+          </div>
           </section>
         </div>
       </Layout>
