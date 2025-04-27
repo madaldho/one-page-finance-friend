@@ -50,6 +50,9 @@ import AdminLayout from './components/admin/AdminLayout';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
 
+// Tambahkan import DeviceManagerPage
+import DeviceManagerPage from './pages/DeviceManagerPage';
+
 // Create a wrapper component to handle auth redirects
 const AuthRedirect = () => {
   const { user, isLoading } = useAuth();
@@ -380,6 +383,14 @@ function App() {
               <ProtectedProRoute feature="assets">
                 <AssetDetailPage />
               </ProtectedProRoute>
+            </ProtectedRoute>
+          } />
+          
+          {/* Tambahkan route untuk Device Manager */}
+          <Route path="/device-manager" element={
+            <ProtectedRoute>
+              <AuthRedirect />
+              <DeviceManagerPage />
             </ProtectedRoute>
           } />
           
