@@ -98,9 +98,9 @@ const Index = () => {
   const [settings, setSettings] = useState<UserSettings>({
     id: "",
     user_id: "",
-    show_budgeting: false,
-    show_savings: false,
-    show_loans: false,
+    show_budgeting: true,
+    show_savings: true,
+    show_loans: true,
   });
 
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
@@ -177,38 +177,6 @@ const Index = () => {
 
       if (!settingsError && settingsData) {
         setSettings(settingsData as UserSettings);
-      } else if (settingsError && settingsError.code === 'PGRST116') {
-        const defaultSettings: UserSettings = {
-          id: "",
-          user_id: user.id,
-          show_budgeting: false,
-          show_savings: false,
-          show_loans: false,
-        };
-        
-        try {
-          const { data: newSettings, error: insertError } = await supabase
-            .from("user_settings")
-            .insert({
-              user_id: user.id,
-              show_budgeting: false,
-              show_savings: false,
-              show_loans: false,
-            })
-            .select()
-            .single();
-            
-          if (insertError) {
-            console.error("Error creating default settings:", insertError);
-          } else if (newSettings) {
-            setSettings(newSettings as UserSettings);
-          } else {
-            setSettings(defaultSettings);
-          }
-        } catch (insertError) {
-          console.error("Error creating default settings:", insertError);
-          setSettings(defaultSettings);
-        }
       }
 
       const { data: budgetsData, error: budgetsError } = await supabase

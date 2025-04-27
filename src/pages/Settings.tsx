@@ -1,19 +1,14 @@
-import React, { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Blocks, House } from "lucide-react";
+import { Loader2,  ChevronRight, Blocks, House } from "lucide-react";
 import ProfileSection from "@/components/settings/ProfileSection";
 import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
 import Footer from "@/components/settings/Footer";
 import { Button } from "@/components/ui/button";
-import { getCache, setCache } from "@/lib/utils";
-
-// Deklarasi konstanta untuk caching
-const SETTINGS_CACHE_KEY = 'settings_data';
-const CACHE_DURATION_MINUTES = 30;
 
 interface UserWithProfile {
   id?: string;
@@ -30,6 +25,7 @@ interface UserSettingsForm {
 const Settings = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<UserWithProfile | null>(null);
   const [settings, setSettings] = useState<UserSettingsForm>({
     show_budgeting: false,
@@ -37,144 +33,11 @@ const Settings = () => {
     show_loans: false,
   });
   const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
-  const [dataInitialized, setDataInitialized] = useState(false);
-
-  // Update pengaturan di server di background
-  const updateSettingInBackground = async (setting: keyof UserSettingsForm, userId: string, value: boolean) => {
-    try {
-      const { data, error: checkError } = await supabase
-        .from('user_settings')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
-        
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw checkError;
-      }
-      
-      if (data) {
-        await supabase
-          .from('user_settings')
-          .update({ [setting]: value })
-          .eq('user_id', userId);
-      } else {
-        await supabase
-          .from('user_settings')
-          .insert({
-            user_id: userId,
-            show_budgeting: setting === 'show_budgeting' ? value : settings.show_budgeting,
-            show_savings: setting === 'show_savings' ? value : settings.show_savings,
-            show_loans: setting === 'show_loans' ? value : settings.show_loans,
-          });
-      }
-      
-      // Update cache
-      if (userId) {
-        const cacheKey = `${SETTINGS_CACHE_KEY}_${userId}`;
-        const newSettings = { ...settings, [setting]: value };
-        
-        setCache({
-          key: cacheKey,
-          data: newSettings,
-          expiresInMinutes: CACHE_DURATION_MINUTES
-        });
-      }
-    } catch (error) {
-      console.error('Error updating setting in background:', error);
-    }
-  };
-
-  // Fungsi untuk merefresh pengaturan di background tanpa blocking UI
-  const refreshSettingsInBackground = async (userId: string) => {
-    try {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      if (profileData) {
-        setUser(prev => ({
-          ...prev,
-          profile: profileData
-        }));
-      }
-      
-      const { data, error } = await supabase
-        .from('user_settings')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-        
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-      
-      if (data) {
-        const userSettings = {
-          show_budgeting: data.show_budgeting || false,
-          show_savings: data.show_savings || false,
-          show_loans: data.show_loans || false,
-        };
-        
-        setSettings(userSettings);
-        
-        // Update cache
-        const cacheKey = `${SETTINGS_CACHE_KEY}_${userId}`;
-        setCache({
-          key: cacheKey,
-          data: userSettings,
-          expiresInMinutes: CACHE_DURATION_MINUTES
-        });
-      }
-    } catch (error) {
-      console.error('Error refreshing settings:', error);
-    }
-  };
-  
-  // Fetch data pengguna dan pengaturan, digunakan saat tidak ada cache
-  const fetchUserData = async (userId: string) => {
-    try {
-      const [profileResponse, settingsResponse] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', userId).single(),
-        supabase.from('user_settings').select('*').eq('user_id', userId).single()
-      ]);
-      
-      if (profileResponse.data) {
-        setUser(prev => ({
-          ...prev,
-          profile: profileResponse.data
-        }));
-      }
-      
-      if (settingsResponse.data) {
-        const userSettings = {
-          show_budgeting: settingsResponse.data.show_budgeting || false,
-          show_savings: settingsResponse.data.show_savings || false,
-          show_loans: settingsResponse.data.show_loans || false,
-        };
-        
-        setSettings(userSettings);
-        
-        // Cache settings untuk penggunaan selanjutnya
-        const cacheKey = `${SETTINGS_CACHE_KEY}_${userId}`;
-        setCache({
-          key: cacheKey,
-          data: userSettings,
-          expiresInMinutes: CACHE_DURATION_MINUTES
-        });
-      }
-      
-      setDataInitialized(true);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setDataInitialized(true);
-    }
-  };
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
+        setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session) {
@@ -189,24 +52,45 @@ const Settings = () => {
         
         setUser(session.user);
         
-        // Cek cache untuk pengaturan
-        const userId = session.user.id;
-        const cacheKey = `${SETTINGS_CACHE_KEY}_${userId}`;
-        const cachedSettings = getCache<UserSettingsForm>(cacheKey);
-        
-        if (cachedSettings) {
-          setSettings(cachedSettings);
-          setDataInitialized(true);
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
           
-          // Background refresh - tidak perlu menunggu hasil
-          refreshSettingsInBackground(userId);
-          return;
+        if (profileData) {
+          setUser(prev => ({
+            ...prev,
+            profile: profileData
+          }));
         }
         
-        // Jika tidak ada cache, fetch secara normal
-        await fetchUserData(userId);
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+        
+        if (data) {
+          setSettings({
+            show_budgeting: data.show_budgeting || false,
+            show_savings: data.show_savings || false,
+            show_loans: data.show_loans || false,
+          });
+        }
       } catch (error) {
         console.error('Error fetching settings:', error);
+        toast({
+          title: "Gagal Memuat Pengaturan",
+          description: "Terjadi kesalahan saat mengambil data pengaturan",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -217,7 +101,6 @@ const Settings = () => {
     try {
       setToggleLoading({...toggleLoading, [setting]: true});
       
-      // Optimistic update UI
       setSettings(prev => ({
         ...prev,
         [setting]: !prev[setting]
@@ -234,12 +117,44 @@ const Settings = () => {
         return;
       }
       
-      // Background update ke server
-      updateSettingInBackground(setting, session.user.id, !settings[setting]);
+      const { data, error: checkError } = await supabase
+        .from('user_settings')
+        .select('id')
+        .eq('user_id', session.user.id)
+        .single();
+        
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
+      
+      if (data) {
+        const { error: updateError } = await supabase
+          .from('user_settings')
+          .update({
+            [setting]: !settings[setting]
+          })
+          .eq('user_id', session.user.id);
+          
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('user_settings')
+          .insert({
+            user_id: session.user.id,
+            show_budgeting: setting === 'show_budgeting' ? !settings.show_budgeting : settings.show_budgeting,
+            show_savings: setting === 'show_savings' ? !settings.show_savings : settings.show_savings,
+            show_loans: setting === 'show_loans' ? !settings.show_loans : settings.show_loans,
+          });
+          
+        if (insertError) throw insertError;
+      }
+      
+      toast({
+        title: "Pengaturan Berhasil Disimpan",
+        description: "Pengaturan kamu telah diperbarui",
+      });
     } catch (error) {
       console.error('Error updating settings:', error);
-      
-      // Rollback UI jika error
       setSettings(prev => ({
         ...prev,
         [setting]: !prev[setting]
@@ -251,18 +166,13 @@ const Settings = () => {
         variant: "destructive"
       });
     } finally {
-      // Segera hapus loading state untuk UI responsif
-      setTimeout(() => {
-        setToggleLoading({...toggleLoading, [setting]: false});
-      }, 300);
+      setToggleLoading({...toggleLoading, [setting]: false});
     }
   };
   
   const handleExportData = async () => {
     try {
-      // Light loading indicator
-      setToggleLoading({...toggleLoading, export: true});
-      
+      setLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -315,29 +225,29 @@ const Settings = () => {
         variant: "destructive"
       });
     } finally {
-      setToggleLoading({...toggleLoading, export: false});
+      setLoading(false);
     }
   };
+  
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto p-4 pb-32 max-w-2xl flex items-center justify-center h-full min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-4" />
+            <p className="text-gray-500">Memuat pengaturan...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
   
   return (
     <Layout>
       <div className="container mx-auto p-4 pb-32 max-w-2xl">
         <h1 className="text-xl font-bold mb-6">Pengaturan</h1>
         
-        {/* Skeleton loader untuk ProfileSection saat data belum diinisialisasi */}
-        {!dataInitialized ? (
-          <div className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden p-4 animate-pulse">
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 rounded-full bg-gray-200"></div>
-              <div className="flex-1">
-                <div className="h-5 bg-gray-200 rounded w-40 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-64"></div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <ProfileSection user={user} />
-        )}
+        <ProfileSection user={user} />
         
         <FeaturesSection 
           user={user}
@@ -394,10 +304,7 @@ const Settings = () => {
           </div>
         </section>
         
-        <ActionSection 
-          handleExportData={handleExportData} 
-          loading={toggleLoading.export} 
-        />
+        <ActionSection handleExportData={handleExportData} loading={loading} />
         
         <Footer />
       </div>
