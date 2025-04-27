@@ -1,17 +1,12 @@
-import React, { useState, useEffect } from "react";
-import FeatureToggle from "@/components/FeatureToggle";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { DollarSign, PiggyBank, CreditCard, AlertCircle } from "lucide-react";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { hasProAccess, getSubscriptionStatus, UserSubscriptionProfile } from "@/utils/subscription";
 import { useNavigate } from "react-router-dom";
+import FeatureItem from "./FeatureItem";
+import { Badge } from "@/components/ui/badge";
+import { hasProAccess, getSubscriptionStatus, UserSubscriptionProfile } from "@/utils/subscription";
 
 interface UserWithProfile {
   id?: string;
@@ -30,164 +25,91 @@ interface FeaturesSectionProps {
   onToggleFeature: (feature: string) => void;
 }
 
+// Memoized komponen untuk mencegah rendering ulang
+const FeatureStatusBadge = memo(({ status }: { status: string }) => {
+  switch (status) {
+    case 'trial':
+      return (
+        <Badge variant="outline" className="px-2 py-0.5 bg-blue-100 text-blue-600 border-blue-200 text-xs rounded-full">
+          TRIAL PRO
+        </Badge>
+      );
+    case 'pro':
+      return (
+        <Badge variant="outline" className="px-2 py-0.5 bg-purple-100 text-purple-600 border-purple-200 text-xs rounded-full">
+          PRO
+        </Badge>
+      );
+    case 'admin':
+      return (
+        <Badge variant="outline" className="px-2 py-0.5 bg-red-100 text-red-600 border-red-200 text-xs rounded-full">
+          ADMIN
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="outline" className="px-2 py-0.5 bg-orange-100 text-orange-600 border-orange-200 text-xs rounded-full">
+          FREE
+        </Badge>
+      );
+  }
+});
+
 const FeaturesSection = ({
   user,
   settings,
-  toggleLoading,
   onToggleFeature,
 }: FeaturesSectionProps) => {
   const { user: authUser } = useAuth();
-  const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('free');
   const [isProUser, setIsProUser] = useState(false);
-  const [subscriptionStatus, setSubscriptionStatus] = useState<'admin' | 'pro' | 'trial' | 'free'>('free');
   const navigate = useNavigate();
   
-  // ! FIX: Gunakan authUser jika user tidak memiliki id
+  // Menggunakan useCallback untuk mencegah fungsi dibuat ulang pada setiap render
+  const handleFeatureClick = useCallback((path: string, isEnabled: boolean) => {
+    if (isEnabled) {
+      navigate(path);
+    }
+  }, [navigate]);
+  
+  // Fetch profile info sekali saja saat komponen dimount
   useEffect(() => {
-    // Gunakan user.id atau authUser?.id, jika salah satu tersedia
-    const userId = user?.id || authUser?.id;
-    if (userId) {
-      console.log("FeaturesSection - fetching profile for userId:", userId);
-      fetchUserProfile(userId);
-    } else {
-      console.log("FeaturesSection - no userId available");
-      setLoading(false);
-    }
-  }, [user, authUser]);
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      setLoading(true);
-      console.log("FeaturesSection - fetchUserProfile started for userId:", userId);
-      
-      // Fetch data dari Supabase
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        setLoading(false);
-        return;
-      }
-      
-      // Validasi data yang diterima
-      if (!data) {
-        console.error('No profile data returned for userId:', userId);
-        setLoading(false);
-        return;
-      }
-      
-      const profileData = data as UserSubscriptionProfile;
-      
-      // Print semua fields dari profileData
-      console.log("PROFILE_DATA_FULL:", JSON.stringify(profileData, null, 2));
-      
-      // Update state userProfile
-      setUserProfile(profileData);
-      
-      // Tentukan status subscription
-      const status = getSubscriptionStatus(profileData);
-      setSubscriptionStatus(status);
-      
-      // Periksa apakah memiliki akses Pro (Pro, Trial, atau Admin)
-      const proAccess = hasProAccess(profileData);
-      setIsProUser(proAccess);
-      
-      console.log('FeaturesSection - Profile loaded successfully:');
-      console.log('- is_admin:', profileData?.is_admin);
-      console.log('- subscription_type:', profileData?.subscription_type);
-      console.log('- trial_end:', profileData?.trial_end);
-      console.log('- subscription_active:', profileData?.subscription_active);
-      console.log('- Status:', status);
-      console.log('- Has Pro access:', proAccess);
-      
-      // Jika pengguna bukan Pro tetapi harusnya Pro, coba force update
-      if (!proAccess && (profileData?.subscription_type === 'pro_6m' || profileData?.subscription_type === 'pro_12m')) {
-        console.warn("WARNING: User has Pro subscription type but hasProAccess returned false!");
+    const fetchUserProfile = async () => {
+      try {
+        const userId = user?.id || authUser?.id;
+        if (!userId) return;
         
-        // Coba force set status Pro
-        setIsProUser(true);
-        setSubscriptionStatus('pro');
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (data) {
+          const profileData = data as UserSubscriptionProfile;
+          const status = getSubscriptionStatus(profileData);
+          setSubscriptionStatus(status);
+          setIsProUser(hasProAccess(profileData));
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
       }
-    } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleToggleClick = (setting: 'show_budgeting' | 'show_savings' | 'show_loans') => {
-    // Jika user free dan ingin mengaktifkan fitur, tampilkan pesan upgrade
-    if (!isProUser && !settings[setting]) {
-      const message = `Halo, saya ingin upgrade ke paket Pro untuk menggunakan fitur ${
-        setting === 'show_budgeting' ? 'Anggaran' : 
-        setting === 'show_savings' ? 'Tabungan' : 'Hutang & Piutang'
-      } di aplikasi Keuangan Pribadi.`;
-      const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+    };
+    
+    fetchUserProfile();
+  }, [user?.id, authUser?.id]);
+  
+  // Fungsi untuk handle toggle dari FeatureItem
+  const handleToggleFeature = useCallback((feature: string) => {
+    // Jika pengguna free dan ingin mengaktifkan fitur, tampilkan pesan upgrade
+    if (!isProUser && !settings[feature as keyof typeof settings]) {
+      navigate('/upgrade');
       return;
     }
-
-    // Jika pro user (termasuk trial) atau ingin menonaktifkan fitur, lanjutkan seperti biasa
-    onToggleFeature(setting);
-  };
-
-  const renderProBadge = () => (
-    <div className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full font-medium">
-      PRO
-    </div>
-  );
-  
-  // Render badge sesuai jenis subscription
-  const renderStatusBadge = () => {
-    if (subscriptionStatus === 'trial') {
-      return (
-        <div className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">
-          TRIAL PRO
-        </div>
-      );
-    } else if (subscriptionStatus === 'pro') {
-      return (
-        <div className="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs rounded-full font-medium">
-          PRO
-        </div>
-      );
-    } else if (subscriptionStatus === 'admin') {
-      return (
-        <div className="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full font-medium">
-          ADMIN
-        </div>
-      );
-    }
-    return (
-      <div className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full font-medium">
-        FREE
-      </div>
-    );
-  };
-
-  // Loading state dipersingkat, hanya tampilkan spinner kecil
-  if (loading) {
-    return (
-      <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h2 className="font-semibold">Fitur</h2>
-          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-        </div>
-        <div className="p-4">
-          <div className="space-y-4">
-            {['budgeting', 'savings', 'loans'].map((feature, index) => (
-              <div key={index} className="h-14 bg-gray-100 rounded-lg animate-pulse"></div>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
+    
+    // Panggil handler dari parent
+    onToggleFeature(feature);
+  }, [isProUser, settings, onToggleFeature, navigate]);
 
   return (
     <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
@@ -195,60 +117,66 @@ const FeaturesSection = ({
         <h2 className="font-semibold">Fitur</h2>
         <div className="flex items-center">
           <span className="text-xs text-gray-500 mr-2">Status:</span>
-          {renderStatusBadge()}
+          <FeatureStatusBadge status={subscriptionStatus} />
         </div>
       </div>
       
-      <div className={isProUser ? '' : 'opacity-70'}>
-        <FeatureToggle
-          icon={<DollarSign className="w-4 h-4 text-blue-600" />}
-          title="Budgeting"
-          description="Atur dan pantau anggaran keuangan kamu"
-          checked={settings.show_budgeting}
-          onToggle={() => handleToggleClick('show_budgeting')}
-          managementLink={isProUser || settings.show_budgeting ? "/budgets" : undefined}
-          loading={toggleLoading.show_budgeting}
-          disabled={!isProUser && !settings.show_budgeting}
-          extraElement={!isProUser && renderProBadge()}
-        />
-      </div>
+      {/* Budgeting */}
+      <FeatureItem 
+        icon={<DollarSign className="w-4 h-4 text-blue-600" />}
+        title="Budgeting"
+        description="Atur dan pantau anggaran keuangan kamu"
+        isEnabled={settings.show_budgeting}
+        isPro={isProUser}
+        onClick={() => {
+          if (settings.show_budgeting) {
+            handleFeatureClick('/budgets', settings.show_budgeting);
+          } else {
+            handleToggleFeature('show_budgeting');
+          }
+        }}
+      />
       
-      <div className={`border-b border-gray-100 ${isProUser ? '' : 'opacity-70'}`}>
-        <FeatureToggle
-          icon={<PiggyBank className="w-4 h-4 text-green-600" />}
-          title="Tabungan"
-          description="Atur target dan pantau tabungan kamu"
-          checked={settings.show_savings}
-          onToggle={() => handleToggleClick('show_savings')}
-          managementLink={isProUser || settings.show_savings ? "/savings" : undefined}
-          loading={toggleLoading.show_savings}
-          disabled={!isProUser && !settings.show_savings}
-          extraElement={!isProUser && renderProBadge()}
-        />
-      </div>
+      {/* Tabungan */}
+      <FeatureItem 
+        icon={<PiggyBank className="w-4 h-4 text-green-600" />}
+        title="Tabungan"
+        description="Atur target dan pantau tabungan kamu"
+        isEnabled={settings.show_savings}
+        isPro={isProUser}
+        onClick={() => {
+          if (settings.show_savings) {
+            handleFeatureClick('/savings', settings.show_savings);
+          } else {
+            handleToggleFeature('show_savings');
+          }
+        }}
+      />
       
-      <div className={isProUser ? '' : 'opacity-70'}>
-        <FeatureToggle
-          icon={<CreditCard className="w-4 h-4 text-red-600" />}
-          title="Hutang & Piutang"
-          description="Kelola data hutang dan piutang"
-          checked={settings.show_loans}
-          onToggle={() => handleToggleClick('show_loans')}
-          managementLink={isProUser || settings.show_loans ? "/loans" : undefined}
-          loading={toggleLoading.show_loans}
-          disabled={!isProUser && !settings.show_loans}
-          extraElement={!isProUser && renderProBadge()}
-        />
-      </div>
+      {/* Hutang & Piutang */}
+      <FeatureItem 
+        icon={<CreditCard className="w-4 h-4 text-red-600" />}
+        title="Hutang & Piutang"
+        description="Kelola data hutang dan piutang"
+        isEnabled={settings.show_loans}
+        isPro={isProUser}
+        onClick={() => {
+          if (settings.show_loans) {
+            handleFeatureClick('/loans', settings.show_loans);
+          } else {
+            handleToggleFeature('show_loans');
+          }
+        }}
+      />
 
-      {/* Hanya tampilkan notifikasi upgrade jika bukan Pro user */}
+      {/* Notifikasi upgrade */}
       {!isProUser && (
         <div className="p-4 bg-orange-50 border-t border-orange-100">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
             <div className="flex-1">
               <p className="text-sm text-orange-800 mb-2">
-                Fitur-fitur ini tersedia hanya untuk pengguna Pro. Upgrade sekarang untuk menggunakan semua fitur tanpa batasan!
+                Fitur-fitur ini tersedia untuk pengguna Pro. Upgrade sekarang untuk menggunakan semua fitur tanpa batasan!
               </p>
               <Button 
                 size="sm" 
@@ -265,4 +193,5 @@ const FeaturesSection = ({
   );
 };
 
-export default FeaturesSection;
+// Menggunakan memo untuk mencegah re-render yang tidak perlu
+export default memo(FeaturesSection);

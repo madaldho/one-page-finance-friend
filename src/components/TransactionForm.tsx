@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
@@ -44,41 +44,94 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
     const [categories, setCategories] = useState<Category[]>([]);
     const [wallets, setWallets] = useState<Wallet[]>([]);
     const [loading, setLoading] = useState(false);
+    const [formTouched, setFormTouched] = useState(false);
     const navigate = useNavigate();
-
+    
+    // Debounce untuk input dan update state lebih efisien
+    const [debouncedTitle, setDebouncedTitle] = useState('');
+    const [debouncedAmount, setDebouncedAmount] = useState('');
+    const [debouncedDesc, setDebouncedDesc] = useState('');
+    
+    // Menggunakan useEffect untuk menerapkan debouncing
     useEffect(() => {
-        const fetchCategories = async () => {
-            const { data, error } = await supabase
-                .from('categories')
-                .select('id, name');
+        const timer = setTimeout(() => {
+            setTitle(debouncedTitle);
+        }, 300); // Delay 300ms
+        
+        return () => clearTimeout(timer);
+    }, [debouncedTitle]);
+    
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setAmount(debouncedAmount);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+    }, [debouncedAmount]);
+    
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDescription(debouncedDesc);
+        }, 300);
+        
+        return () => clearTimeout(timer);
+    }, [debouncedDesc]);
 
-            if (error) {
-                console.error('Error fetching categories:', error);
-            } else {
-                setCategories(data || []);
+    // Mengoptimalkan fetch data dengan caching
+    useEffect(() => {
+        const fetchCategoriesAndWallets = async () => {
+            try {
+                // Periksa cache terlebih dahulu
+                const cachedCategories = localStorage.getItem('form_categories');
+                const cachedWallets = localStorage.getItem('form_wallets');
+                const cacheTimestamp = localStorage.getItem('form_cache_timestamp');
+                const now = Date.now();
+                
+                // Cache valid selama 30 menit
+                const isCacheValid = cacheTimestamp && (now - parseInt(cacheTimestamp)) < 1800000;
+                
+                if (isCacheValid && cachedCategories && cachedWallets) {
+                    setCategories(JSON.parse(cachedCategories));
+                    setWallets(JSON.parse(cachedWallets));
+                    return;
+                }
+                
+                // Jika cache tidak ada atau sudah kadaluarsa, fetch data baru
+                const [{ data: categoriesData, error: categoriesError }, { data: walletsData, error: walletsError }] = 
+                    await Promise.all([
+                        supabase.from('categories').select('id, name'),
+                        supabase.from('wallets').select('id, name')
+                    ]);
+    
+                if (categoriesError) {
+                    console.error('Error fetching categories:', categoriesError);
+                } else {
+                    setCategories(categoriesData || []);
+                    localStorage.setItem('form_categories', JSON.stringify(categoriesData));
+                }
+    
+                if (walletsError) {
+                    console.error('Error fetching wallets:', walletsError);
+                } else {
+                    setWallets(walletsData || []);
+                    localStorage.setItem('form_wallets', JSON.stringify(walletsData));
+                }
+                
+                localStorage.setItem('form_cache_timestamp', now.toString());
+            } catch (error) {
+                console.error('Error fetching data:', error);
             }
         };
 
-        const fetchWallets = async () => {
-            const { data, error } = await supabase
-                .from('wallets')
-                .select('id, name');
-
-            if (error) {
-                console.error('Error fetching wallets:', error);
-            } else {
-                setWallets(data || []);
-            }
-        };
-
-        fetchCategories();
-        fetchWallets();
+        fetchCategoriesAndWallets();
     }, []);
 
-    useEffect(() => {
-        const fetchTransaction = async () => {
-            if (transactionId) {
-                setLoading(true);
+    // Menggunakan useCallback untuk fungsi yang sering dipanggil
+    const fetchTransaction = useCallback(async () => {
+        if (transactionId) {
+            setLoading(true);
+            
+            try {
                 const { data, error } = await supabase
                     .from('transactions')
                     .select('*')
@@ -87,26 +140,48 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
 
                 if (error) {
                     console.error('Error fetching transaction:', error);
+                    return;
                 }
 
                 if (data) {
-                    setTitle(data.title);
-                    setAmount(data.amount.toString());
+                    setDebouncedTitle(data.title);
+                    setDebouncedAmount(data.amount.toString());
                     setType(data.type);
                     setDate(new Date(data.date));
                     setCategoryId(data.category_id);
                     setWalletId(data.wallet_id);
-                    setDescription(data.description || '');
+                    setDebouncedDesc(data.description || '');
                 }
+            } catch (error) {
+                console.error('Error in fetchTransaction:', error);
+            } finally {
                 setLoading(false);
             }
-        };
-
-        fetchTransaction();
+        }
     }, [transactionId]);
+
+    useEffect(() => {
+        fetchTransaction();
+    }, [fetchTransaction]);
+
+    // Menggunakan useMemo untuk memvalidasi form - mencegah kalkulasi berulang
+    const isFormValid = useMemo(() => {
+        return (
+            title.trim() !== '' &&
+            amount !== '' &&
+            parseFloat(amount) > 0 &&
+            walletId !== null
+        );
+    }, [title, amount, walletId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        if (!isFormValid) {
+            toast.error('Harap isi semua field yang diperlukan');
+            return;
+        }
+        
         setLoading(true);
 
         const transactionData = {
@@ -121,7 +196,7 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
 
         try {
             if (transactionId) {
-                const { data, error } = await supabase
+                const { error } = await supabase
                     .from('transactions')
                     .update(transactionData)
                     .eq('id', transactionId);
@@ -129,16 +204,19 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
                 if (error) throw error;
                 toast.success('Transaksi berhasil diperbarui!');
             } else {
-                const { data, error } = await supabase
+                const { error } = await supabase
                     .from('transactions')
-                    .insert({ ...transactionData, user_id: supabase.auth.user()?.id })
-                    .select();
+                    .insert([{ ...transactionData, user_id: (await supabase.auth.getUser()).data.user?.id }]);
 
                 if (error) throw error;
                 toast.success('Transaksi berhasil ditambahkan!');
             }
-            navigate('/transactions');
-            setOpen(false);
+            
+            // Gunakan setTimeout untuk memastikan toast muncul sebelum navigasi
+            setTimeout(() => {
+                navigate('/transactions');
+                setOpen(false);
+            }, 500);
         } catch (error) {
             console.error('Error adding/updating transaction:', error);
             toast.error('Terjadi kesalahan saat menambahkan/memperbarui transaksi.');
@@ -147,8 +225,33 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
         }
     };
 
+    // Handler debounce untuk perubahan input
+    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDebouncedTitle(e.target.value);
+        if (!formTouched) setFormTouched(true);
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDebouncedAmount(e.target.value);
+        if (!formTouched) setFormTouched(true);
+    };
+
+    const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDebouncedDesc(e.target.value);
+        if (!formTouched) setFormTouched(true);
+    };
+
     return (
-        <Sheet open={open} onOpenChange={setOpen}>
+        <Sheet open={open} onOpenChange={(newOpen) => {
+            // Cegah penutupan form secara tidak sengaja jika sudah dimodifikasi
+            if (!newOpen && formTouched) {
+                if (window.confirm('Anda memiliki perubahan yang belum disimpan. Yakin ingin menutup?')) {
+                    setOpen(newOpen);
+                }
+            } else {
+                setOpen(newOpen);
+            }
+        }}>
             <SheetTrigger asChild>
                 <Button variant="outline">
                     {transactionId ? 'Edit Transaksi' : 'Tambah Transaksi'}
@@ -168,10 +271,11 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
                                 <Label htmlFor="title">Judul</Label>
                                 <Input
                                     id="title"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
+                                    value={debouncedTitle}
+                                    onChange={handleTitleChange}
                                     placeholder="Judul transaksi"
                                     required
+                                    autoComplete="off"
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -179,10 +283,12 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
                                 <Input
                                     type="number"
                                     id="amount"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
+                                    value={debouncedAmount}
+                                    onChange={handleAmountChange}
                                     placeholder="Jumlah transaksi"
                                     required
+                                    inputMode="numeric"
+                                    autoComplete="off"
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -249,13 +355,17 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
                                 <Label htmlFor="description">Deskripsi</Label>
                                 <Input
                                     id="description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
+                                    value={debouncedDesc}
+                                    onChange={handleDescriptionChange}
                                     placeholder="Deskripsi transaksi"
                                 />
                             </div>
-                            <Button type="submit" disabled={loading}>
-                                {loading ? 'Loading...' : 'Simpan'}
+                            <Button 
+                                type="submit" 
+                                disabled={loading || !isFormValid}
+                                className="w-full"
+                            >
+                                {loading ? 'Menyimpan...' : 'Simpan'}
                             </Button>
                         </form>
                     </CardContent>

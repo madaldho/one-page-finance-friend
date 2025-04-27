@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#ffffff">
+    <title>Keuangan Pribadi</title>
+    <link rel="icon" type="image/webp" href="/favicon.webp">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+            text-align: center;
+        }
+        
+        .splash-container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        
+        p {
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+            color: #666;
+        }
+        
+        .button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.25);
+            transition: all 0.3s ease;
+        }
+        
+        .button:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3);
+        }
+        
+        .install-guide {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f3f4f6;
+            border-radius: 8px;
+            max-width: 90%;
+        }
+        
+        .install-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        
+        .step-number {
+            background-color: #2563eb;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 24px;
+            }
+            
+            p {
+                font-size: 14px;
+            }
+            
+            .logo {
+                width: 120px;
+                height: 120px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="splash-container">
+        <img src="/logokeuanganpay.webp" alt="Logo Keuangan Pribadi" class="logo">
+        <h1>Selamat Datang di Keuangan Pribadi</h1>
+        <p>Aplikasi untuk membantu Anda mengelola keuangan pribadi dengan lebih efektif. Lacak pengeluaran, buat anggaran, dan capai tujuan keuangan Anda.</p>
+        
+        <a href="/" class="button">Mulai Aplikasi</a>
+        
+        <div class="install-guide">
+            <h3>Pasang Aplikasi di Perangkat Anda:</h3>
+            <div class="install-step">
+                <div class="step-number">1</div>
+                <span>Di Chrome: tekan ikon menu (⋮) lalu "Tambahkan ke Layar Utama"</span>
+            </div>
+            <div class="install-step">
+                <div class="step-number">2</div>
+                <span>Di Safari: tekan ikon bagikan lalu "Tambahkan ke Layar Utama"</span>
+            </div>
+            <div class="install-step">
+                <div class="step-number">3</div>
+                <span>Nikmati akses langsung dari layar utama perangkat Anda!</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Redirect to main app after 3 seconds if user doesn't interact
+        const redirectTimer = setTimeout(() => {
+            window.location.href = '/';
+        }, 5000);
+        
+        // Clear timer if user clicks the button manually
+        document.querySelector('.button').addEventListener('click', () => {
+            clearTimeout(redirectTimer);
+        });
+    </script>
+</body>
+</html> 

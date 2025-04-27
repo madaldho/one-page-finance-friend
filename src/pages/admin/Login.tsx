@@ -19,29 +19,38 @@ const AdminLogin = () => {
   useEffect(() => {
     const checkAdminSession = async () => {
       try {
-        // Cek jika sudah login sebagai admin
-        const savedAdminStatus = localStorage.getItem('isAdmin') === 'true';
-        if (savedAdminStatus) {
-          const { data } = await supabase.auth.getSession();
-          if (data.session) {
-            // Cek apakah user benar-benar admin
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('is_admin')
-              .eq('id', data.session.user.id)
-              .single();
+        // Ambil sesi dari Supabase yang sudah dikonfigurasi dengan persistSession
+        const { data } = await supabase.auth.getSession();
+        
+        // Jika ada sesi yang valid
+        if (data.session) {
+          console.log("Sesi ditemukan, memeriksa apakah pengguna adalah admin");
+          
+          // Cek apakah user adalah admin
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('is_admin')
+            .eq('id', data.session.user.id)
+            .single();
 
-            if (!profileError && profileData?.is_admin) {
-              // Jika masih admin, arahkan ke dashboard
-              navigate('/admin/dashboard');
-              return;
-            }
+          if (!profileError && profileData?.is_admin) {
+            console.log("Pengguna adalah admin, mengalihkan ke dashboard");
+            // Simpan status admin di localStorage untuk pemeriksaan cepat
+            localStorage.setItem('isAdmin', 'true');
+            // Jika admin valid, arahkan ke dashboard
+            navigate('/admin/dashboard');
+            return;
+          } else {
+            console.log("Sesi ada tapi bukan admin atau terjadi error");
+            // Jika bukan admin, hapus flag dan biarkan di halaman login
+            localStorage.removeItem('isAdmin');
           }
-          // Jika tidak valid, hapus flag admin
+        } else {
+          console.log("Tidak ada sesi admin yang aktif");
           localStorage.removeItem('isAdmin');
         }
       } catch (error) {
-        console.error('Error checking admin session:', error);
+        console.error("Error checking admin session:", error);
         localStorage.removeItem('isAdmin');
       } finally {
         setCheckingSession(false);
@@ -106,7 +115,10 @@ const AdminLogin = () => {
   if (checkingSession) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mb-4"></div>
+          <p className="text-gray-600">Memeriksa sesi admin...</p>
+        </div>
       </div>
     );
   }

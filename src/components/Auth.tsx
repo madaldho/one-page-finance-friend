@@ -15,6 +15,7 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -31,6 +32,26 @@ const Auth = () => {
       window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
+
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        
+        if (data.session) {
+          console.log("Sesi login ditemukan, pengguna akan langsung diarahkan");
+          navigate('/home', { replace: true });
+          return;
+        }
+      } catch (error) {
+        console.error("Error saat memeriksa sesi:", error);
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+
+    checkExistingSession();
+  }, [navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +70,7 @@ const Auth = () => {
           title: "✨ Pendaftaran Berhasil",
           description: "Silakan periksa email Anda untuk konfirmasi.",
         });
-        setIsSignUp(false); // Switch to login view after successful registration
+        setIsSignUp(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -108,6 +129,17 @@ const Auth = () => {
       setGoogleLoading(false);
     }
   };
+
+  if (checkingSession) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mb-4"></div>
+          <p className="text-gray-600">Memeriksa sesi login...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-screen items-center justify-center p-4 overflow-hidden">

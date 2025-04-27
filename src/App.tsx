@@ -42,6 +42,7 @@ import SubscriptionChecker from './components/subscription/SubscriptionChecker';
 import ProtectedProRoute from './components/premium/ProtectedProRoute';
 import ProRouteGuard from './components/premium/ProRouteGuard';
 import Upgrade from './pages/Upgrade';
+import LocalStorageMonitor from './components/LocalStorageMonitor';
 
 // Admin Pages
 import AdminLogin from './pages/admin/Login';
@@ -110,6 +111,7 @@ function App() {
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
         <ScrollToTop />
+        <LocalStorageMonitor />
         <SubscriptionChecker />
         <Routes>
           <Route path="/" element={<>

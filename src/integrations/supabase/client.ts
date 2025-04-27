@@ -8,4 +8,13 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Konfigurasi persisten sesi untuk menyimpan login dalam waktu lama
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true, // Aktifkan penyimpanan sesi persisten
+    storageKey: 'finance_friend_auth', // Kunci penyimpanan untuk localStorage
+    autoRefreshToken: true, // Secara otomatis refresh token
+    detectSessionInUrl: true, // Deteksi sesi dalam URL (untuk OAuth)
+    storage: localStorage // Gunakan localStorage untuk menyimpan sesi
+  }
+});

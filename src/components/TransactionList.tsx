@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Transaction } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -109,11 +109,38 @@ const TransactionList = ({
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string[]>([]);
+  
+  // Optimasi 1: Virtualisasi untuk daftar panjang - hanya render item yang terlihat
+  const [visibleStartIndex, setVisibleStartIndex] = useState(0);
+  const ITEMS_PER_PAGE = 20; // Jumlah item yang dirender sekaligus
+  
+  // Optimasi 2: Menggunakan useCallback untuk fungsi yang sering dipanggil
+  const handleSearch = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    onFilter(value);
+  }, [onFilter]);
 
-  // Fetch categories and wallets
+  // Fetch categories and wallets - Optimasi dengan caching
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Periksa cache lokal terlebih dahulu
+        const cachedCategories = localStorage.getItem('categories');
+        const cachedWallets = localStorage.getItem('wallets');
+        const cacheTimestamp = localStorage.getItem('cacheTimestamp');
+        const now = Date.now();
+        
+        // Cache valid selama 1 jam (3600000 ms)
+        const isCacheValid = cacheTimestamp && (now - parseInt(cacheTimestamp)) < 3600000;
+        
+        if (isCacheValid && cachedCategories && cachedWallets) {
+          setCategories(JSON.parse(cachedCategories));
+          setWallets(JSON.parse(cachedWallets));
+          return;
+        }
+
+        // Jika cache tidak valid, lakukan fetch
         // Fetch categories
         const { data: categoriesData, error: categoriesError } = await supabase
           .from('categories')
@@ -127,6 +154,9 @@ const TransactionList = ({
         }, {} as Record<string, Category>);
         
         setCategories(categoryMap);
+        
+        // Update cache
+        localStorage.setItem('categories', JSON.stringify(categoryMap));
 
         // Fetch wallets
         const { data: walletsData, error: walletsError } = await supabase
@@ -141,6 +171,10 @@ const TransactionList = ({
         }, {} as Record<string, Wallet>);
         
         setWallets(walletMap);
+        
+        // Update cache
+        localStorage.setItem('wallets', JSON.stringify(walletMap));
+        localStorage.setItem('cacheTimestamp', now.toString());
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -149,6 +183,83 @@ const TransactionList = ({
     fetchData();
   }, []);
 
+  // Optimasi 3: Gunakan useMemo untuk operasi yang mahal seperti sorting
+  const sortedTransactions = useMemo(() => {
+    return [...transactions].sort((a, b) => {
+      // Tambahkan special case untuk category
+      if (sortConfig.key === 'category') {
+        const aCategory = categories[a.category_id || a.category || '']?.name || '';
+        const bCategory = categories[b.category_id || b.category || '']?.name || '';
+        
+        return sortConfig.direction === 'asc'
+          ? aCategory.localeCompare(bCategory)
+          : bCategory.localeCompare(aCategory);
+      }
+      
+      // Tambahkan special case untuk wallet_name
+      if (sortConfig.key === 'wallet_name') {
+        const aWallet = a.wallet_name || wallets[a.wallet_id]?.name || '';
+        const bWallet = b.wallet_name || wallets[b.wallet_id]?.name || '';
+        
+        return sortConfig.direction === 'asc'
+          ? aWallet.localeCompare(bWallet)
+          : bWallet.localeCompare(aWallet);
+      }
+      
+      const aValue = a[sortConfig.key as keyof Transaction];
+      const bValue = b[sortConfig.key as keyof Transaction];
+      
+      // Special case for created_at which might be undefined
+      if (sortConfig.key === 'created_at') {
+        // Fallback to date if created_at is not available
+        const aCreatedAt = a.created_at ? new Date(a.created_at).getTime() : new Date(a.date).getTime();
+        const bCreatedAt = b.created_at ? new Date(b.created_at).getTime() : new Date(b.date).getTime();
+        
+        return sortConfig.direction === 'asc' 
+          ? aCreatedAt - bCreatedAt
+          : bCreatedAt - aCreatedAt;
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+      
+      return 0;
+    });
+  }, [transactions, sortConfig, categories, wallets]);
+
+  // Optimalkan dengan memisahkan hanya transaksi yang terlihat
+  const visibleTransactions = useMemo(() => {
+    return sortedTransactions.slice(visibleStartIndex, visibleStartIndex + ITEMS_PER_PAGE);
+  }, [sortedTransactions, visibleStartIndex]);
+
+  // Fungsi untuk handle infinite scroll
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    // Jika sudah scroll 75% dari content yang terlihat, muat item berikutnya
+    if (scrollTop + clientHeight > scrollHeight * 0.75) {
+      const nextIndex = Math.min(
+        visibleStartIndex + Math.floor(ITEMS_PER_PAGE / 2),
+        sortedTransactions.length - ITEMS_PER_PAGE
+      );
+      
+      if (nextIndex > visibleStartIndex) {
+        setVisibleStartIndex(nextIndex);
+      }
+    }
+    
+    // Jika scroll ke atas, muat item sebelumnya
+    if (scrollTop < clientHeight * 0.25 && visibleStartIndex > 0) {
+      const prevIndex = Math.max(
+        visibleStartIndex - Math.floor(ITEMS_PER_PAGE / 2),
+        0
+      );
+      setVisibleStartIndex(prevIndex);
+    }
+  }, [visibleStartIndex, sortedTransactions.length]);
+
   // Handle sort
   const handleSort = (key: keyof Transaction | 'category' | 'wallet_name') => {
     setSortConfig(prev => ({
@@ -156,57 +267,6 @@ const TransactionList = ({
       direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
-
-  // Sort transactions
-  const sortedTransactions = [...transactions].sort((a, b) => {
-    // Tambahkan special case untuk category
-    if (sortConfig.key === 'category') {
-      const aCategory = categories[a.category_id || a.category || '']?.name || '';
-      const bCategory = categories[b.category_id || b.category || '']?.name || '';
-      
-      return sortConfig.direction === 'asc'
-        ? aCategory.localeCompare(bCategory)
-        : bCategory.localeCompare(aCategory);
-    }
-    
-    // Tambahkan special case untuk wallet_name
-    if (sortConfig.key === 'wallet_name') {
-      const aWallet = a.wallet_name || wallets[a.wallet_id]?.name || '';
-      const bWallet = b.wallet_name || wallets[b.wallet_id]?.name || '';
-      
-      return sortConfig.direction === 'asc'
-        ? aWallet.localeCompare(bWallet)
-        : bWallet.localeCompare(aWallet);
-    }
-    
-    const aValue = a[sortConfig.key as keyof Transaction];
-    const bValue = b[sortConfig.key as keyof Transaction];
-    
-    // Special case for created_at which might be undefined
-    if (sortConfig.key === 'created_at') {
-      // Fallback to date if created_at is not available
-      const aCreatedAt = a.created_at ? new Date(a.created_at).getTime() : new Date(a.date).getTime();
-      const bCreatedAt = b.created_at ? new Date(b.created_at).getTime() : new Date(b.date).getTime();
-      
-      return sortConfig.direction === 'asc' 
-        ? aCreatedAt - bCreatedAt
-        : bCreatedAt - aCreatedAt;
-    }
-    
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortConfig.direction === 'asc' 
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    }
-    
-    if (typeof aValue === 'number' && typeof bValue === 'number') {
-      return sortConfig.direction === 'asc' 
-        ? aValue - bValue
-        : bValue - aValue;
-    }
-    
-    return 0;
-  });
 
   // Fungsi untuk mendapatkan tampilan kategori
   const getCategoryDisplay = (transaction: ExtendedTransaction): React.ReactNode => {
@@ -243,13 +303,6 @@ const TransactionList = ({
     
     // Fallback paling akhir: tampilkan sebagian ID kategori
     return categoryId.slice(0, 6);
-  };
-
-  // Handle search
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    onFilter(query);
   };
 
   // Get transaction type color
@@ -421,7 +474,7 @@ const TransactionList = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-          {sortedTransactions.map((transaction) => {
+          {visibleTransactions.map((transaction) => {
             const wallet = wallets[transaction.wallet_id];
             const isSelected = selectedIds.includes(transaction.id);
             
@@ -522,7 +575,7 @@ const TransactionList = ({
     const groupTransactionsByMonth = () => {
       const groupedTransactions: Record<string, Transaction[]> = {};
       
-      sortedTransactions.forEach(transaction => {
+      visibleTransactions.forEach(transaction => {
         const date = new Date(transaction.date);
         const month = date.getMonth(); // 0-11
         const year = date.getFullYear();
@@ -558,7 +611,7 @@ const TransactionList = ({
         <div className="mb-4 mt-1">
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
-              Menampilkan {sortedTransactions.length} transaksi
+              Menampilkan {visibleTransactions.length} transaksi
             </div>
             
             <div 
@@ -827,5 +880,5 @@ const TransactionList = ({
   );
 };
 
-export default TransactionList;
+export default React.memo(TransactionList);
 
