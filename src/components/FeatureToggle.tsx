@@ -1,5 +1,4 @@
 import React from "react";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -29,6 +28,31 @@ const FeatureToggle = ({
 }: FeatureToggleProps) => {
   const canNavigate = checked && managementLink;
   
+  const StatusBadge = () => (
+    <div 
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!disabled && !loading) onToggle();
+      }}
+      className={`text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-colors ${
+        loading ? "opacity-50 cursor-not-allowed" : ""
+      } ${
+        checked 
+          ? "bg-green-100 text-green-600 hover:bg-green-200" 
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+      }`}
+    >
+      {loading ? (
+        <span className="flex items-center">
+          <span className="w-3 h-3 border-2 border-t-transparent border-green-600 rounded-full animate-spin mr-1"></span>
+          {checked ? "Aktif" : "Nonaktif"}
+        </span>
+      ) : (
+        checked ? "Aktif" : "Nonaktif"
+      )}
+    </div>
+  );
+  
   const Content = () => (
     <>
       <div className="flex items-center gap-3">
@@ -37,7 +61,7 @@ const FeatureToggle = ({
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <Label htmlFor={`toggle-${title}`} className="cursor-pointer">{title}</Label>
+            <Label className="cursor-pointer">{title}</Label>
             {extraElement && extraElement}
           </div>
           {description && (
@@ -46,18 +70,9 @@ const FeatureToggle = ({
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <div onClick={(e) => e.stopPropagation()}>
-          <Switch 
-            id={`toggle-${title}`}
-            checked={checked} 
-            onCheckedChange={onToggle}
-            disabled={disabled || loading}
-            aria-label={`Toggle ${title}`}
-            className={loading ? "opacity-50 cursor-not-allowed" : ""}
-          />
-        </div>
-        {managementLink && (
-          <div className={`transition-colors ${checked ? "text-gray-500" : "text-gray-300"}`}>
+        <StatusBadge />
+        {managementLink && checked && (
+          <div className="text-gray-500">
             <ChevronRight className="w-5 h-5" />
           </div>
         )}

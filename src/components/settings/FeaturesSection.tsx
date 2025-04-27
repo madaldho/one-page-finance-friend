@@ -137,7 +137,7 @@ const FeaturesSection = ({
   };
 
   const renderProBadge = () => (
-    <div className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full font-medium">
+    <div className="px-2.5 py-1 bg-purple-100 text-purple-600 text-xs rounded-full font-medium">
       PRO
     </div>
   );
@@ -146,25 +146,25 @@ const FeaturesSection = ({
   const renderStatusBadge = () => {
     if (subscriptionStatus === 'trial') {
       return (
-        <div className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">
+        <div className="px-2.5 py-1 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">
           TRIAL PRO
         </div>
       );
     } else if (subscriptionStatus === 'pro') {
       return (
-        <div className="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs rounded-full font-medium">
+        <div className="px-2.5 py-1 bg-purple-100 text-purple-600 text-xs rounded-full font-medium">
           PRO
         </div>
       );
     } else if (subscriptionStatus === 'admin') {
       return (
-        <div className="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded-full font-medium">
+        <div className="px-2.5 py-1 bg-red-100 text-red-600 text-xs rounded-full font-medium">
           ADMIN
         </div>
       );
     }
     return (
-      <div className="px-2 py-0.5 bg-orange-100 text-orange-600 text-xs rounded-full font-medium">
+      <div className="px-2.5 py-1 bg-orange-100 text-orange-600 text-xs rounded-full font-medium">
         FREE
       </div>
     );
