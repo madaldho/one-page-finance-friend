@@ -3,6 +3,7 @@ import { Route, Routes, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import ScrollToTop from './components/ScrollToTop';
+import SessionManager from './components/SessionManager';
 import Auth from './components/Auth';
 import Index from './pages/Index';
 import Profile from './pages/Profile';
@@ -110,6 +111,7 @@ function App() {
     <AuthProvider>
       <div className="min-h-screen bg-gray-50">
         <ScrollToTop />
+        <SessionManager />
         <SubscriptionChecker />
         <Routes>
           <Route path="/" element={<>

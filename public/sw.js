@@ -21,6 +21,14 @@ const API_ROUTES = [
   '/api/settings'
 ];
 
+// Daftar rute autentikasi yang tidak boleh di-cache
+const AUTH_ROUTES = [
+  '/auth/v1/token',
+  '/auth/v1/logout',
+  '/auth/v1/user',
+  'supabase.co/auth'
+];
+
 // Cache untuk data dinamis
 const DYNAMIC_CACHE = 'keuangan-pribadi-dynamic-v1';
 
@@ -53,9 +61,47 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Nasłuchiwanie pesan dari klien
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_AUTH_CACHE') {
+    clearAuthCache().then(() => {
+      // Kirim konfirmasi kembali ke klien
+      event.ports[0].postMessage({ cleared: true });
+    });
+  }
+});
+
+// Fungsi untuk membersihkan cache autentikasi
+async function clearAuthCache() {
+  try {
+    const cache = await caches.open(DYNAMIC_CACHE);
+    const requests = await cache.keys();
+    const authRequests = requests.filter(request => 
+      AUTH_ROUTES.some(route => request.url.includes(route))
+    );
+    
+    // Hapus semua permintaan autentikasi dari cache
+    for (const request of authRequests) {
+      await cache.delete(request);
+    }
+    
+    console.log('Auth cache cleared successfully');
+    return true;
+  } catch (error) {
+    console.error('Failed to clear auth cache:', error);
+    return false;
+  }
+}
+
 // Strategi caching yang dioptimalkan
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
+  
+  // Jangan cache permintaan autentikasi
+  if (AUTH_ROUTES.some(route => event.request.url.includes(route))) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   
   // Jika request ke domain yang sama
   if (url.origin === self.location.origin) {

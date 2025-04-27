@@ -8,4 +8,49 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Konfigurasi untuk memperpanjang durasi sesi menjadi 30 hari
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true, // Pertahankan sesi di local storage
+    autoRefreshToken: true, // Otomatis refresh token sebelum kadaluarsa
+    storageKey: 'keuangan-pribadi-auth', // Custom key untuk localStorage
+    detectSessionInUrl: true, // Deteksi otomatis sesi dari URL (untuk OAuth)
+    storage: {
+      getItem: (key) => {
+        try {
+          // Coba ambil dari localStorage
+          return localStorage.getItem(key);
+        } catch (error) {
+          // Fallback ke sessionStorage jika localStorage tidak tersedia
+          console.error('Error accessing localStorage:', error);
+          return sessionStorage.getItem(key);
+        }
+      },
+      setItem: (key, value) => {
+        try {
+          // Simpan di localStorage
+          localStorage.setItem(key, value);
+        } catch (error) {
+          // Fallback ke sessionStorage jika localStorage tidak tersedia
+          console.error('Error writing to localStorage:', error);
+          sessionStorage.setItem(key, value);
+        }
+      },
+      removeItem: (key) => {
+        try {
+          // Hapus dari localStorage
+          localStorage.removeItem(key);
+        } catch (error) {
+          // Fallback ke sessionStorage jika localStorage tidak tersedia
+          console.error('Error removing from localStorage:', error);
+          sessionStorage.removeItem(key);
+        }
+      },
+    },
+  },
+  global: {
+    headers: {
+      'x-application-name': 'keuangan-pribadi',
+    },
+  },
+});

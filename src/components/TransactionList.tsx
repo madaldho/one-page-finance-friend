@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Transaction } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronDown, MoreVertical, Trash2, Edit2, Calendar, CheckCircle2, Check, ArrowUpDown } from "lucide-react";
+import { Search, ChevronDown, MoreVertical, Trash2, Edit2, Calendar, CheckCircle2, Check, ArrowUpDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { formatCurrency } from "@/lib/utils";
@@ -110,6 +110,9 @@ const TransactionList = ({
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string[]>([]);
+  // Menambahkan state untuk lazy loading
+  const [displayLimit, setDisplayLimit] = useState(40);
+  const [hasMore, setHasMore] = useState(true);
 
   // Fetch categories and wallets
   useEffect(() => {
@@ -208,6 +211,24 @@ const TransactionList = ({
     
     return 0;
   });
+
+  // Terapkan batasan jumlah transaksi yang ditampilkan (lazy loading)
+  useEffect(() => {
+    // Reset display limit ketika data transaksi berubah
+    setDisplayLimit(40);
+    // Set hasMore berdasarkan jumlah transaksi yang tersedia
+    setHasMore(transactions.length > 40);
+  }, [transactions]);
+  
+  // Batasi jumlah transaksi yang ditampilkan
+  const visibleTransactions = sortedTransactions.slice(0, displayLimit);
+  
+  // Fungsi untuk memuat lebih banyak transaksi
+  const loadMoreTransactions = () => {
+    const newLimit = displayLimit + 40;
+    setDisplayLimit(newLimit);
+    setHasMore(newLimit < sortedTransactions.length);
+  };
 
   // Fungsi untuk mendapatkan tampilan kategori
   const getCategoryDisplay = (transaction: ExtendedTransaction): React.ReactNode => {
@@ -422,7 +443,7 @@ const TransactionList = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-          {sortedTransactions.map((transaction) => {
+          {visibleTransactions.map((transaction) => {
             const wallet = wallets[transaction.wallet_id];
             const isSelected = selectedIds.includes(transaction.id);
             
@@ -571,7 +592,7 @@ const TransactionList = ({
     const groupTransactionsByMonth = () => {
       const groupedTransactions: Record<string, Transaction[]> = {};
       
-      sortedTransactions.forEach(transaction => {
+      visibleTransactions.forEach(transaction => {
         const date = new Date(transaction.date);
         const month = date.getMonth(); // 0-11
         const year = date.getFullYear();
@@ -607,7 +628,7 @@ const TransactionList = ({
         <div className="mb-4 mt-1">
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
-              Menampilkan {sortedTransactions.length} transaksi
+              Menampilkan {visibleTransactions.length} {sortedTransactions.length > visibleTransactions.length ? `dari ${sortedTransactions.length}` : ""} transaksi
             </div>
             
             <div 
@@ -886,6 +907,19 @@ const TransactionList = ({
         ? (isDesktop ? <DesktopSkeletonView /> : <MobileSkeletonView />)
         : (isDesktop ? <DesktopView /> : <MobileView />)
       }
+
+      {/* Tombol Load More */}
+      {hasMore && !isLoading && (
+        <div className="flex justify-center mt-4">
+          <button 
+            onClick={loadMoreTransactions}
+            className="text-sm text-primary font-medium flex items-center gap-1 hover:underline focus:outline-none bg-primary/5 px-4 py-2 rounded-md"
+          >
+            <span>Muat Lebih Banyak</span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       <DeleteConfirmationDialog
         open={showDeleteDialog}
