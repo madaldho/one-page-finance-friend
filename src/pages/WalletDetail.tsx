@@ -147,7 +147,7 @@ const WalletDetail = () => {
     
     switch(selectedPeriod) {
       case 'last-7':
-        return { from: subDays(today, 6), to }; // 7 hari terakhir
+        return { from: subDays(today, 7), to }; // 7 hari terakhir
       case 'last-30':
         return { from: subDays(today, 29), to }; // 30 hari terakhir
       case 'last-90':

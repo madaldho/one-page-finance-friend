@@ -369,7 +369,7 @@ const Settings = () => {
           <div className="hover:bg-gray-50">
             <div 
               className="flex items-center justify-between p-4 cursor-pointer"
-              onClick={() => navigate('/device-manager')}
+              onClick={() => navigate('/trusted-devices')}
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">

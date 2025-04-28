@@ -711,7 +711,7 @@ const BudgetManagement = () => {
       const endDate = new Date(editStartDate);
       
       if (value === 'weekly') {
-        endDate.setDate(endDate.getDate() + 6); // 7 hari dari mulai
+        endDate.setDate(endDate.getDate() + 7); // 7 hari dari mulai
       } else if (value === 'monthly') {
         endDate.setMonth(endDate.getMonth() + 1);
         endDate.setDate(endDate.getDate() - 1); // Akhir bulan

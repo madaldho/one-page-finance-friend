@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { getSubscriptionLabel, UserSubscriptionProfile } from '@/utils/subscription';
@@ -24,6 +24,7 @@ interface ProfileSectionProps {
 
 const ProfileSection = ({ user }: ProfileSectionProps) => {
   const navigate = useNavigate();
+  const [imageError, setImageError] = useState(false);
   
   const handleEditProfile = () => {
     navigate('/profile');
@@ -35,6 +36,20 @@ const ProfileSection = ({ user }: ProfileSectionProps) => {
   
   // Check if user has Pro status
   const isPro = subscriptionLabel.text.includes('Pro');
+
+  // Fungsi untuk handle error saat loading image
+  const handleImageError = () => {
+    console.log("Avatar image failed to load");
+    setImageError(true);
+  };
+  
+  // Mendapatkan initial dari email jika nama tidak tersedia
+  const getInitial = () => {
+    if (user?.profile?.name && user.profile.name.length > 0) {
+      return user.profile.name.charAt(0).toUpperCase();
+    }
+    return user?.email?.charAt(0).toUpperCase() || 'U';
+  };
   
   return (
     <section className={`mb-8 rounded-lg shadow-sm overflow-hidden ${isPro ? 'shadow-md' : ''}`}>
@@ -49,18 +64,20 @@ const ProfileSection = ({ user }: ProfileSectionProps) => {
           <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-3 overflow-hidden ${
             isPro ? 'border-2 border-amber-400 shadow-md' : 'bg-[#6E59A5]'
           }`}>
-            {user?.profile?.avatar_url ? (
+            {user?.profile?.avatar_url && !imageError ? (
               <img 
                 src={user.profile.avatar_url} 
                 alt="Profile" 
                 className="w-full h-full object-cover"
+                onError={handleImageError}
+                loading="eager"
               />
             ) : (
               <div className={`w-full h-full flex items-center justify-center ${
                 isPro ? 'bg-gradient-to-br from-purple-600 to-indigo-700' : 'bg-[#6E59A5]'
               }`}>
                 <span className="text-white text-lg font-semibold">
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
+                  {getInitial()}
                 </span>
               </div>
             )}

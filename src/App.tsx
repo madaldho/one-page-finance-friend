@@ -43,6 +43,7 @@ import SubscriptionChecker from './components/subscription/SubscriptionChecker';
 import ProtectedProRoute from './components/premium/ProtectedProRoute';
 import ProRouteGuard from './components/premium/ProRouteGuard';
 import Upgrade from './pages/Upgrade';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Admin Pages
 import AdminLogin from './pages/admin/Login';
@@ -150,6 +151,15 @@ function App() {
               <Profile />
             </ProtectedRoute>
           } />
+          
+          {/* Tambahkan reset password route */}
+          <Route path="/reset-password" element={
+            <ProtectedRoute>
+              <AuthRedirect />
+              <ResetPasswordPage />
+            </ProtectedRoute>
+          } />
+          
           <Route path="/settings" element={
             <ProtectedRoute>
               <AuthRedirect />
@@ -387,7 +397,7 @@ function App() {
           } />
           
           {/* Tambahkan route untuk Device Manager */}
-          <Route path="/device-manager" element={
+          <Route path="/trusted-devices" element={
             <ProtectedRoute>
               <AuthRedirect />
               <DeviceManagerPage />

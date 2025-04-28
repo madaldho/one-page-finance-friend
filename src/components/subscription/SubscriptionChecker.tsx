@@ -41,9 +41,9 @@ const SubscriptionChecker: FC = () => {
         
         // Jika pengguna adalah Free dan belum memiliki trial
         if (profile.subscription_type === 'free' && !profile.trial_end) {
-          // Berikan trial 7 hari menggunakan waktu lokal perangkat
+          // Berikan trial 8 hari menggunakan waktu lokal perangkat
           const trialStart = formatLocalDate(currentDate);
-          const trialEnd = formatLocalDate(addLocalDays(currentDate, 7));
+          const trialEnd = formatLocalDate(addLocalDays(currentDate, 8));
           
           // Update profil dengan tanggal trial dan set subscription_type ke 'trial'
           const { error: updateError } = await supabase

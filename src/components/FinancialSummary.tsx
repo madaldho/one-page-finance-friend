@@ -27,7 +27,7 @@ import { ArrowUpRight, TrendingUp, TrendingDown, DollarSign, CalendarClock } fro
 import { DateRange } from "react-day-picker";
 
 // Import type dari types/index.ts
-import type { TransactionWithNames as ImportedTransactionWithNames, Wallet, Category } from "@/types";
+import type { TransactionWithNames as ImportedTransactionWithNames } from "@/types";
 
 interface Transaction {
   id: string;

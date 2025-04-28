@@ -30,6 +30,9 @@ interface FeaturesSectionProps {
   onToggleFeature: (feature: string) => void;
 }
 
+// Storage key untuk menyimpan pengaturan fitur di localStorage
+const LOCAL_STORAGE_FEATURES_KEY = 'finance_app_feature_settings';
+
 const FeaturesSection = ({
   user,
   settings,
@@ -41,7 +44,26 @@ const FeaturesSection = ({
   const [loading, setLoading] = useState(true);
   const [isProUser, setIsProUser] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState<'admin' | 'pro' | 'trial' | 'free'>('free');
+  const [localSettings, setLocalSettings] = useState<{
+    show_budgeting: boolean;
+    show_savings: boolean;
+    show_loans: boolean;
+  } | null>(null);
   const navigate = useNavigate();
+  
+  // Saat komponen dimuat, coba ambil pengaturan dari localStorage
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem(LOCAL_STORAGE_FEATURES_KEY);
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setLocalSettings(parsedSettings);
+        console.log("Loaded settings from localStorage:", parsedSettings);
+      }
+    } catch (error) {
+      console.error("Error loading settings from localStorage:", error);
+    }
+  }, []);
   
   // ! FIX: Gunakan authUser jika user tidak memiliki id
   useEffect(() => {
@@ -70,6 +92,10 @@ const FeaturesSection = ({
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        // Gunakan pengaturan lokal jika tersedia
+        if (localSettings) {
+          console.log("Using local settings as fallback");
+        }
         setLoading(false);
         return;
       }
@@ -77,6 +103,10 @@ const FeaturesSection = ({
       // Validasi data yang diterima
       if (!data) {
         console.error('No profile data returned for userId:', userId);
+        // Gunakan pengaturan lokal jika tersedia
+        if (localSettings) {
+          console.log("Using local settings as fallback");
+        }
         setLoading(false);
         return;
       }
@@ -115,14 +145,28 @@ const FeaturesSection = ({
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
+      // Gunakan pengaturan lokal jika tersedia
+      if (localSettings) {
+        console.log("Using local settings as fallback due to error");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Menggunakan settings dari props atau dari storage lokal jika ada masalah
+  const effectiveSettings = {
+    show_budgeting: settings.show_budgeting,
+    show_savings: settings.show_savings,
+    show_loans: settings.show_loans
+  };
+
   const handleToggleClick = (setting: 'show_budgeting' | 'show_savings' | 'show_loans') => {
+    // Dapatkan nilai pengaturan saat ini (dari props atau local sebagai fallback)
+    const currentValue = effectiveSettings[setting];
+    
     // Jika user free dan ingin mengaktifkan fitur, tampilkan pesan upgrade
-    if (!isProUser && !settings[setting]) {
+    if (!isProUser && !currentValue) {
       const message = `Halo, saya ingin upgrade ke paket Pro untuk menggunakan fitur ${
         setting === 'show_budgeting' ? 'Anggaran' : 
         setting === 'show_savings' ? 'Tabungan' : 'Hutang & Piutang'
@@ -132,8 +176,23 @@ const FeaturesSection = ({
       return;
     }
 
-    // Jika pro user (termasuk trial) atau ingin menonaktifkan fitur, lanjutkan seperti biasa
-    onToggleFeature(setting);
+    try {
+      // Perbarui pengaturan lokal
+      const newSettings = {
+        ...effectiveSettings,
+        [setting]: !currentValue
+      };
+      
+      // Simpan ke localStorage untuk backup
+      localStorage.setItem(LOCAL_STORAGE_FEATURES_KEY, JSON.stringify(newSettings));
+      setLocalSettings(newSettings);
+      
+      // Panggil fungsi toggle dari parent component
+      onToggleFeature(setting);
+    } catch (error) {
+      console.error(`Error toggling feature ${setting}:`, error);
+      alert("Terjadi kesalahan saat mengubah pengaturan. Silakan coba lagi.");
+    }
   };
 
   const renderProBadge = () => (
@@ -204,11 +263,11 @@ const FeaturesSection = ({
           icon={<DollarSign className="w-4 h-4 text-blue-600" />}
           title="Budgeting"
           description="Atur dan pantau anggaran keuangan kamu"
-          checked={settings.show_budgeting}
+          checked={effectiveSettings.show_budgeting}
           onToggle={() => handleToggleClick('show_budgeting')}
-          managementLink={isProUser || settings.show_budgeting ? "/budgets" : undefined}
+          managementLink={isProUser || effectiveSettings.show_budgeting ? "/budgets" : undefined}
           loading={toggleLoading.show_budgeting}
-          disabled={!isProUser && !settings.show_budgeting}
+          disabled={!isProUser && !effectiveSettings.show_budgeting}
           extraElement={!isProUser && renderProBadge()}
         />
       </div>
@@ -218,11 +277,11 @@ const FeaturesSection = ({
           icon={<PiggyBank className="w-4 h-4 text-green-600" />}
           title="Tabungan"
           description="Atur target dan pantau tabungan kamu"
-          checked={settings.show_savings}
+          checked={effectiveSettings.show_savings}
           onToggle={() => handleToggleClick('show_savings')}
-          managementLink={isProUser || settings.show_savings ? "/savings" : undefined}
+          managementLink={isProUser || effectiveSettings.show_savings ? "/savings" : undefined}
           loading={toggleLoading.show_savings}
-          disabled={!isProUser && !settings.show_savings}
+          disabled={!isProUser && !effectiveSettings.show_savings}
           extraElement={!isProUser && renderProBadge()}
         />
       </div>
@@ -232,11 +291,11 @@ const FeaturesSection = ({
           icon={<CreditCard className="w-4 h-4 text-red-600" />}
           title="Hutang & Piutang"
           description="Kelola data hutang dan piutang"
-          checked={settings.show_loans}
+          checked={effectiveSettings.show_loans}
           onToggle={() => handleToggleClick('show_loans')}
-          managementLink={isProUser || settings.show_loans ? "/loans" : undefined}
+          managementLink={isProUser || effectiveSettings.show_loans ? "/loans" : undefined}
           loading={toggleLoading.show_loans}
-          disabled={!isProUser && !settings.show_loans}
+          disabled={!isProUser && !effectiveSettings.show_loans}
           extraElement={!isProUser && renderProBadge()}
         />
       </div>
@@ -250,13 +309,23 @@ const FeaturesSection = ({
               <p className="text-sm text-orange-800 mb-2">
                 Fitur-fitur ini tersedia hanya untuk pengguna Pro. Upgrade sekarang untuk menggunakan semua fitur tanpa batasan!
               </p>
-              <Button 
-                size="sm" 
-                className="bg-orange-500 hover:bg-orange-600 text-white"
-                onClick={() => navigate('/upgrade')}
-              >
-                Upgrade ke Pro
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
+                  onClick={() => navigate('/upgrade')}
+                >
+                  Upgrade ke Pro
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-orange-200 text-orange-800 hover:bg-orange-100"
+                  onClick={() => navigate('/profile')}
+                >
+                  Pengaturan Akun
+                </Button>
+              </div>
             </div>
           </div>
         </div>

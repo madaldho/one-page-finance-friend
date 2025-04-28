@@ -1,17 +1,17 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Camera, Loader2, User } from "lucide-react";
+import { Camera, Loader2, User, LockKeyhole, ArrowRight, Smartphone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Link } from "react-router-dom";
 
 const formSchema = z.object({
   name: z.string().min(1, "Nama tidak boleh kosong"),
@@ -25,6 +25,9 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [avatar, setAvatar] = useState("");
+  
+  // Cek apakah user login via Google
+  const isGoogleAccount = user?.app_metadata?.provider === 'google';
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
@@ -55,7 +58,7 @@ const Profile = () => {
         form.setValue("name", data.name || "");
         setAvatar(data.avatar_url || "");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching profile:', error);
       toast({
         title: "Gagal Memuat Profil",
@@ -99,11 +102,12 @@ const Profile = () => {
         title: "Avatar Diperbarui",
         description: "Foto profil kamu telah berhasil diperbarui",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading avatar:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mengunggah foto';
       toast({
         title: "Gagal Mengunggah Foto",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -139,11 +143,12 @@ const Profile = () => {
         title: "Profil Diperbarui",
         description: "Profil kamu telah berhasil diperbarui",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating profile:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat memperbarui profil';
       toast({
         title: "Gagal Memperbarui Profil",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -168,6 +173,11 @@ const Profile = () => {
                     src={avatar} 
                     alt="Avatar" 
                     className="w-24 h-24 rounded-full object-cover border-2 border-primary"
+                    onError={(e) => {
+                      console.log("Gambar avatar gagal dimuat");
+                      // Tampilkan avatar default
+                      setAvatar("");
+                    }}
                   />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
@@ -238,6 +248,31 @@ const Profile = () => {
                 </Button>
               </form>
             </Form>
+
+            {/* Tambahkan link ke halaman reset password */}
+            <div className="border-t mt-6 pt-4">
+              <Link 
+                to="/reset-password" 
+                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-md transition-colors"
+              >
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-50 rounded-md mr-3">
+                    <LockKeyhole className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium">
+                      {isGoogleAccount ? 'Atur Password Akun' : 'Ubah Password'}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {isGoogleAccount 
+                        ? 'Tambahkan password untuk akun Google Anda' 
+                        : 'Perbarui password login Anda'}
+                    </p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400" />
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </div>
