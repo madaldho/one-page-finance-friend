@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { Label } from "@/components/ui/label";
 import { ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -28,18 +28,31 @@ const FeatureToggle = ({
 }: FeatureToggleProps) => {
   const canNavigate = checked && managementLink;
   
+  // Callback untuk menangani toggle dengan handling khusus untuk touch events
+  const handleToggle = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!disabled && !loading) {
+      // Tambahkan delay untuk mobile agar lebih responsif
+      setTimeout(() => {
+        onToggle();
+      }, 10);
+    }
+  }, [disabled, loading, onToggle]);
+  
   const StatusBadge = () => (
     <div 
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!disabled && !loading) onToggle();
-      }}
-      className={`text-xs font-medium px-2.5 py-1 rounded-full cursor-pointer transition-colors ${
+      onClick={handleToggle}
+      onTouchEnd={handleToggle}
+      role="button"
+      tabIndex={0}
+      aria-pressed={checked ? "true" : "false"}
+      className={`text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors select-none touch-manipulation ${
         loading ? "opacity-50 cursor-not-allowed" : ""
       } ${
         checked 
-          ? "bg-green-100 text-green-600 hover:bg-green-200" 
-          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          ? "bg-green-100 text-green-600 hover:bg-green-200 active:bg-green-300" 
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
       }`}
     >
       {loading ? (
@@ -53,9 +66,24 @@ const FeatureToggle = ({
     </div>
   );
   
+  // Gunakan label yang terpisah dan bisa diklik
+  const handleLabelClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (canNavigate) return; // Biarkan navigasi jika sedang aktif dan ada managementLink
+    e.stopPropagation();
+    if (!disabled && !loading) {
+      onToggle();
+    }
+  }, [canNavigate, disabled, loading, onToggle]);
+  
   const Content = () => (
     <>
-      <div className="flex items-center gap-3">
+      <div 
+        className="flex items-center gap-3 flex-1 cursor-pointer" 
+        onClick={handleLabelClick}
+        onTouchEnd={handleLabelClick}
+        role="button"
+        tabIndex={0}
+      >
         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
           {icon}
         </div>
@@ -80,6 +108,23 @@ const FeatureToggle = ({
     </>
   );
 
+  // Tambahkan event listener untuk iOS PWA
+  const handleCardTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Jika target adalah toggle button, biarkan event handler StatusBadge menanganinya
+    const target = e.target as HTMLElement;
+    if (target.closest('.StatusBadge')) return;
+    
+    // Jika manageLink aktif, biarkan navigasi berlangsung
+    if (canNavigate) return;
+    
+    // Jika tidak, aktifkan toggle
+    if (!disabled && !loading) {
+      e.stopPropagation();
+      e.preventDefault();
+      onToggle();
+    }
+  }, [canNavigate, disabled, loading, onToggle]);
+
   return (
     <div className={`border-b border-gray-100 ${canNavigate ? 'hover:bg-gray-50' : ''}`}>
       {canNavigate ? (
@@ -89,7 +134,11 @@ const FeatureToggle = ({
           </div>
         </Link>
       ) : (
-        <div className="flex items-center justify-between p-4">
+        <div 
+          className="flex items-center justify-between p-4 cursor-pointer"
+          onTouchEnd={handleCardTouchEnd}
+          data-touchable="true"
+        >
           <Content />
         </div>
       )}

@@ -2,11 +2,27 @@
   "name": "Keuangan Pribadi",
   "short_name": "Keuangan",
   "description": "Keuangan Pribadi jadi MUDAH, Simpel, Dan Tersusun",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
-  "orientation": "portrait",
+  "orientation": "any",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Tambah Transaksi",
+      "short_name": "Transaksi",
+      "description": "Tambah transaksi baru",
+      "url": "/transactions/add?source=pwa_shortcut"
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Lihat dashboard",
+      "url": "/dashboard?source=pwa_shortcut"
+    }
+  ],
   "icons": [
     {
       "src": "/logokeuanganpay.webp",
@@ -19,6 +35,36 @@
       "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable_icon_x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/maskable_icon_x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/dashboard.webp",
+      "sizes": "1280x720",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Dashboard Keuangan Pribadi"
+    },
+    {
+      "src": "/screenshots/mobile.webp",
+      "sizes": "540x1080",
+      "type": "image/webp", 
+      "form_factor": "narrow",
+      "label": "Keuangan Pribadi di Mobile"
+    }
+  ],
+  "categories": ["finance", "productivity", "utilities"],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"]
 } 

@@ -125,7 +125,7 @@ export const registerDevice = async (userId: string): Promise<boolean> => {
       }
       
       console.log('Device registered successfully:', newDevice?.id);
-      return true;
+    return true;
     }
   } catch (error) {
     console.error('Error in registerDevice:', error);
