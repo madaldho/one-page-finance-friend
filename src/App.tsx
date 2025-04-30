@@ -44,6 +44,7 @@ import ProtectedProRoute from './components/premium/ProtectedProRoute';
 import ProRouteGuard from './components/premium/ProRouteGuard';
 import Upgrade from './pages/Upgrade';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AuthCallback from './pages/AuthCallback';
 
 // Admin Pages
 import AdminLogin from './pages/admin/Login';
@@ -75,7 +76,7 @@ const AuthRedirect = () => {
       }
     }
   }, [user, isLoading, navigate, location.pathname]);
-
+  
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
@@ -98,7 +99,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       navigate('/', { replace: true });
     }
   }, [user, isLoading, navigate]);
-
+  
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
@@ -106,18 +107,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return null;
   }
-
+  
   return <>{children}</>;
 };
 
 function App() {
   return (
-    <AuthProvider>
+      <AuthProvider>
       <div className="min-h-screen bg-gray-50">
         <ScrollToTop />
         <SessionManager />
         <SubscriptionChecker />
-        <Routes>
+              <Routes>
           <Route path="/" element={<>
             <AuthRedirect />
             <Auth />
@@ -154,11 +155,14 @@ function App() {
           
           {/* Tambahkan reset password route */}
           <Route path="/reset-password" element={
-            <ProtectedRoute>
+            <>
               <AuthRedirect />
               <ResetPasswordPage />
-            </ProtectedRoute>
+            </>
           } />
+          
+          {/* Auth callback route untuk OAuth dan reset password */}
+                <Route path="/auth-callback" element={<AuthCallback />} />
           
           <Route path="/settings" element={
             <ProtectedRoute>
@@ -405,10 +409,10 @@ function App() {
           } />
           
           <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
+              </Routes>
+          <Toaster />
       </div>
-    </AuthProvider>
+      </AuthProvider>
   );
 }
 

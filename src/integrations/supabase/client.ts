@@ -2,55 +2,32 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://pjwmfyvknbtoofxfuwjm.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd21meXZrbmJ0b29meGZ1d2ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3OTQ2NTgsImV4cCI6MjA2MDM3MDY1OH0.yrje_gdq9gODnMZbxUO6giRz4ID4SOpcmBlBOIDOK1U";
+// Use environment variables when available, otherwise use the fallback values
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://pjwmfyvknbtoofxfuwjm.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqd21meXZrbmJ0b29meGZ1d2ptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ3OTQ2NTgsImV4cCI6MjA2MDM3MDY1OH0.yrje_gdq9gODnMZbxUO6giRz4ID4SOpcmBlBOIDOK1U";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Konfigurasi untuk memperpanjang durasi sesi menjadi 30 hari
+// Konfigurasi untuk memperpanjang durasi sesi menjadi 30 hari dan memastikan persistensi sesi
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true, // Pertahankan sesi di local storage
-    autoRefreshToken: true, // Otomatis refresh token sebelum kadaluarsa
-    storageKey: 'keuangan-pribadi-auth', // Custom key untuk localStorage
-    detectSessionInUrl: true, // Deteksi otomatis sesi dari URL (untuk OAuth)
-    storage: {
-      getItem: (key) => {
-        try {
-          // Coba ambil dari localStorage
-          return localStorage.getItem(key);
-        } catch (error) {
-          // Fallback ke sessionStorage jika localStorage tidak tersedia
-          console.error('Error accessing localStorage:', error);
-          return sessionStorage.getItem(key);
-        }
-      },
-      setItem: (key, value) => {
-        try {
-          // Simpan di localStorage
-          localStorage.setItem(key, value);
-        } catch (error) {
-          // Fallback ke sessionStorage jika localStorage tidak tersedia
-          console.error('Error writing to localStorage:', error);
-          sessionStorage.setItem(key, value);
-        }
-      },
-      removeItem: (key) => {
-        try {
-          // Hapus dari localStorage
-          localStorage.removeItem(key);
-        } catch (error) {
-          // Fallback ke sessionStorage jika localStorage tidak tersedia
-          console.error('Error removing from localStorage:', error);
-          sessionStorage.removeItem(key);
-        }
-      },
-    },
+    storageKey: 'supabase_auth_token', // Kunci untuk menyimpan token di storage
+    autoRefreshToken: true, // Otomatis refresh token saat expired
+    detectSessionInUrl: true, // Deteksi sesi dari URL (penting untuk login OAuth)
+    flowType: 'pkce', // Gunakan PKCE flow untuk keamanan lebih baik (Proof Key for Code Exchange)
   },
   global: {
+    // Menambahkan headers untuk request Supabase
     headers: {
-      'x-application-name': 'keuangan-pribadi',
+      'x-application-name': 'Wordy Greeting Echo',
+    },
+  },
+  // Konfigurasi cache untuk performa lebih baik
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
     },
   },
 });
