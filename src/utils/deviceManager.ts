@@ -72,60 +72,70 @@ export const registerDevice = async (userId: string): Promise<boolean> => {
       return false;
     }
     
-    // Data perangkat
+    // Data perangkat dengan expiry 30 hari dari sekarang
+    const now = new Date();
+    const expiryDate = new Date(now);
+    expiryDate.setDate(now.getDate() + 30); // 30 hari dari sekarang
+    
     const deviceInfo = {
       user_id: userId,
       fingerprint,
       device_name: getBrowserInfo(),
-      last_used: new Date().toISOString(),
-      // Perangkat berlaku selama 30 hari
-      expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      last_used: now.toISOString(),
+      expires_at: expiryDate.toISOString(),
     };
     
     // Periksa apakah perangkat sudah ada
-    const { data: existingDevice, error: checkError } = await supabase
-      .from('trusted_devices')
-      .select('id')
-      .eq('fingerprint', fingerprint)
-      .eq('user_id', userId)
-      .single();
-    
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('Error checking existing device:', checkError);
-    }
-    
-    if (existingDevice) {
-      // Update perangkat yang sudah ada
-      const { error: updateError } = await supabase
+    try {
+      const { data: existingDevice, error: checkError } = await supabase
         .from('trusted_devices')
-        .update({
-          last_used: deviceInfo.last_used,
-          expires_at: deviceInfo.expires_at
-        })
-        .eq('id', existingDevice.id);
-      
-      if (updateError) {
-        console.error('Error updating existing device:', updateError);
-        return false;
-      }
-      
-      console.log('Device updated successfully:', existingDevice.id);
-      return true;
-    } else {
-      // Buat perangkat baru
-      const { data: newDevice, error: insertError } = await supabase
-        .from('trusted_devices')
-        .insert(deviceInfo)
         .select('id')
+        .eq('fingerprint', fingerprint)
+        .eq('user_id', userId)
         .single();
-        
-      if (insertError) {
-        console.error('Error registering device:', insertError);
-        return false;
+      
+      if (checkError) {
+        if (checkError.code !== 'PGRST116') { // PGRST116 = tidak ditemukan, itu normal
+          console.error('Error checking existing device:', checkError);
+        }
       }
       
-      console.log('Device registered successfully:', newDevice?.id);
-    return true;
+      if (existingDevice) {
+        // Update perangkat yang sudah ada
+        const { error: updateError } = await supabase
+          .from('trusted_devices')
+          .update({
+            last_used: deviceInfo.last_used,
+            expires_at: deviceInfo.expires_at
+          })
+          .eq('id', existingDevice.id);
+        
+        if (updateError) {
+          console.error('Error updating existing device:', updateError);
+          return false;
+        }
+        
+        console.log('Device updated successfully:', existingDevice.id);
+        return true;
+      } else {
+        // Buat perangkat baru
+        const { data: newDevice, error: insertError } = await supabase
+          .from('trusted_devices')
+          .insert(deviceInfo)
+          .select('id')
+          .single();
+          
+        if (insertError) {
+          console.error('Error registering device:', insertError);
+          return false;
+        }
+        
+        console.log('Device registered successfully:', newDevice?.id);
+        return true;
+      }
+    } catch (innerError) {
+      console.error('Inner error in registerDevice:', innerError);
+      return false;
     }
   } catch (error) {
     console.error('Error in registerDevice:', error);
@@ -147,40 +157,61 @@ export const verifyDevice = async (userId: string): Promise<boolean> => {
       return false;
     }
     
+    console.log("Current fingerprint:", fingerprint.substring(0, 8) + "...");
+    
     // Cari perangkat di database
-    const { data, error } = await supabase
-      .from('trusted_devices')
-      .select('id, expires_at')
-      .eq('fingerprint', fingerprint)
-      .eq('user_id', userId)
-      .single();
-    
-    if (error) {
-      if (error.code === 'PGRST116') {
-        console.log("Device not found in trusted devices");
-      } else {
-        console.error('Error verifying device:', error);
+    try {
+      const { data, error } = await supabase
+        .from('trusted_devices')
+        .select('id, expires_at')
+        .eq('fingerprint', fingerprint)
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log("Device not found in trusted devices");
+        } else {
+          console.error('Error verifying device:', error);
+        }
+        return false;
       }
+      
+      // Periksa apakah perangkat masih valid (belum kadaluarsa)
+      if (data && data.expires_at) {
+        const expiresAt = new Date(data.expires_at);
+        const now = new Date();
+        
+        console.log("Device expiry:", expiresAt.toISOString());
+        console.log("Current time:", now.toISOString());
+        console.log("Days until expiry:", Math.round((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+        
+        if (expiresAt < now) {
+          console.log("Device expired, needs re-authentication");
+          return false;
+        }
+        
+        // Update last_used dan perpanjang waktu kedaluwarsa 30 hari dari sekarang
+        const newExpiryDate = new Date(now);
+        newExpiryDate.setDate(now.getDate() + 30);
+        
+        await supabase
+          .from('trusted_devices')
+          .update({ 
+            last_used: now.toISOString(),
+            expires_at: newExpiryDate.toISOString()
+          })
+          .eq('id', data.id);
+        
+        console.log("Device verified successfully and expiry extended");
+        return true;
+      }
+      
+      return false;
+    } catch (innerError) {
+      console.error('Inner error in verifyDevice:', innerError);
       return false;
     }
-    
-    // Periksa apakah perangkat masih valid (belum kadaluarsa)
-    const expiresAt = new Date(data.expires_at);
-    const now = new Date();
-    
-    if (expiresAt < now) {
-      console.log("Device expired, needs re-authentication");
-      return false;
-    }
-    
-    // Update last_used
-    await supabase
-      .from('trusted_devices')
-      .update({ last_used: now.toISOString() })
-      .eq('id', data.id);
-    
-    console.log("Device verified successfully");
-    return true;
   } catch (error) {
     console.error('Error in verifyDevice:', error);
     return false;

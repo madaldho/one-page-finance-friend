@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { verifyDevice, removeAllDevices } from '@/utils/deviceManager';
@@ -91,6 +91,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const apiUrl = import.meta.env.VITE_SUPABASE_URL || "https://pjwmfyvknbtoofxfuwjm.supabase.co";
           urlsToRefresh.push(`${apiUrl}/rest/v1/profiles?id=eq.${user.id}`);
           urlsToRefresh.push(`${apiUrl}/rest/v1/user_settings?user_id=eq.${user.id}`);
+          urlsToRefresh.push(`${apiUrl}/rest/v1/trusted_devices?user_id=eq.${user.id}`);
         }
         
         // Kirim pesan ke service worker
@@ -105,17 +106,110 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Tunggu konfirmasi dari service worker (dengan timeout)
         const result = await Promise.race([
           refreshPromise,
-          new Promise<boolean>(resolve => setTimeout(() => resolve(false), 3000))
+          new Promise<boolean>(resolve => setTimeout(() => resolve(false), 5000))
         ]);
         
         if (result) {
           console.log('Profile cache refreshed successfully');
+          
+          // Notifikasi pengguna tentang data terbaru
+          if (window.navigator.onLine) {
+            toast({
+              title: "Data profil telah diperbarui",
+              description: "Informasi terbaru telah dimuat",
+              duration: 3000,
+            });
+          }
         } else {
           console.warn('Profile cache refresh might have failed or timed out');
         }
       }
     } catch (error) {
       console.error('Error refreshing profile cache:', error);
+    }
+  };
+
+  const setupSessionTracking = useCallback(() => {
+    // Periksa apakah aplikasi di-install sebagai PWA
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                 (window.navigator as { standalone?: boolean }).standalone === true;
+    
+    // Setup interval untuk refresh session - lebih sering jika dalam mode PWA
+    const intervalTime = isPWA ? 3 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000; // 3 jam untuk PWA, 6 jam untuk browser
+    
+    if (refreshTokenInterval) {
+      clearInterval(refreshTokenInterval);
+    }
+    
+    const interval = setInterval(async () => {
+      console.log('Refreshing auth session...');
+      await refreshSession();
+    }, intervalTime);
+    
+    setRefreshTokenInterval(interval);
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [refreshTokenInterval]);
+
+  // Fungsi untuk menangani perubahan status network
+  const handleNetworkChange = useCallback(() => {
+    if (window.navigator.onLine) {
+      console.log('Online detected, refreshing session and profile');
+      refreshSession();
+      fetchProfile();
+      // Perbarui cache profil setelah online
+      setTimeout(() => {
+        refreshProfileCache();
+      }, 2000);
+    } else {
+      console.log('Offline detected');
+    }
+  }, []);
+
+  // Fungsi untuk membersihkan cache autentikasi saat logout
+  const clearAuthCache = async () => {
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        console.log('Requesting auth cache clear');
+        
+        // Buat channel untuk komunikasi dengan service worker
+        const messageChannel = new MessageChannel();
+        
+        // Buat promise untuk menunggu respons service worker
+        const clearPromise = new Promise<boolean>((resolve) => {
+          messageChannel.port1.onmessage = (event) => {
+            if (event.data && event.data.cleared) {
+              resolve(true);
+            } else {
+              resolve(false);
+            }
+          };
+        });
+        
+        // Kirim pesan ke service worker
+        navigator.serviceWorker.controller.postMessage(
+          { 
+            type: 'CLEAR_AUTH_CACHE' 
+          },
+          [messageChannel.port2]
+        );
+        
+        // Tunggu konfirmasi dari service worker (dengan timeout)
+        const result = await Promise.race([
+          clearPromise,
+          new Promise<boolean>(resolve => setTimeout(() => resolve(false), 3000))
+        ]);
+        
+        if (result) {
+          console.log('Auth cache cleared successfully');
+        } else {
+          console.warn('Auth cache clear might have failed or timed out');
+        }
+      }
+    } catch (error) {
+      console.error('Error clearing auth cache:', error);
     }
   };
 
@@ -145,7 +239,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .select('*')
         .eq('id', user.id)
         .single();
-      
+        
       if (error) {
         console.error('Error fetching user profile:', error);
         return null;
@@ -166,7 +260,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return null;
     }
   };
-  
+
   const updateProfile = async (profileData: Partial<UserProfile>): Promise<UserProfile | null> => {
     try {
       if (!user) return null;
@@ -211,7 +305,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return null;
     }
   };
-  
+
   const ensureUserProfile = async (): Promise<void> => {
     try {
       if (!user) return;
@@ -238,13 +332,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Try insert first
       const { data: insertedProfile, error: insertError } = await supabase
-        .from('profiles')
+            .from('profiles')
         .insert(newProfile)
-        .select()
-        .single();
-        
-      if (insertError) {
-        console.error('Error creating profile:', insertError);
+            .select()
+            .single();
+            
+          if (insertError) {
+            console.error('Error creating profile:', insertError);
         
         // Try upsert if insert fails
         const { data: upsertedProfile, error: upsertError } = await supabase
@@ -279,13 +373,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!existingSettings) {
         console.log("Creating default user settings");
         const { error: insertSettingsError } = await supabase
-          .from('user_settings')
-          .insert({
+            .from('user_settings')
+            .insert({
             user_id: user.id,
-            show_budgeting: true,
-            show_loans: true,
-            show_savings: true
-          });
+              show_budgeting: true,
+              show_loans: true,
+              show_savings: true
+            });
           
         if (insertSettingsError) {
           console.error('Error creating user settings:', insertSettingsError);
@@ -298,6 +392,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const autoLogin = async (): Promise<boolean> => {
     try {
+      console.log("Mencoba auto login...");
+      
+      // 1. Pertama, periksa apakah ada sesi aktif
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
@@ -305,19 +402,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return false;
       }
       
-      // If we have an active session, user is already logged in
+      // Jika sudah ada sesi aktif, gunakan saja
       if (sessionData?.session) {
+        console.log("Sesi aktif ditemukan, melanjutkan dengan sesi yang ada");
         setSession(sessionData.session);
         setUser(sessionData.session.user);
         await fetchProfile();
         return true;
       }
       
-      // Try device-based auto login
+      console.log("Tidak ada sesi aktif, mencoba login dengan trusted device...");
+      
+      // 2. Jika tidak ada sesi, coba login dengan trusted device
       const { data } = await supabase.auth.getUser();
       if (data && data.user) {
+        console.log("User data ditemukan:", data.user.id);
+        
+        // Verifikasi perangkat
         const isVerified = await verifyDevice(data.user.id);
+        console.log("Hasil verifikasi perangkat:", isVerified);
+        
         if (isVerified) {
+          console.log("Perangkat terverifikasi, refreshing session...");
+          
+          // Refresh sesi untuk mendapatkan sesi baru
           const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
           
           if (refreshError) {
@@ -326,14 +434,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           }
           
           if (refreshData && refreshData.session) {
+            console.log("Berhasil refresh sesi, user login otomatis");
             setSession(refreshData.session);
             setUser(refreshData.session.user);
             await fetchProfile();
+            
+            // Perbarui waktu terakhir refresh sesi
+            localStorage.setItem('last_session_refresh', new Date().toISOString());
+            
+            // Tampilkan toast untuk memberi tahu pengguna
+            toast({
+              title: "Login Otomatis Berhasil",
+              description: "Selamat datang kembali!",
+              duration: 4000,
+            });
+            
             return true;
           }
+        } else {
+          console.log("Perangkat tidak terverifikasi atau sudah kedaluwarsa");
         }
+      } else {
+        console.log("Tidak ada data user yang ditemukan");
       }
       
+      console.log("Auto login gagal, perlu login manual");
       return false;
     } catch (error) {
       console.error("Auto login failed:", error);
@@ -343,159 +468,118 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      setIsLoading(true);
+      // Clear user data from service worker cache
+      await clearAuthCache();
       
-      // Bersihkan cache sebelum logout
-      if (user) {
-        try {
-          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            // Buat channel untuk komunikasi service worker
-            const messageChannel = new MessageChannel();
-            
-            // Buat promise untuk menunggu respons service worker
-            const clearCachePromise = new Promise<boolean>((resolve) => {
-              messageChannel.port1.onmessage = (event) => {
-                if (event.data && event.data.cleared) {
-                  resolve(true);
-                } else {
-                  resolve(false);
-                }
-              };
-            });
-            
-            // Kirim pesan ke service worker
-            navigator.serviceWorker.controller.postMessage(
-              { type: 'CLEAR_ALL_USER_DATA', userId: user.id },
-              [messageChannel.port2]
-            );
-            
-            // Tunggu konfirmasi atau timeout setelah 1 detik
-            await Promise.race([
-              clearCachePromise,
-              new Promise(resolve => setTimeout(resolve, 1000))
-            ]);
-          }
-        } catch (e) {
-          console.error('Error clearing cache:', e);
-        }
+      if (user?.id) {
+        // Remove all trusted devices if user requested
+        await removeAllDevices(user.id);
       }
       
+      // Sign out from supabase
       const { error } = await supabase.auth.signOut();
-      
       if (error) {
-        console.error("Error signing out:", error);
-        toast({
-          title: "Gagal keluar",
-          description: "Terjadi kesalahan saat mencoba keluar. Silakan coba lagi.",
-          variant: "destructive",
-        });
-        return;
+        throw error;
       }
       
-      // Clear local state
+      // Reset all state
       setUser(null);
       setSession(null);
       setProfile(null);
       
-      // Hapus dari local storage
-      localStorage.removeItem('supabase_auth_token');
-      
-      // Hapus dari session storage
-      sessionStorage.removeItem('supabase_auth_token');
-      
-      // Hapus data user dari localStorage
-      Object.keys(localStorage).forEach(key => {
-        if (key.includes('user_') || key.includes('profile_') || key.includes('settings_')) {
-          localStorage.removeItem(key);
-        }
-      });
-      
-      // Clear refresh token interval
-      if (refreshTokenInterval) {
-        clearInterval(refreshTokenInterval);
-        setRefreshTokenInterval(null);
-      }
-      
+      // Show confirmation message
       toast({
-        title: "Berhasil keluar",
-        description: "Anda telah berhasil keluar dari aplikasi.",
+        title: "Berhasil Keluar",
+        description: "Anda telah keluar dari akun",
+        duration: 5000,
       });
+      
+      // Return to home page or login page
+      window.location.href = '/';
     } catch (error) {
-      console.error("Error in sign out:", error);
+      console.error('Error signing out:', error);
       toast({
-        title: "Gagal keluar",
-        description: "Terjadi kesalahan saat mencoba keluar. Silakan coba lagi.",
+        title: "Terjadi kesalahan",
+        description: "Gagal keluar dari akun, silakan coba lagi",
         variant: "destructive",
+        duration: 5000,
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     const setupAuth = async () => {
+      setIsLoading(true);
       try {
-        // Try to get initial session
-        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        // Coba auto login saat aplikasi dimuat
+        const autoLoginSuccess = await autoLogin();
         
-        if (error) {
-          console.error("Error getting initial session:", error);
-        }
-        
-        if (initialSession) {
-          setSession(initialSession);
-          setUser(initialSession.user);
-          await fetchProfile();
-        }
-        
-        // Set up auth state change listener
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-          async (event, newSession) => {
-            console.log("Auth state change:", event);
+        if (!autoLoginSuccess) {
+          // Jika auto login gagal, coba dapatkan sesi secara normal
+          console.log("Auto login gagal, memeriksa sesi secara normal...");
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            setSession(session);
+            setUser(session.user ?? null);
             
-            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-              setSession(newSession);
-              setUser(newSession?.user ?? null);
-              
-              if (newSession?.user) {
-                // Tunggu untuk memastikan profil sudah dibuat
-                await ensureUserProfile();
-                
-                // Paksakan refresh cache untuk memastikan data terbaru
-                await refreshProfileCache();
-              }
-            } else if (event === 'SIGNED_OUT') {
-              setUser(null);
-              setSession(null);
-              setProfile(null);
-            } else {
-              // Untuk event lain, cukup update session dan user
-              setSession(newSession);
-              setUser(newSession?.user ?? null);
+            // Fetch user profile only if we have a session
+            const userProfile = await fetchProfile();
+            if (!userProfile) {
+              // If no profile exists but we have a session, create one
+              await ensureUserProfile();
             }
           }
-        );
-        
-        // Set up refresh interval (every 30 minutes)
-        const intervalId = setInterval(async () => {
-          await refreshSession();
-          await fetchProfile();
-        }, 30 * 60 * 1000);
-        
-        setRefreshTokenInterval(intervalId);
-        
-        return () => {
-          authListener.subscription.unsubscribe();
-          if (intervalId) clearInterval(intervalId);
-        };
+        }
       } catch (error) {
-        console.error("Error setting up auth:", error);
+        console.error('Error setting up auth:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     setupAuth();
+    
+    // Setup network change listeners
+    window.addEventListener('online', handleNetworkChange);
+    window.addEventListener('offline', handleNetworkChange);
+    
+    // Setup session tracking with appropriate intervals
+    const clearSessionTracker = setupSessionTracking();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event);
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        // Only on SIGNED_IN handle additional steps
+        if (event === 'SIGNED_IN') {
+          await ensureUserProfile();
+          await fetchProfile();
+        } else if (event === 'SIGNED_OUT') {
+          setProfile(null);
+        } else if (event === 'TOKEN_REFRESHED') {
+          console.log('Token refreshed successfully');
+        } else if (event === 'USER_UPDATED') {
+          // Refresh profile when user metadata changes
+          await fetchProfile();
+          refreshProfileCache();
+        }
+      }
+    );
+
+    return () => {
+      // Cleanup listeners
+      subscription.unsubscribe();
+      window.removeEventListener('online', handleNetworkChange);
+      window.removeEventListener('offline', handleNetworkChange);
+      
+      // Clear interval
+      if (clearSessionTracker) clearSessionTracker();
+      if (refreshTokenInterval) clearInterval(refreshTokenInterval);
+    };
   }, []);
 
   // Set up realtime subscription untuk profil
@@ -538,11 +622,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value = {
     user,
-    session,
-    profile,
-    isLoading,
-    signOut,
-    refreshSession,
+      session, 
+      profile,
+      isLoading, 
+      signOut, 
+      refreshSession,
     autoLogin,
     fetchProfile,
     updateProfile,

@@ -29,9 +29,10 @@ import {
   AlertCircle,
   Loader2,
   Award,
-  CalendarClock
+  CalendarClock,
+  Filter
 } from 'lucide-react';
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { id } from 'date-fns/locale';
 
 // Perbaikan untuk definisi tipe UserProfile yang lengkap
@@ -65,6 +66,8 @@ const Users = () => {
   const [sortField, setSortField] = useState('trial_end');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [processingUser, setProcessingUser] = useState<string | null>(null);
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
+  const [expirationFilter, setExpirationFilter] = useState<string>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -223,18 +226,39 @@ const Users = () => {
     );
   };
 
-  // Filter dan sort users
+  // Filter users based on search term and subscription/expiration filters
   const filteredUsers = users
     .filter(user => {
+      // Search filter
       const searchLower = searchTerm.toLowerCase();
-      return (
+      const matchesSearch = (
         (user.name && user.name.toLowerCase().includes(searchLower)) ||
         (user.email && user.email.toLowerCase().includes(searchLower))
       );
+      
+      // Subscription type filter
+      let matchesSubscription = true;
+      if (subscriptionFilter !== 'all') {
+        matchesSubscription = user.subscription_type === subscriptionFilter;
+      }
+      
+      // Expiration filter
+      let matchesExpiration = true;
+      const daysLeft = getDaysLeft(user.trial_end);
+      
+      if (expirationFilter === 'expired') {
+        matchesExpiration = daysLeft <= 0;
+      } else if (expirationFilter === 'expiring_soon') {
+        matchesExpiration = daysLeft > 0 && daysLeft <= 7;
+      } else if (expirationFilter === 'active') {
+        matchesExpiration = daysLeft > 7;
+      }
+      
+      return matchesSearch && matchesSubscription && matchesExpiration;
     })
     .sort((a, b) => {
-      let fieldA = a[sortField as keyof UserProfile];
-      let fieldB = b[sortField as keyof UserProfile];
+      let fieldA: string | number | undefined = a[sortField as keyof UserProfile];
+      let fieldB: string | number | undefined = b[sortField as keyof UserProfile];
       
       // Handle special case for days_left
       if (sortField === 'days_left') {
@@ -243,10 +267,13 @@ const Users = () => {
       }
       
       // Handle dates
-      if (sortField === 'trial_start' || sortField === 'trial_end') {
+      if (sortField === 'trial_start' || sortField === 'trial_end' || sortField === 'created_at') {
         fieldA = fieldA ? new Date(fieldA as string).getTime() : 0;
         fieldB = fieldB ? new Date(fieldB as string).getTime() : 0;
       }
+      
+      if (fieldA === undefined || fieldA === null) fieldA = 0;
+      if (fieldB === undefined || fieldB === null) fieldB = 0;
       
       if (fieldA < fieldB) return sortDirection === 'asc' ? -1 : 1;
       if (fieldA > fieldB) return sortDirection === 'asc' ? 1 : -1;
@@ -259,11 +286,12 @@ const Users = () => {
 
       <Card className="mb-8">
         <CardHeader className="pb-3">
-          <CardTitle className="text-xl">Cari Pengguna</CardTitle>
+          <CardTitle className="text-xl">Filter Pengguna</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Search Input */}
+            <div className="relative col-span-full">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Cari berdasarkan nama atau email..."
@@ -272,9 +300,73 @@ const Users = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" onClick={fetchUsers}>
-              Refresh
+            
+            {/* Subscription Type Filter */}
+            <div>
+              <label className="text-sm font-medium block mb-2">Tipe Langganan</label>
+              <Select 
+                value={subscriptionFilter} 
+                onValueChange={setSubscriptionFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Semua Langganan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Langganan</SelectItem>
+                  <SelectItem value="pro_12m">Pro 12 Bulan</SelectItem>
+                  <SelectItem value="pro_6m">Pro 6 Bulan</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Expiration Filter */}
+            <div>
+              <label className="text-sm font-medium block mb-2">Status Langganan</label>
+              <Select 
+                value={expirationFilter} 
+                onValueChange={setExpirationFilter}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Semua Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Status</SelectItem>
+                  <SelectItem value="expired">Habis Masa</SelectItem>
+                  <SelectItem value="expiring_soon">Hampir Habis (≤7 hari)</SelectItem>
+                  <SelectItem value="active">Aktif ({'>'}7 hari)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Sort Options */}
+            <div>
+              <label className="text-sm font-medium block mb-2">Urutkan Berdasarkan</label>
+              <Select 
+                value={sortField} 
+                onValueChange={(value) => {
+                  setSortField(value);
+                  setSortDirection('asc');
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Urutan" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="trial_end">Tanggal Berakhir</SelectItem>
+                  <SelectItem value="days_left">Sisa Hari</SelectItem>
+                  <SelectItem value="created_at">Tanggal Bergabung</SelectItem>
+                  <SelectItem value="name">Nama Pengguna</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Refresh Button */}
+            <div className="self-end lg:col-start-4 lg:justify-self-end">
+              <Button variant="outline" onClick={fetchUsers} className="w-full lg:w-auto">
+                Refresh Data
             </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -326,8 +418,8 @@ const Users = () => {
                   <TableCell colSpan={userColumns.length} className="h-24 text-center">
                     <AlertCircle className="h-6 w-6 mx-auto text-muted-foreground" />
                     <div className="mt-2 text-sm text-muted-foreground">
-                      {searchTerm
-                        ? `Tidak ada pengguna yang cocok dengan "${searchTerm}"`
+                      {searchTerm || subscriptionFilter !== 'all' || expirationFilter !== 'all'
+                        ? `Tidak ada pengguna yang cocok dengan filter yang dipilih`
                         : "Belum ada pengguna yang terdaftar"}
                     </div>
                   </TableCell>
@@ -352,15 +444,15 @@ const Users = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {user.subscription_type === 'pro_6m' ? (
-                        <span className="text-green-600 font-medium">180 hari</span>
-                      ) : user.subscription_type === 'pro_12m' ? (
-                        <span className="text-green-600 font-medium">365 hari</span>
-                      ) : (
-                        <span className={`font-medium ${getDaysLeft(user.trial_end) <= 0 ? 'text-red-500' : 'text-amber-500'}`}>
+                      <span className={`font-medium ${
+                        getDaysLeft(user.trial_end) <= 0 
+                          ? 'text-red-500' 
+                          : user.subscription_type?.includes('pro') 
+                            ? 'text-green-600' 
+                            : 'text-amber-500'
+                      }`}>
                           {getDaysLeft(user.trial_end)} hari
                         </span>
-                      )}
                     </TableCell>
                     <TableCell>
                       {getUserStatusBadge(user)}
@@ -397,6 +489,9 @@ const Users = () => {
               )}
             </TableBody>
           </Table>
+        </div>
+        <div className="p-4 text-sm text-gray-500 border-t">
+          Total: {filteredUsers.length} dari {users.length} pengguna
         </div>
       </Card>
     </div>

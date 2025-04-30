@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <!-- Mencegah zoom untuk tampilan stabil (catatan: dapat mengurangi aksesibilitas) -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Viewport yang benar untuk PWA dengan dukungan aksesibilitas -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Keuangan Pribadi</title>
     <meta name="description" content="Keuangan Pribadi jadi MUDAH, Simpel, Dan Tersusun" />
     <meta name="author" content="madaldho" />
@@ -20,16 +20,28 @@
     <!-- Favicon dan app icons -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/logokeuanganpay.webp" type="image/webp" />
-    <link rel="apple-touch-icon" href="/logokeuanganpay.webp" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     
     <!-- PWA manifest -->
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
     
     <!-- iOS specific meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="white" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Keuangan Pribadi" />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
+    
+    <!-- iOS splash screens -->
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-1668-2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-1536-2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-1125-2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-1242-2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-828-1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-1242-2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-750-1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+    <link rel="apple-touch-startup-image" href="/icons/apple-splash-640-1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -64,53 +76,275 @@
     
     <!-- Register service worker -->
     <script>
-      // Check if service workers are supported
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-          // Register the service worker
-          navigator.serviceWorker.register('/sw.js')
-            .then(function(registration) {
-              // Registration was successful
+      // Variabel dan fungsi global untuk manajemen service worker
+      const SW_PATH = '/sw.js';
+      let isRefreshing = false;
+      let registration = null;
+      let swUpdateTimer = null;
+      
+      /**
+       * Mendaftarkan service worker
+       */
+      function registerServiceWorker() {
+        // Check if service workers are supported
+        if ('serviceWorker' in navigator) {
+          // Tunggu hingga window load untuk meningkatkan performa halaman pertama
+          window.addEventListener('load', async function() {
+            try {
+              // Register the service worker
+              registration = await navigator.serviceWorker.register(SW_PATH, {
+                scope: '/',
+                updateViaCache: 'none' // Jangan cache service worker agar selalu diperbarui
+              });
+              
               console.log('ServiceWorker registration successful with scope: ', registration.scope);
               
-              // Check for updates
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                console.log('Service Worker update found!');
-                
-                newWorker.addEventListener('statechange', () => {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New version available
-                    if (confirm('Versi baru tersedia! Muat ulang halaman untuk memperbarui?')) {
-                      window.location.reload();
-                    }
-                  }
-                });
-              });
-            })
-            .catch(function(error) {
-              // Registration failed
-              console.log('ServiceWorker registration failed: ', error);
-            });
-            
-          // Handle service worker updates
-          let refreshing = false;
+              // Setup event listeners setelah registrasi
+              setupServiceWorkerEvents(registration);
+              
+              // Periksa pembaruan secara berkala (setiap 6 jam)
+              scheduleUpdateCheck();
+            } catch (error) {
+              console.error('ServiceWorker registration failed: ', error);
+              // Coba daftarkan kembali jika gagal (retry after 1 minute)
+              setTimeout(registerServiceWorker, 60000);
+            }
+          });
+          
+          // Setup event listener untuk controller change (service worker baru aktif)
           navigator.serviceWorker.addEventListener('controllerchange', () => {
-            if (!refreshing) {
-              refreshing = true;
+            if (!isRefreshing) {
+              isRefreshing = true;
+              console.log('Service worker controller changed, refreshing page...');
               window.location.reload();
             }
           });
           
-          // Handle POST messages from service worker
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'CACHE_UPDATED') {
-              console.log('Cache updated:', event.data);
-              // You could notify the user or refresh specific components
+          // Jika service worker aktif, dengarkan pesan dari service worker
+          if (navigator.serviceWorker.controller) {
+            setupMessageListener();
+          }
+        } else {
+          console.log('Service workers are not supported in this browser');
+        }
+      }
+      
+      /**
+       * Setup event listeners untuk service worker
+       */
+      function setupServiceWorkerEvents(registration) {
+        // Periksa pembaruan saat service worker sudah terdaftar
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          console.log('Service Worker update found!');
+          
+          newWorker.addEventListener('statechange', () => {
+            // Ketika service worker baru selesai diinstal
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Ada versi baru yang tersedia - tampilkan notifikasi
+              showUpdateNotification();
             }
           });
         });
+        
+        // Setup message listener untuk pesan dari service worker
+        setupMessageListener();
       }
+      
+      /**
+       * Menampilkan notifikasi pembaruan
+       */
+      function showUpdateNotification() {
+        // Hapus notifikasi sebelumnya jika ada
+        const oldNotification = document.querySelector('.sw-update-notification');
+        if (oldNotification) {
+          oldNotification.remove();
+        }
+        
+        // Buat notifikasi baru
+        const notification = document.createElement('div');
+        notification.className = 'sw-update-notification';
+        notification.innerHTML = `
+          <div style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; border: 1px solid #ddd; 
+                      border-radius: 8px; padding: 12px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: flex; align-items: center; 
+                      justify-content: space-between; max-width: 90%; width: 400px; z-index: 9999; animation: slideIn 0.3s ease-out;">
+            <span>Versi baru aplikasi tersedia!</span>
+            <div>
+              <button id="sw-update-dismiss" style="background: transparent; border: 1px solid #ddd; padding: 8px 16px; 
+                      border-radius: 4px; cursor: pointer; margin-right: 8px;">
+                Nanti
+              </button>
+              <button id="sw-update-button" style="background: #4CAF50; color: white; border: none; padding: 8px 16px; 
+                      border-radius: 4px; cursor: pointer; white-space: nowrap;">
+                Perbarui Sekarang
+              </button>
+            </div>
+          </div>
+          <style>
+            @keyframes slideIn {
+              from { transform: translate(-50%, 100px); opacity: 0; }
+              to { transform: translate(-50%, 0); opacity: 1; }
+            }
+          </style>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Tambahkan event listener untuk tombol update
+        document.getElementById('sw-update-button').addEventListener('click', () => {
+          isRefreshing = true;
+          window.location.reload();
+        });
+        
+        // Tambahkan event listener untuk tombol dismiss
+        document.getElementById('sw-update-dismiss').addEventListener('click', () => {
+          notification.remove();
+        });
+      }
+      
+      /**
+       * Setup message listener untuk pesan dari service worker
+       */
+      function setupMessageListener() {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (!event.data) return;
+          
+          // Jika ada pembaruan cache
+          if (event.data.type === 'CACHE_UPDATED') {
+            console.log('Cache updated:', event.data);
+          }
+          
+          // Jika service worker baru diaktifkan
+          if (event.data.type === 'SW_ACTIVATED') {
+            console.log('Service worker diaktifkan:', event.data.message);
+            
+            // Tampilkan notifikasi jika versi berbeda
+            if (event.data.version && localStorage.getItem('sw-version') !== event.data.version) {
+              localStorage.setItem('sw-version', event.data.version);
+              
+              // Tampilkan notifikasi pembaruan hanya jika bukan penginstalan pertama
+              if (localStorage.getItem('sw-installed')) {
+                showUpdateNotification();
+              } else {
+                localStorage.setItem('sw-installed', 'true');
+              }
+            }
+          }
+        });
+      }
+      
+      /**
+       * Ping service worker untuk menjaga tetap aktif
+       */
+      function pingServiceWorker() {
+        if (navigator.serviceWorker.controller) {
+          try {
+            // Buat channel untuk komunikasi
+            const channel = new MessageChannel();
+            
+            // Setup event handler untuk respons
+            channel.port1.onmessage = (event) => {
+              if (event.data && event.data.type === 'PONG') {
+                console.log('Service worker active: ' + new Date(event.data.timestamp).toLocaleTimeString());
+                
+                // Simpan versi service worker untuk perbandingan
+                if (event.data.version) {
+                  localStorage.setItem('sw-version', event.data.version);
+                }
+              }
+            };
+            
+            // Kirim ping
+            navigator.serviceWorker.controller.postMessage({
+              type: 'PING'
+            }, [channel.port2]);
+          } catch (error) {
+            console.error('Error pinging service worker:', error);
+          }
+        }
+      }
+      
+      /**
+       * Jadwalkan pemeriksaan pembaruan service worker
+       */
+      function scheduleUpdateCheck() {
+        // Clear previous timer if exists
+        if (swUpdateTimer) {
+          clearInterval(swUpdateTimer);
+        }
+        
+        // Check for updates every 6 hours
+        swUpdateTimer = setInterval(() => {
+          console.log('Checking for service worker updates...');
+          
+          if (registration) {
+            registration.update()
+              .then(() => console.log('Service worker update check complete'))
+              .catch(err => console.error('Error checking for updates:', err));
+          }
+        }, 6 * 60 * 60 * 1000); // 6 jam
+        
+        // Ping service worker setiap 15 menit untuk mencegah penonaktifan
+        setInterval(pingServiceWorker, 15 * 60 * 1000);
+      }
+      
+      // Mulai pendaftaran service worker
+      registerServiceWorker();
+    </script>
+    
+    <!-- CSS untuk overlay offline -->
+    <style>
+      .offline-indicator {
+        display: none;
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        background: #ff5722;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 14px;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      }
+      .offline-indicator.visible {
+        display: flex;
+        align-items: center;
+      }
+      .offline-indicator::before {
+        content: '●';
+        margin-right: 8px;
+        animation: blink 1s infinite;
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+    </style>
+    
+    <!-- Offline indicator -->
+    <div class="offline-indicator" id="offlineIndicator">
+      Anda Sedang Offline
+    </div>
+    
+    <!-- Deteksi status online/offline -->
+    <script>
+      // Tampilkan indikator offline saat koneksi terputus
+      function updateOfflineStatus() {
+        const indicator = document.getElementById('offlineIndicator');
+        if (!navigator.onLine) {
+          indicator.classList.add('visible');
+        } else {
+          indicator.classList.remove('visible');
+        }
+      }
+      
+      // Periksa saat mulai
+      window.addEventListener('load', updateOfflineStatus);
+      
+      // Periksa saat status berubah
+      window.addEventListener('online', updateOfflineStatus);
+      window.addEventListener('offline', updateOfflineStatus);
     </script>
   </body>
 </html>

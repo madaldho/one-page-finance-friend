@@ -15,28 +15,6 @@ const DeviceManagerPage = () => {
           <h1 className="text-xl font-bold">Perangkat Terpercaya</h1>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm mb-6 p-4">
-          <p className="text-sm text-gray-600 mb-4">
-            Perangkat terpercaya adalah perangkat yang dikenali dan diingat oleh sistem untuk memudahkan login secara otomatis.
-            Perangkat akan diingat selama 30 hari.
-          </p>
-          
-          <div className="space-y-2 text-sm">
-            <div className="flex items-start">
-              <span className="text-primary font-medium mr-2">•</span>
-              <p>Sesi login akan otomatis diperpanjang pada perangkat terpercaya</p>
-            </div>
-            <div className="flex items-start">
-              <span className="text-primary font-medium mr-2">•</span>
-              <p>Hapus perangkat dari daftar untuk menghentikan fitur login otomatis</p>
-            </div>
-            <div className="flex items-start">
-              <span className="text-primary font-medium mr-2">•</span>
-              <p>Saat logout, semua perangkat terpercaya akan dihapus</p>
-            </div>
-          </div>
-        </div>
-
         <DeviceManager />
       </div>
     </Layout>

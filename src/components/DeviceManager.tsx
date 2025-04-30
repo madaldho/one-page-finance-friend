@@ -139,7 +139,7 @@ const DeviceManager = () => {
           Perangkat Terpercaya
         </CardTitle>
         <CardDescription>
-          Perangkat yang Anda gunakan untuk login akan diingat selama 30 hari
+          Perangkat yang Anda gunakan untuk login
         </CardDescription>
       </CardHeader>
       <CardContent>

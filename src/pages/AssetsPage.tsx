@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
-import { ArrowLeft, Plus, Building, Wallet, HelpCircle, CircleDollarSign, PieChart, ArrowUpRight, Lock, BarChart2, Sparkles, Star } from "lucide-react"
+import { ArrowLeft, Plus, Building, Wallet, HelpCircle, CircleDollarSign, PieChart, ArrowUpRight, Lock, BarChart2, Sparkles, Star, Car, TrendingUp } from "lucide-react"
 import { Asset } from "@/types"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/integrations/supabase/client"
@@ -143,15 +143,15 @@ export default function AssetsPage() {
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case "property":
-        return <Building className="h-4 w-4" />;
+        return <Building className="h-5 w-5" />;
       case "gold":
-        return <Wallet className="h-4 w-4" />;
+        return <Wallet className="h-5 w-5" />;
       case "vehicle":
-        return <Wallet className="h-4 w-4" />;
+        return <Car className="h-5 w-5" />;
       case "stock":
-        return <Wallet className="h-4 w-4" />;
+        return <TrendingUp className="h-5 w-5" />;
       default:
-        return <HelpCircle className="h-4 w-4" />;
+        return <HelpCircle className="h-5 w-5" />;
     }
   };
 
@@ -170,161 +170,185 @@ export default function AssetsPage() {
     }
   };
 
-  // Render tampilan Pro Features untuk pengguna free
+  // Render tampilan Pro Features untuk pengguna free - UI yang lebih modern
   const renderProFeatures = () => (
-    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-xl border border-purple-200 shadow-md mb-8">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-          <Building className="h-10 w-10 text-white" />
+    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border border-purple-200 shadow-sm overflow-hidden">
+      <div className="p-6 sm:p-8">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
+            <Building className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold mb-2 text-gray-800">Lacak Semua Aset Anda</h2>
+          <p className="text-gray-600 max-w-md mx-auto text-sm sm:text-base">
+            Upgrade ke Pro untuk melacak semua aset Anda dan memantau pertumbuhan kekayaan secara real-time.
+          </p>
         </div>
-        <h2 className="text-2xl font-bold mb-2 text-gray-800">Lacak Semua Aset Anda</h2>
-        <p className="text-gray-600 max-w-md mx-auto">
-          Upgrade ke Pro untuk melacak semua aset Anda dan memantau pertumbuhan kekayaan bersih secara real-time.
-        </p>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-100">
-          <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mb-3">
-            <Building className="h-5 w-5 text-purple-600" />
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-purple-100 transition-all hover:shadow-md hover:border-purple-200">
+            <div className="bg-purple-100 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+              <Building className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base mb-1">Properti</h3>
+            <p className="text-xs text-gray-500">Lacak nilai rumah, apartemen, dan properti lainnya</p>
           </div>
-          <h3 className="font-semibold mb-1">Properti</h3>
-          <p className="text-xs text-gray-500">Lacak nilai rumah, apartemen, dan properti lainnya</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-100">
-          <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mb-3">
-            <Wallet className="h-5 w-5 text-purple-600" />
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-purple-100 transition-all hover:shadow-md hover:border-purple-200">
+            <div className="bg-purple-100 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+              <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base mb-1">Emas & Logam</h3>
+            <p className="text-xs text-gray-500">Pantau nilai investasi emas dan logam mulia</p>
           </div>
-          <h3 className="font-semibold mb-1">Emas & Logam</h3>
-          <p className="text-xs text-gray-500">Pantau nilai investasi emas dan logam mulia</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-100">
-          <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mb-3">
-            <Star className="h-5 w-5 text-purple-600" />
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-purple-100 transition-all hover:shadow-md hover:border-purple-200">
+            <div className="bg-purple-100 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+              <Car className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base mb-1">Kendaraan</h3>
+            <p className="text-xs text-gray-500">Kelola nilai mobil, motor, dan kendaraan lainnya</p>
           </div>
-          <h3 className="font-semibold mb-1">Kendaraan</h3>
-          <p className="text-xs text-gray-500">Kelola nilai mobil, motor, dan kendaraan lainnya</p>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-100">
-          <div className="bg-purple-100 w-10 h-10 rounded-full flex items-center justify-center mb-3">
-            <BarChart2 className="h-5 w-5 text-purple-600" />
+          <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-purple-100 transition-all hover:shadow-md hover:border-purple-200">
+            <div className="bg-purple-100 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-2 sm:mb-3">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base mb-1">Saham & Investasi</h3>
+            <p className="text-xs text-gray-500">Monitor portofolio investasi Anda</p>
           </div>
-          <h3 className="font-semibold mb-1">Saham & Investasi</h3>
-          <p className="text-xs text-gray-500">Monitor portofolio investasi Anda</p>
         </div>
-      </div>
 
-      <Button 
-        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-6 rounded-xl shadow-md"
-        onClick={handleUpgrade}
-      >
-        <Sparkles className="mr-2 h-5 w-5" />
-        <span className="font-medium">Upgrade ke Pro Sekarang</span>
-      </Button>
+        <Button 
+          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-5 sm:py-6 rounded-xl shadow-sm hover:shadow-md transition-all"
+          onClick={handleUpgrade}
+        >
+          <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="font-medium">Upgrade ke Pro Sekarang</span>
+        </Button>
+      </div>
     </div>
   );
 
   return (
     <Layout>
       <div className="container mx-auto p-4 pb-32 max-w-xl">
-        <div className="flex items-center mb-6">
-          <Link to="/settings" className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-xl font-bold">Aset</h1>
+        {/* Header dengan styling yang lebih konsisten */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
+            <Link to="/settings" className="mr-2 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 rounded-full p-1 transition-colors">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <h1 className="text-xl font-bold">Aset</h1>
+          </div>
+        
         </div>
 
         {loading ? (
-          <div className="text-center text-gray-500 py-8 bg-white rounded-lg shadow-sm">
-            <div className="animate-spin w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full mx-auto mb-2"></div>
-            <p>Memuat data aset...</p>
+          <div className="flex flex-col items-center justify-center text-gray-500 py-8 bg-white rounded-xl shadow-sm">
+            <div className="animate-spin w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full mb-3"></div>
+            <p className="text-sm">Memuat data aset...</p>
           </div>
         ) : !isProUser ? (
           // Tampilan untuk pengguna free - tampilkan langsung fitur pro
           renderProFeatures()
         ) : assets.length > 0 ? (
           <>
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-6">
+            {/* Card Total Kekayaan dengan desain yang lebih modern */}
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-5">
               {/* Header */}
               <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-white">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-2">
-                    <PieChart className="w-5 h-5 text-white/80" />
+                <div className="flex flex-col space-y-4">
+                  <div className="flex items-center">
+                    <PieChart className="w-5 h-5 text-white/80 mr-2" />
                     <h2 className="font-medium">Total Kekayaan</h2>
                   </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => navigate("/assets/transactions")} 
-                      size="sm" 
-                      variant="secondary"
-                      className="bg-white/20 hover:bg-white/30 text-white border-0"
-                    >
-                      <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
-                      Transaksi
-                    </Button>
-                    <Button 
-                      onClick={handleAddAsset} 
-                      size="sm" 
-                      variant="secondary"
-                      className="bg-white/20 hover:bg-white/30 text-white border-0"
-                    >
-                      <Plus className="w-3.5 h-3.5 mr-1" />
-                      Tambah
-                    </Button>
+                  
+                  <p className="text-3xl font-bold">{formatCurrency(totalWealth)}</p>
+                  
+                  <div className="flex items-center text-xs text-white/80">
+                    <ArrowUpRight className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                    <span>Total dari nilai aset dan saldo dompet</span>
                   </div>
-                </div>
-                <p className="text-3xl font-bold mb-2">{formatCurrency(totalWealth)}</p>
-                
-                <div className="flex items-center text-xs text-white/80 mt-1">
-                  <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
-                  <span>Total dari nilai aset dan saldo dompet</span>
                 </div>
               </div>
               
-              {/* Breakdown */}
+              {/* Breakdown dengan animasi hover */}
               <div className="p-4 divide-y">
                 <div className="pb-4">
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-indigo-400"></div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
                       <span className="text-sm font-medium">Nilai Aset</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold">{formatCurrency(totalAssetValue)}</span>
-                      <span className="text-xs text-gray-500">{assetPercentage.toFixed(1)}%</span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                        {assetPercentage.toFixed(1)}%
+                      </span>
                     </div>
                   </div>
-                  <Progress value={assetPercentage} className="h-1.5 bg-gray-100" indicatorClassName="bg-indigo-400" />
+                  <Progress value={assetPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-indigo-500" />
                 </div>
                 
                 <div className="pt-4">
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-purple-400"></div>
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
                       <span className="text-sm font-medium">Saldo Dompet</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-semibold">{formatCurrency(totalWalletBalance)}</span>
-                      <span className="text-xs text-gray-500">{walletPercentage.toFixed(1)}%</span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                        {walletPercentage.toFixed(1)}%
+                      </span>
                     </div>
                   </div>
-                  <Progress value={walletPercentage} className="h-1.5 bg-gray-100" indicatorClassName="bg-purple-400" />
+                  <Progress value={walletPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-purple-500" />
+                </div>
+              </div>
+              
+              {/* Action Buttons yang lebih jelas dan responsif */}
+              <div className="p-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button 
+                    onClick={() => navigate("/assets/transactions")} 
+                    variant="outline"
+                    className="h-10 text-xs border-gray-200 bg-white hover:bg-gray-50"
+                  >
+                    <ArrowUpRight className="w-3.5 h-3.5 mr-1.5" />
+                    Lihat Transaksi
+                  </Button>
+                  <Button 
+                    onClick={handleAddAsset} 
+                    className="h-10 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    Tambah Aset
+                  </Button>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-6">
+            {/* Daftar kategori aset dengan card yang lebih modern */}
+            <div className="space-y-5">
               {Object.keys(assetsByCategory).map((category) => (
-                <div key={category} className="bg-white rounded-lg shadow-sm p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="bg-purple-100 p-1.5 rounded-full">
+                <div key={category} className="bg-white rounded-xl shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center">
+                    <div className="bg-purple-100 p-1.5 rounded-full mr-2">
                       {getCategoryIcon(category)}
                     </div>
-                    <h2 className="font-medium">{getCategoryLabel(category)}</h2>
+                    <h2 className="font-medium text-gray-800">
+                      {getCategoryLabel(category)}
+                    </h2>
+                    <div className="ml-auto">
+                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {assetsByCategory[category].length}
+                      </span>
+                    </div>
                   </div>
-                  <div className="space-y-3">
+                  
+                  <div className="divide-y divide-gray-100">
                     {assetsByCategory[category].map((asset) => (
-                      <AssetCard key={asset.id} asset={asset} />
+                      <div key={asset.id} className="p-3 hover:bg-gray-50 transition-colors">
+                        <AssetCard asset={asset} />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -332,17 +356,18 @@ export default function AssetsPage() {
             </div>
           </>
         ) : (
-          <div className="text-center bg-white rounded-lg shadow-sm p-8">
+          // State kosong yang lebih menarik
+          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
             <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Building className="h-8 w-8 text-purple-600" />
             </div>
-            <h3 className="font-medium mb-2">Belum ada aset</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Tambahkan aset untuk memantau kekayaan Anda
+            <h3 className="font-medium mb-2 text-gray-800">Belum ada aset</h3>
+            <p className="text-sm text-gray-500 mb-5 max-w-xs mx-auto">
+              Tambahkan aset untuk memantau pertumbuhan kekayaan Anda secara real-time
             </p>
             <Button 
               onClick={handleAddAsset}
-              className="bg-purple-600 hover:bg-purple-700"
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
               Tambah Aset Baru

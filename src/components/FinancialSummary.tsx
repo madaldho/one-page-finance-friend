@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { format, subDays } from "date-fns";
 import { Category, Wallet } from "@/types";
-import { WalletTransactionsChart } from './analysis/charts/WalletTransactionsChart';
 import { DailyExpensesChart } from './analysis/charts/DailyExpensesChart';
 import { CategoryDistributionChart } from './analysis/charts/CategoryDistributionChart';
 import { TransactionChart } from './analysis/charts/TransactionChart';
@@ -529,11 +528,6 @@ const FinancialSummary = ({
           </CardFooter>
         </Card>
       </div>
-
-      {/* Wallet Transactions Chart */}
-      {showWalletData && walletChartData.length > 0 && (
-        <WalletTransactionsChart walletChartData={walletDistributionData} />
-      )}
     </div>
   );
 };

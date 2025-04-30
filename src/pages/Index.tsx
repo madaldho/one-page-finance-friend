@@ -521,6 +521,11 @@ const Index = () => {
     }).format(date);
   };
 
+  // Menambahkan fungsi untuk mengarahkan ke halaman detail saldo dompet
+  const handleTotalBalanceClick = () => {
+    navigate('/wallet-detail');
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-gray-50">
@@ -547,17 +552,23 @@ const Index = () => {
 
             {/* Total Balance - Minimalist Strip */}
             {wallets.length > 0 && (
-              <div className="flex items-center justify-between mb-3 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-md border border-gray-200 shadow-sm">
+              <div 
+                onClick={handleTotalBalanceClick}
+                className="flex items-center justify-between mb-3 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-md border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-100 transition-colors"
+              >
                 <div className="flex items-center gap-2">
                   <CircleDollarSign className="h-4 w-4 text-gray-500" />
                   <span className="text-xs font-medium text-gray-500">
                     Total Saldo
                   </span>
                 </div>
-                <div className="font-semibold text-gray-800">
-                  {formatCurrency(
-                    wallets.reduce((total, wallet) => total + wallet.balance, 0)
-                  )}
+                <div className="flex items-center gap-1">
+                  <div className="font-semibold text-gray-800">
+                    {formatCurrency(
+                      wallets.reduce((total, wallet) => total + wallet.balance, 0)
+                    )}
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
                 </div>
               </div>
             )}

@@ -45,6 +45,7 @@ import ProRouteGuard from './components/premium/ProRouteGuard';
 import Upgrade from './pages/Upgrade';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AuthCallback from './pages/AuthCallback';
+import WalletDetailPage from './pages/WalletDetailPage';
 
 // Admin Pages
 import AdminLogin from './pages/admin/Login';
@@ -174,6 +175,12 @@ function App() {
             <ProtectedRoute>
               <AuthRedirect />
               <Analysis />
+            </ProtectedRoute>
+          } />
+          <Route path="/wallet-detail" element={
+            <ProtectedRoute>
+              <AuthRedirect />
+              <WalletDetailPage />
             </ProtectedRoute>
           } />
           <Route path="/wallet/:id" element={
