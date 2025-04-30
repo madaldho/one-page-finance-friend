@@ -133,7 +133,7 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CLEAR_ALL_USER_DATA') {
     clearUserData(event.data.userId).then(() => {
       if (event.ports && event.ports[0]) {
-        event.ports[0].postMessage({ cleared: true });
+      event.ports[0].postMessage({ cleared: true });
       }
     });
   }
@@ -219,7 +219,7 @@ async function clearAuthCache() {
     
     for (const cacheName of cacheKeys) {
       const cache = await caches.open(cacheName);
-      const requests = await cache.keys();
+    const requests = await cache.keys();
       
       for (const request of requests) {
         if (AUTH_ROUTES.some(route => request.url.includes(route))) {
@@ -364,12 +364,12 @@ async function networkOnly(request) {
 // Strategi cache-first - untuk asset statis
 async function cacheFirst(request) {
   try {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
       // Jika ada di cache, gunakan versi cache
       console.log('[Service Worker] Menggunakan respons cache untuk:', request.url);
-      return cachedResponse;
-    }
+    return cachedResponse;
+  }
     
     // Jika tidak ada di cache, coba ambil dari jaringan
     console.log('[Service Worker] Cache miss, fetching dari jaringan:', request.url);

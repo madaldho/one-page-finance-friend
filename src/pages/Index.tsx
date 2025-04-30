@@ -32,7 +32,9 @@ import {
   GraduationCap,
   FileText,
   Umbrella,
-  Percent
+  Percent,
+  X,
+  PlayCircle
 } from "lucide-react";
 import { Transaction, Wallet, Budget, Loan, Saving, Category } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,6 +75,91 @@ interface UserSettings {
   show_savings: boolean;
   show_loans: boolean;
 }
+
+// Komponen untuk notifikasi tutorial
+const TutorialNotification = () => {
+  const [visible, setVisible] = useState(true);
+  const [shouldRender, setShouldRender] = useState(true);
+  const [animation, setAnimation] = useState("animate-slide-down");
+
+  useEffect(() => {
+    // Periksa apakah notifikasi sudah ditutup sebelumnya
+    const tutorialDismissed = localStorage.getItem("tutorialDismissed");
+    if (tutorialDismissed === "true") {
+      setShouldRender(false);
+    }
+  }, []);
+
+  const handleDismiss = () => {
+    // Set animasi untuk slide up sebelum menghilangkan komponen
+    setAnimation("animate-slide-up");
+    
+    // Tunggu animasi selesai
+    setTimeout(() => {
+      setVisible(false);
+      // Simpan ke localStorage bahwa notifikasi sudah ditutup
+      localStorage.setItem("tutorialDismissed", "true");
+    }, 300);
+  };
+
+  const openTutorial = () => {
+    const videoId = "JtcduL3ohYk";
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Coba buka aplikasi YouTube di perangkat mobile
+      window.location.href = `youtube://watch?v=${videoId}`;
+      
+      // Fallback ke URL normal jika aplikasi tidak terbuka dalam waktu tertentu
+      setTimeout(() => {
+        window.location.href = `https://youtu.be/${videoId}`;
+      }, 2000);
+    } else {
+      // Buka di browser untuk desktop
+      window.open(`https://youtu.be/${videoId}`, "_blank");
+    }
+  };
+
+  if (!shouldRender || !visible) {
+    return null;
+  }
+
+  return (
+    <div className={`mb-5 pt-2 ${animation}`}>
+      <div className="relative overflow-visible">
+        <div className="animate-float bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg shadow-md p-3 text-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-white/20 p-1.5 rounded-full">
+              <svg className="h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+              </svg>
+            </div>
+            <p className="text-sm font-medium">
+              Baru menggunakan aplikasi ini? Lihat tutorial kami
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={openTutorial}
+              className="bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium px-3 py-1 rounded-full"
+            >
+              Lihat Tutorial
+            </button>
+            
+            <button 
+              onClick={handleDismiss}
+              className="text-white/70 hover:text-white transition-colors"
+              aria-label="Tutup notifikasi"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Index = () => {
   const { toast } = useToast();
@@ -531,6 +618,7 @@ const Index = () => {
       <div className="min-h-screen bg-gray-50">
         <main className="container mx-auto px-4 pb-32 pt-2">
           <Header />
+          <TutorialNotification />
           {/* Wallet Section */}
           <section className="mb-5">
             <div className="flex justify-between items-center mb-3">

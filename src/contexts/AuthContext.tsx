@@ -448,8 +448,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               description: "Selamat datang kembali!",
               duration: 4000,
             });
-            
-            return true;
+          
+          return true;
           }
         } else {
           console.log("Perangkat tidak terverifikasi atau sudah kedaluwarsa");

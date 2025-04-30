@@ -119,23 +119,23 @@ const FeatureToggle = ({
         tabIndex={0}
         {...ariaProps}
         className={`status-badge text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors select-none touch-manipulation ${
-          loading ? "opacity-50 cursor-not-allowed" : ""
-        } ${
-          checked 
+        loading ? "opacity-50 cursor-not-allowed" : ""
+      } ${
+        checked 
             ? "bg-green-100 text-green-600 hover:bg-green-200 active:bg-green-300" 
             : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
-        }`}
-      >
-        {loading ? (
-          <span className="flex items-center">
-            <span className="w-3 h-3 border-2 border-t-transparent border-green-600 rounded-full animate-spin mr-1"></span>
-            {checked ? "Aktif" : "Nonaktif"}
-          </span>
-        ) : (
-          checked ? "Aktif" : "Nonaktif"
-        )}
-      </div>
-    );
+      }`}
+    >
+      {loading ? (
+        <span className="flex items-center">
+          <span className="w-3 h-3 border-2 border-t-transparent border-green-600 rounded-full animate-spin mr-1"></span>
+          {checked ? "Aktif" : "Nonaktif"}
+        </span>
+      ) : (
+        checked ? "Aktif" : "Nonaktif"
+      )}
+    </div>
+  );
   };
   
   // Gunakan label yang terpisah dan bisa diklik

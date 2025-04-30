@@ -348,7 +348,7 @@ export default function AssetDetailPage() {
               
               <div className="mt-4 text-center">
         <Button
-          onClick={() => navigate(`/assets/${asset.id}/update`)}
+          onClick={() => navigate(`/assets/update-value/${asset.id}`)}
                   className="w-full"
                   variant="outline"
         >
@@ -417,7 +417,7 @@ export default function AssetDetailPage() {
                 <div className="text-center py-8 text-gray-500">
                   <p className="mb-3">Belum ada riwayat nilai.</p>
                   <Button 
-                    onClick={() => navigate(`/assets/${asset.id}/update`)}
+                    onClick={() => navigate(`/assets/update-value/${asset.id}`)}
                     variant="outline"
                     size="sm"
                   >
