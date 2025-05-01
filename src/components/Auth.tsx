@@ -238,7 +238,7 @@ const Auth = () => {
           },
         },
       });
-      
+
       if (error) throw error;
       
       // Navigasi otomatis akan dilakukan oleh Supabase
@@ -291,7 +291,7 @@ const Auth = () => {
           ? "bg-gradient-to-br from-emerald-500/20 via-teal-500/20 to-cyan-500/20" 
           : forgotPassword
             ? "bg-gradient-to-br from-amber-500/20 via-orange-500/20 to-yellow-500/20"
-            : "bg-gradient-to-br from-blue-500/20 via-indigo-500/20 to-purple-500/20"
+          : "bg-gradient-to-br from-blue-500/20 via-indigo-500/20 to-purple-500/20"
       }`}>
         {/* Efek orbs gradien yang bergerak */}
         <div 
@@ -353,7 +353,7 @@ const Auth = () => {
           ? "bg-gradient-to-br from-white to-emerald-50 border border-emerald-100" 
           : forgotPassword
             ? "bg-gradient-to-br from-white to-amber-50 border border-amber-100"
-            : "bg-gradient-to-br from-white to-blue-50 border border-blue-100"
+          : "bg-gradient-to-br from-white to-blue-50 border border-blue-100"
       }`}>
         {/* Back button for forgot password */}
         {forgotPassword && (
@@ -399,8 +399,8 @@ const Auth = () => {
                 ? "Silakan cek email Anda untuk instruksi reset password"
                 : "Masukkan email Anda untuk menerima link reset password"
               : isSignUp 
-                ? "Daftar untuk mulai mengelola keuangan Anda"
-                : "Masuk ke akun Anda untuk melanjutkan"
+              ? "Daftar untuk mulai mengelola keuangan Anda"
+              : "Masuk ke akun Anda untuk melanjutkan"
             }
           </p>
         </div>
@@ -432,38 +432,38 @@ const Auth = () => {
           
           {/* Only show password field if not in forgot password mode or not in email sent confirmation */}
           {!forgotPassword && !resetEmailSent && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="pl-10 border-gray-300 bg-white/80 text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-offset-0 focus:ring-opacity-50"
-                  style={{
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                placeholder="••••••••"
+                className="pl-10 border-gray-300 bg-white/80 text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-offset-0 focus:ring-opacity-50"
+                style={{
                     borderColor: isSignUp 
                       ? "rgb(167, 243, 208)" 
                       : "rgb(191, 219, 254)"
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
             </div>
+          </div>
           )}
 
           {/* Remember device checkbox only on login */}
@@ -491,7 +491,7 @@ const Auth = () => {
                 ? "bg-emerald-500 hover:bg-emerald-600"
                 : forgotPassword
                   ? "bg-amber-500 hover:bg-amber-600"
-                  : "bg-blue-500 hover:bg-blue-600"
+                : "bg-blue-500 hover:bg-blue-600"
             }`}
             type="submit"
             disabled={loading}
@@ -514,63 +514,63 @@ const Auth = () => {
           {/* Only show OAuth options if not in forgot password mode */}
           {!forgotPassword && (
             <>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className={`px-3 bg-opacity-80 ${
-                    isSignUp ? "bg-emerald-50" : "bg-blue-50"
-                  } text-gray-600`}>
-                    Atau lanjutkan dengan
-                  </span>
-                </div>
-              </div>
-              
-              <Button
-                className={`w-full bg-white hover:bg-gray-50 text-gray-700 border ${
-                  isSignUp ? "border-emerald-300" : "border-blue-300"
-                } hover:shadow-lg transition-all duration-300`}
-                onClick={handleGoogleSignIn}
-                disabled={googleLoading}
-                type="button"
-                variant="outline"
-              >
-                {googleLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    <span>Menghubungkan...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-                      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
-                      <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
-                      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
-                      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
-                    </svg>
-                    <span>Google</span>
-                  </>
-                )}
-              </Button>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className={`px-3 bg-opacity-80 ${
+                isSignUp ? "bg-emerald-50" : "bg-blue-50"
+              } text-gray-600`}>
+                Atau lanjutkan dengan
+              </span>
+            </div>
+          </div>
+          
+          <Button
+            className={`w-full bg-white hover:bg-gray-50 text-gray-700 border ${
+              isSignUp ? "border-emerald-300" : "border-blue-300"
+            } hover:shadow-lg transition-all duration-300`}
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading}
+            type="button"
+            variant="outline"
+          >
+            {googleLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <span>Menghubungkan...</span>
+              </>
+            ) : (
+              <>
+                <svg className="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                  <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                  <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                  <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                  <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                </svg>
+                <span>Google</span>
+              </>
+            )}
+          </Button>
             </>
           )}
         </form>
         
         {/* Toggle between signup and login */}
         {!forgotPassword && (
-          <p className="mt-6 text-center text-sm text-gray-600">
-            {isSignUp ? "Sudah punya akun? " : "Belum punya akun? "}
-            <button
-              type="button"
+        <p className="mt-6 text-center text-sm text-gray-600">
+          {isSignUp ? "Sudah punya akun? " : "Belum punya akun? "}
+          <button
+            type="button"
               onClick={toggleSignUp}
-              className={`font-medium hover:underline ${
-                isSignUp ? "text-emerald-600 hover:text-emerald-700" : "text-blue-600 hover:text-blue-700"
-              }`}
-            >
-              {isSignUp ? "Masuk di sini" : "Daftar sekarang"}
-            </button>
-          </p>
+            className={`font-medium hover:underline ${
+              isSignUp ? "text-emerald-600 hover:text-emerald-700" : "text-blue-600 hover:text-blue-700"
+            }`}
+          >
+            {isSignUp ? "Masuk di sini" : "Daftar sekarang"}
+          </button>
+        </p>
         )}
 
         {/* Return to login from reset email sent confirmation */}

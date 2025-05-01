@@ -216,42 +216,6 @@ const Index = () => {
     fetchData();
   }, [user]);
 
-  // Mencegah zoom saat input fokus pada iOS
-  useEffect(() => {
-    // Mencegah double-tap zoom
-    document.addEventListener('touchend', (event) => {
-      // Mencegah double-tap pada elemen tertentu (bukan link atau button)
-      const target = event.target as HTMLElement;
-      if (target && !target.closest('a') && !target.closest('button')) {
-        event.preventDefault();
-        // Menanggapi klik tunggal jika diperlukan
-        target.click();
-      }
-    }, { passive: false });
-
-    // Mencegah zoom pada input saat fokus
-    const inputs = document.querySelectorAll('input, textarea, select');
-    inputs.forEach(input => {
-      input.addEventListener('focus', () => {
-        // Atur font-size > 16px untuk mencegah zoom otomatis di iOS
-        document.documentElement.style.fontSize = '16.1px';
-      });
-      
-      input.addEventListener('blur', () => {
-        // Kembalikan font-size ke normal
-        document.documentElement.style.fontSize = '';
-      });
-    });
-
-    return () => {
-      document.removeEventListener('touchend', () => {});
-      inputs.forEach(input => {
-        input.removeEventListener('focus', () => {});
-        input.removeEventListener('blur', () => {});
-      });
-    };
-  }, []);
-
   const fetchData = async () => {
     try {
       setIsLoading(true);

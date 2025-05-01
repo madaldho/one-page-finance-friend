@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <!-- Viewport yang benar untuk PWA dengan dukungan aksesibilitas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0" />
     <title>Keuangan Pribadi</title>
     <meta name="description" content="Keuangan Pribadi jadi MUDAH, Simpel, Dan Tersusun" />
     <meta name="author" content="madaldho" />
@@ -21,11 +21,12 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/logokeuanganpay.webp" type="image/webp" />
     
-    <!-- iOS icons - sangat penting untuk ditampilkan di homescreen -->
+    <!-- iOS icons - menggunakan logo utama untuk tampilan di iOS -->
     <link rel="apple-touch-icon" href="/logokeuanganpay.webp" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/logokeuanganpay.webp" />
     <link rel="apple-touch-icon" sizes="180x180" href="/logokeuanganpay.webp" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/logokeuanganpay.webp" />
     <link rel="apple-touch-icon" sizes="167x167" href="/logokeuanganpay.webp" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/logokeuanganpay.webp" />
     
     <!-- PWA manifest -->
     <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
@@ -36,6 +37,7 @@
     <meta name="apple-mobile-web-app-title" content="Keuangan Pribadi" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#121212" media="(prefers-color-scheme: dark)" />
+    <meta name="format-detection" content="telephone=no" />
     
     <!-- iOS splash screens -->
     <link rel="apple-touch-startup-image" href="/icons/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
@@ -324,6 +326,17 @@
       @keyframes blink {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.4; }
+      }
+
+      /* Mencegah zoom pada input di iOS dengan cara yang lebih baik */
+      input, select, textarea, button {
+        font-size: 16px; /* Mencegah zoom pada iOS dengan font size minimal 16px */
+      }
+      
+      /* Mencegah scaling dengan touch-action */
+      html, body {
+        touch-action: pan-x pan-y;
+        height: 100%;
       }
     </style>
     
