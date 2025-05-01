@@ -38,6 +38,55 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Import style globals
+import "./index.css";
+
+// Tambahkan style global untuk mencegah zoom pada perangkat mobile
+const preventZoomStyle = document.createElement('style');
+preventZoomStyle.innerHTML = `
+  /* Mencegah double-tap zoom dan scroll bounce pada iOS */
+  html {
+    touch-action: manipulation;
+    height: 100%;
+    overflow: hidden;
+  }
+  
+  body {
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Atur ukuran font minimum untuk input di iOS agar tidak zoom */
+  input, textarea, select {
+    font-size: 16px !important; /* iOS tidak akan zoom jika font-size >= 16px */
+  }
+  
+  /* Disable viewport zoom on focus */
+  input:focus, textarea:focus, select:focus {
+    font-size: 16px !important;
+  }
+  
+  /* Force native app look */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+`;
+document.head.appendChild(preventZoomStyle);
+
+// Tambahkan listener global untuk mencegah zoom pada gestur pinch
+document.addEventListener('gesturestart', function(e) {
+  e.preventDefault();
+}, { passive: false });
+
+// Perbaikan untuk error TypeScript pada TouchEvent
+document.addEventListener('touchmove', function(e: TouchEvent) {
+  // @ts-expect-error - scale mungkin tidak didefinisikan pada tipe TouchEvent standar tetapi ada di beberapa browser
+  if (e.scale && e.scale !== 1) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

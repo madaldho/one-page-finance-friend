@@ -110,6 +110,18 @@
       "sizes": "196x196",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "logokeuanganpay.webp",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "logokeuanganpay.webp",
+      "sizes": "180x180",
+      "type": "image/webp",
+      "purpose": "any"
     }
   ],
   "screenshots": [
@@ -129,5 +141,7 @@
   "categories": ["finance", "productivity", "utilities"],
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "lang": "id-ID",
-  "dir": "ltr"
+  "dir": "ltr",
+  "related_applications": [],
+  "prefer_related_applications": false
 } 
