@@ -128,7 +128,6 @@ function App() {
           </>} />
           <Route path="/home" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <Index />
             </ProtectedRoute>
           } />
@@ -143,7 +142,6 @@ function App() {
           {/* Halaman Upgrade */}
           <Route path="/upgrade" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <Upgrade />
             </ProtectedRoute>
           } />
@@ -151,7 +149,6 @@ function App() {
           {/* Rute lainnya dengan AuthRedirect */}
           <Route path="/profile" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <Profile />
             </ProtectedRoute>
           } />
@@ -169,49 +166,41 @@ function App() {
           
           <Route path="/settings" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <Settings />
             </ProtectedRoute>
           } />
           <Route path="/analysis" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <Analysis />
             </ProtectedRoute>
           } />
           <Route path="/wallet-detail" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <WalletDetailPage />
             </ProtectedRoute>
           } />
           <Route path="/wallet/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <WalletDetail />
             </ProtectedRoute>
           } />
           <Route path="/wallet/add" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <WalletForm />
             </ProtectedRoute>
           } />
           <Route path="/wallet/edit/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <WalletForm />
             </ProtectedRoute>
           } />
           <Route path="/transaction/:type" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <TransactionPage />
             </ProtectedRoute>
           } />
           <Route path="/transaction/:type/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <TransactionPage />
             </ProtectedRoute>
           } />
@@ -219,7 +208,6 @@ function App() {
           {/* FITUR PRO: Budgeting - Gunakan ProtectedProRoute */}
           <Route path="/budgets" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProRouteGuard featureName="Budget Management">
                 <BudgetManagement />
               </ProRouteGuard>
@@ -227,7 +215,6 @@ function App() {
           } />
           <Route path="/budget-sources/add" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="budget">
                 <AddBudgetSource />
               </ProtectedProRoute>
@@ -235,7 +222,6 @@ function App() {
           } />
           <Route path="/budget/add" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="budget">
                 <AddBudget />
               </ProtectedProRoute>
@@ -245,7 +231,6 @@ function App() {
           {/* FITUR PRO: Savings - Gunakan ProtectedProRoute */}
           <Route path="/savings" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProRouteGuard featureName="Tabungan">
                 <SavingsManagement />
               </ProRouteGuard>
@@ -253,7 +238,6 @@ function App() {
           } />
           <Route path="/savings/add" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="saving">
                 <AddSavingsTarget />
               </ProtectedProRoute>
@@ -261,7 +245,6 @@ function App() {
           } />
           <Route path="/savings/deposit/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="saving">
                 <SavingsDeposit />
               </ProtectedProRoute>
@@ -269,7 +252,6 @@ function App() {
           } />
           <Route path="/savings/withdraw/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="saving">
                 <SavingsWithdraw />
               </ProtectedProRoute>
@@ -277,7 +259,6 @@ function App() {
           } />
           <Route path="/savings/edit/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="saving">
                 <SavingsEdit />
               </ProtectedProRoute>
@@ -287,7 +268,6 @@ function App() {
           {/* FITUR PRO: Loans - Gunakan ProtectedProRoute */}
           <Route path="/loans" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProRouteGuard featureName="Hutang & Piutang">
                 <LoansManagement />
               </ProRouteGuard>
@@ -295,7 +275,6 @@ function App() {
           } />
           <Route path="/loans/add-debt" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="loan">
                 <AddDebtPage />
               </ProtectedProRoute>
@@ -303,7 +282,6 @@ function App() {
           } />
           <Route path="/loans/add-receivable" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="loan">
                 <AddReceivablePage />
               </ProtectedProRoute>
@@ -311,7 +289,6 @@ function App() {
           } />
           <Route path="/loans/edit/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="loan">
                 <EditLoanPage />
               </ProtectedProRoute>
@@ -319,7 +296,6 @@ function App() {
           } />
           <Route path="/loans/:id/payment" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="loan">
                 <LoanPaymentPage />
               </ProtectedProRoute>
@@ -328,25 +304,21 @@ function App() {
           
           <Route path="/categories" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <Categories />
             </ProtectedRoute>
           } />
           <Route path="/categories/add" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <CategoryForm />
             </ProtectedRoute>
           } />
           <Route path="/categories/edit/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <CategoryForm />
             </ProtectedRoute>
           } />
           <Route path="/transactions" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <Transactions />
             </ProtectedRoute>
           } />
@@ -354,7 +326,6 @@ function App() {
           {/* FITUR PRO: Assets - Gunakan ProtectedProRoute */}
           <Route path="/assets" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="assets">
                 <AssetsPage />
               </ProtectedProRoute>
@@ -362,7 +333,6 @@ function App() {
           } />
           <Route path="/assets/add" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="assets">
                 <AddAssetPage />
               </ProtectedProRoute>
@@ -370,7 +340,6 @@ function App() {
           } />
           <Route path="/assets/edit/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="assets">
                 <EditAssetPage />
               </ProtectedProRoute>
@@ -378,7 +347,6 @@ function App() {
           } />
           <Route path="/assets/update-value/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="assets">
                 <UpdateAssetValuePage />
               </ProtectedProRoute>
@@ -386,7 +354,6 @@ function App() {
           } />
           <Route path="/assets/sell/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="assets">
                 <SellAssetPage />
               </ProtectedProRoute>
@@ -394,7 +361,6 @@ function App() {
           } />
           <Route path="/assets/transactions" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="assets">
                 <AssetTransactionsPage />
               </ProtectedProRoute>
@@ -402,7 +368,6 @@ function App() {
           } />
           <Route path="/assets/:id" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <ProtectedProRoute feature="assets">
                 <AssetDetailPage />
               </ProtectedProRoute>
@@ -412,7 +377,6 @@ function App() {
           {/* Tambahkan route untuk Device Manager */}
           <Route path="/trusted-devices" element={
             <ProtectedRoute>
-              <AuthRedirect />
               <DeviceManagerPage />
             </ProtectedRoute>
           } />
