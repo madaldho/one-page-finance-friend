@@ -17,6 +17,8 @@ export interface Wallet {
   balance: number;
   type: string;
   color: string | null;
+  logo_url: string | null;
+  gradient: string | null;
   is_default: boolean;
   created_at: string;
   updated_at: string;

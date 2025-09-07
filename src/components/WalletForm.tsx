@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { FileUpload } from '@/components/ui/file-upload';
 import { 
   Loader2, 
   CreditCard, 
@@ -11,7 +12,8 @@ import {
   Banknote,
   Landmark,
   ChevronLeft,
-  Lock
+  Lock,
+  Image
 } from 'lucide-react';
 import {
   Select,
@@ -74,6 +76,7 @@ const formSchema = z.object({
   useGradient: z.boolean().default(false),
   gradientStart: z.string().optional(),
   gradientEnd: z.string().optional(),
+  logoUrl: z.string().optional(),
 });
 
 export default function WalletForm() { 
@@ -90,6 +93,8 @@ export default function WalletForm() {
   const [selectedGradient, setSelectedGradient] = useState(GRADIENTS[0]);
   const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
   const [isPro, setIsPro] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -101,6 +106,7 @@ export default function WalletForm() {
       useGradient: false,
       gradientStart: GRADIENTS[0].start,
       gradientEnd: GRADIENTS[0].end,
+      logoUrl: '',
     },
   });
 
@@ -165,6 +171,7 @@ export default function WalletForm() {
       if (error) throw error;
       if (data) {
         setWallet(data);
+        setLogoUrl(data.logo_url);
         form.reset({
           name: data.name || '',
           type: (data.type as "cash" | "bank" | "investment" | "savings") || "cash",
@@ -173,6 +180,7 @@ export default function WalletForm() {
           useGradient: !!data.gradient,
           gradientStart: data.gradient ? data.color : GRADIENTS[0].start,
           gradientEnd: data.gradient || GRADIENTS[0].end,
+          logoUrl: data.logo_url || '',
         });
 
         if (data.gradient) {
@@ -211,6 +219,62 @@ export default function WalletForm() {
     }
   };
 
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    try {
+      setUploadingLogo(true);
+      
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const filename = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `wallet-logos/${filename}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars') // Using same bucket as avatars
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mengunggah logo';
+      toast({
+        title: "Gagal Mengunggah Logo",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleLogoSelect = async (file: File) => {
+    const uploadedUrl = await uploadLogo(file);
+    if (uploadedUrl) {
+      setLogoUrl(uploadedUrl);
+      form.setValue('logoUrl', uploadedUrl);
+      toast({
+        title: "Logo Berhasil Diunggah",
+        description: "Logo wallet telah berhasil diperbarui",
+      });
+    }
+  };
+
+  const handleLogoRemove = () => {
+    setLogoUrl(null);
+    form.setValue('logoUrl', '');
+  };
+
   const onSubmit = async (formValues: z.infer<typeof formSchema>) => {
     if (!user) {
       toast({
@@ -233,6 +297,7 @@ export default function WalletForm() {
         balance: formValues.balance,
         color: useGradient ? formValues.gradientStart : (formValues.color === 'custom' ? customColor : formValues.color),
         gradient: useGradient ? `${formValues.gradientStart}, ${formValues.gradientEnd}` : null,
+        logo_url: logoUrl,
         user_id: user.id,
       };
 
@@ -271,7 +336,63 @@ export default function WalletForm() {
     }
   };
 
-  const getWalletIcon = (type: string) => {
+  const getWalletIcon = (type: string, logoUrl?: string | null) => {
+    if (logoUrl) {
+      return (
+        <div className="h-4 w-4 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+          <img 
+            src={logoUrl} 
+            alt="Logo" 
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.parentElement!.innerHTML = getDefaultWalletIcon(type);
+            }}
+          />
+        </div>
+      );
+    }
+    return getDefaultWalletIcon(type);
+  };
+
+  const getDefaultWalletIcon = (type: string) => {
+    switch (type) {
+      case 'cash':
+        return '<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg>';
+      case 'bank':
+        return '<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm2 2h8v8H6V6z" clip-rule="evenodd"></path></svg>';
+      case 'investment':
+        return '<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4z" clip-rule="evenodd"></path><path d="M6 4a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H8a2 2 0 01-2-2V4z"></path></svg>';
+      case 'savings':
+        return '<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z"></path></svg>';
+      default:
+        return '<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path><path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"></path></svg>';
+    }
+  };
+
+  const renderWalletIcon = (type: string, logoUrl?: string | null) => {
+    if (logoUrl) {
+      return (
+        <div className="h-4 w-4 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+          <img 
+            src={logoUrl} 
+            alt="Logo" 
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              // Hide image and show default icon
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.parentElement!.appendChild(getOriginalWalletIcon(type));
+            }}
+          />
+        </div>
+      );
+    }
+    return getOriginalWalletIcon(type);
+  };
+
+  const getOriginalWalletIcon = (type: string) => {
     switch (type) {
       case 'cash':
         return <Banknote className="h-4 w-4" />;
@@ -325,27 +446,27 @@ export default function WalletForm() {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32 max-w-xl">
+      <div className="container mx-auto p-4 pb-32 max-w-2xl">
         {/* Header with back button */}
-        <div className="flex items-center mb-6">
+        <div className="flex items-center mb-8">
           <Button 
             variant="ghost" 
             size="icon" 
-            className="mr-2" 
+            className="mr-3 h-10 w-10 hover:bg-gray-100 transition-colors" 
             onClick={() => navigate(-1)}
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-6 w-6" />
           </Button>
-          <h1 className="text-xl font-bold">{id ? 'Edit Dompet' : 'Tambah Dompet'}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{id ? 'Edit Dompet' : 'Tambah Dompet'}</h1>
         </div>
 
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             {/* Preview Card */}
             <Card
               className={cn(
-                  "p-4 transition-all duration-300 mb-4",
+                  "p-6 transition-all duration-300 mb-6 shadow-lg",
                   watchUseGradient && "bg-gradient-to-r"
               )}
               style={{
@@ -355,14 +476,14 @@ export default function WalletForm() {
                 color: 'white'
               }}
             >
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                    {getWalletIcon(watchType)}
-                    <h3 className="font-medium">{watchName || "Nama Dompet"}</h3>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                    {renderWalletIcon(watchType, logoUrl)}
+                    <h3 className="font-semibold text-lg">{watchName || "Nama Dompet"}</h3>
                 </div>
                 <div>
-                  <p className="text-sm opacity-80">Saldo</p>
-                  <p className="text-xl font-bold">
+                  <p className="text-sm opacity-80 font-medium">Saldo</p>
+                  <p className="text-2xl font-bold tracking-wide">
                       {formatCurrency(watchBalance)}
                   </p>
                 </div>
@@ -374,56 +495,81 @@ export default function WalletForm() {
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Dompet</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-base font-semibold">Nama Dompet</FormLabel>
                   <FormControl>
-                    <Input placeholder="Contoh: Dompet Harian" {...field} />
+                    <Input 
+                      placeholder="Contoh: Dompet Harian" 
+                      {...field} 
+                      className="h-12 text-base border-2 focus:border-primary transition-colors"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
+            {/* Logo Upload */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Image className="h-5 w-5" />
+                <label className="text-base font-semibold">Logo Dompet (Opsional)</label>
+              </div>
+              <FileUpload
+                onFileSelect={handleLogoSelect}
+                onFileRemove={handleLogoRemove}
+                loading={uploadingLogo}
+                currentFileUrl={logoUrl}
+                placeholder="Pilih logo..."
+                accept="image/*"
+                maxSize={2}
+                className="w-full"
+              />
+              <p className="text-sm text-gray-500">
+                Upload logo kustom untuk mempersonalisasi wallet Anda
+              </p>
+            </div>
+
             {/* Tipe Dompet */}
             <FormField
               control={form.control}
               name="type"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipe Dompet</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-base font-semibold">Tipe Dompet</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
                     value={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-12 text-base border-2 focus:border-primary transition-colors">
                         <SelectValue placeholder="Pilih tipe dompet" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="cash">
-                        <div className="flex items-center gap-2">
-                          <Banknote className="h-4 w-4" />
-                          <span>Uang Tunai</span>
+                        <div className="flex items-center gap-3 py-1">
+                          <Banknote className="h-5 w-5" />
+                          <span className="font-medium">Uang Tunai</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="bank">
-                        <div className="flex items-center gap-2">
-                          <Landmark className="h-4 w-4" />
-                          <span>Rekening Bank</span>
+                        <div className="flex items-center gap-3 py-1">
+                          <Landmark className="h-5 w-5" />
+                          <span className="font-medium">Rekening Bank</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="investment">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="h-4 w-4" />
-                          <span>E-Wallet</span>
+                        <div className="flex items-center gap-3 py-1">
+                          <CreditCard className="h-5 w-5" />
+                          <span className="font-medium">E-Wallet</span>
                         </div>
                       </SelectItem>
                       <SelectItem value="savings">
-                        <div className="flex items-center gap-2">
-                          <PiggyBank className="h-4 w-4" />
-                          <span>Lainnya</span>
+                        <div className="flex items-center gap-3 py-1">
+                          <PiggyBank className="h-5 w-5" />
+                          <span className="font-medium">Lainnya</span>
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -438,14 +584,20 @@ export default function WalletForm() {
               control={form.control}
               name="balance"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Saldo {id ? 'Saat Ini' : 'Awal'}</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-base font-semibold">Saldo {id ? 'Saat Ini' : 'Awal'}</FormLabel>
                   <FormControl>
-                    <CurrencyInput
-                      placeholder="0"
-                      value={field.value}
-                      onChange={(value) => field.onChange(value)}
-                    />
+                    <div className="relative">
+                      <CurrencyInput
+                        placeholder="0"
+                        value={field.value}
+                        onChange={(value) => field.onChange(value)}
+                        className="h-12 text-base border-2 focus:border-primary transition-colors pl-12"
+                      />
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
+                        Rp
+                      </div>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -453,20 +605,20 @@ export default function WalletForm() {
             />
 
             {/* Tabs for color selection */}
-            <div className="space-y-3">
-              <FormLabel className="text-sm font-medium">Warna</FormLabel>
+            <div className="space-y-4">
+              <FormLabel className="text-base font-semibold">Warna & Tema</FormLabel>
               <Tabs value={colorTab} onValueChange={handleColorTabChange}>
-                <TabsList className="grid w-full grid-cols-2 h-9 rounded-full p-0.5 mb-4">
-                  <TabsTrigger value="solid" className="rounded-full text-xs h-8">Solid</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 h-11 rounded-xl p-1 mb-6 bg-gray-100">
+                  <TabsTrigger value="solid" className="rounded-lg text-sm h-9 font-medium">Solid</TabsTrigger>
                   <TabsTrigger 
                     value="gradient" 
-                    className="rounded-full text-xs h-8" 
+                    className="rounded-lg text-sm h-9 font-medium" 
                     disabled={!isPro}
                   >
-                    {!isPro && <Lock className="h-3.5 w-3.5 mr-1" />}
+                    {!isPro && <Lock className="h-4 w-4 mr-2" />}
                     Gradient
                     {!isPro && (
-                      <span className="ml-1 text-[10px] bg-orange-100 text-orange-700 px-1 rounded-full">Pro</span>
+                      <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Pro</span>
                     )}
                   </TabsTrigger>
                 </TabsList>
@@ -478,15 +630,15 @@ export default function WalletForm() {
                     render={({ field }) => (
                       <FormItem>
                         <FormControl>
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-5 gap-2">
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-5 gap-3">
                               {WALLET_COLORS.map((color) => (
                                 <button
                                   key={color}
                                   type="button"
                                   className={cn(
-                                    "w-full aspect-square rounded-full border-2", 
-                                    field.value === color ? "border-black shadow-sm scale-110" : "border-transparent"
+                                    "w-full aspect-square rounded-xl border-3 transition-all duration-200 hover:scale-105", 
+                                    field.value === color ? "border-gray-800 shadow-lg scale-110" : "border-transparent hover:border-gray-300"
                                   )}
                                   style={{ backgroundColor: color }}
                                   onClick={() => handleColorChange(color)}
@@ -498,8 +650,8 @@ export default function WalletForm() {
                               <button
                                 type="button"
                                 className={cn(
-                                  "w-full aspect-square rounded-full border-2 overflow-hidden relative", 
-                                  field.value === 'custom' ? "border-black shadow-sm scale-110" : "border-transparent"
+                                  "w-full aspect-square rounded-xl border-3 overflow-hidden relative transition-all duration-200 hover:scale-105", 
+                                  field.value === 'custom' ? "border-gray-800 shadow-lg scale-110" : "border-transparent hover:border-gray-300"
                                 )}
                                 onClick={() => handleColorChange('custom')}
                                 aria-label="Pilih warna kustom"
@@ -515,31 +667,34 @@ export default function WalletForm() {
                                 ></div>
                                 {field.value === 'custom' && (
                                   <div className="absolute inset-0 flex items-center justify-center">
-                                    <div className="h-1/2 w-1/2 rounded-full" style={{ backgroundColor: customColor }}></div>
+                                    <div className="h-1/2 w-1/2 rounded-full border-2 border-white" style={{ backgroundColor: customColor }}></div>
                                   </div>
                                 )}
                               </button>
                             </div>
                             
                             {field.value === 'custom' && (
-                              <div className="flex gap-2 items-center">
-                                <Input 
-                                  type="color" 
-                                  value={customColor}
-                                  onChange={(e) => {
-                                    setCustomColor(e.target.value);
-                                  }}
-                                  className="w-8 h-8 p-0.5 rounded-md cursor-pointer"
-                                />
-                                <Input
-                                  type="text"
-                                  value={customColor}
-                                  onChange={(e) => {
-                                    setCustomColor(e.target.value);
-                                  }}
-                                  className="flex-1 h-8 text-xs"
-                                  placeholder="#000000"
-                                />
+                              <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
+                                <Label className="text-sm font-medium mb-3 block">Warna Kustom</Label>
+                                <div className="flex gap-3 items-center">
+                                  <Input 
+                                    type="color" 
+                                    value={customColor}
+                                    onChange={(e) => {
+                                      setCustomColor(e.target.value);
+                                    }}
+                                    className="w-12 h-12 p-1 rounded-lg cursor-pointer border-2"
+                                  />
+                                  <Input
+                                    type="text"
+                                    value={customColor}
+                                    onChange={(e) => {
+                                      setCustomColor(e.target.value);
+                                    }}
+                                    className="flex-1 h-12 text-base border-2"
+                                    placeholder="#000000"
+                                  />
+                                </div>
                               </div>
                             )}
                           </div>
@@ -551,20 +706,20 @@ export default function WalletForm() {
                 ) : (
                   <>
                     {isPro ? (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {GRADIENTS.map((gradient) => (
                             <button
                               key={gradient.id}
                               type="button"
                               className={cn(
-                                "h-10 rounded-md cursor-pointer border-2",
+                                "h-12 rounded-lg cursor-pointer border-3 transition-all duration-200 hover:scale-105",
                                 selectedGradient.id === gradient.id 
-                                ? "border-black shadow-sm" 
-                                : "border-transparent"
+                                ? "border-gray-800 shadow-lg scale-105" 
+                                : "border-transparent hover:border-gray-300"
                               )}
                               style={{
-                                background: `linear-gradient(to right, ${gradient.start}, ${gradient.end})` 
+                                background: `linear-gradient(135deg, ${gradient.start}, ${gradient.end})` 
                               }}
                               onClick={() => {
                                 handleGradientChange(gradient);
@@ -579,67 +734,72 @@ export default function WalletForm() {
                           ))}
                         </div>
                         
-                        <div className="flex gap-3">
-                          <div className="flex-1 space-y-2">
-                            <Label className="text-xs">Warna Awal</Label>
-                            <div className="flex gap-2 items-center">
-                              <Input 
-                                type="color" 
-                                value={watchGradientStart}
-                                onChange={(e) => {
-                                  form.setValue('gradientStart', e.target.value);
-                                  // Tandai sebagai custom gradient
-                                  setSelectedGradient({...GRADIENTS[0], id: 'custom'});
-                                }}
-                                className="w-8 h-8 p-0.5 rounded-md cursor-pointer"
-                              />
-                              <Input 
-                                type="text" 
-                                value={watchGradientStart}
-                                onChange={(e) => {
-                                  form.setValue('gradientStart', e.target.value);
-                                  // Tandai sebagai custom gradient
-                                  setSelectedGradient({...GRADIENTS[0], id: 'custom'});
-                                }}
-                                className="flex-1 h-8 text-xs"
-                              />
+                        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
+                          <Label className="text-sm font-medium mb-4 block">Kustomisasi Gradient</Label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                              <Label className="text-sm">Warna Awal</Label>
+                              <div className="flex gap-3 items-center">
+                                <Input 
+                                  type="color" 
+                                  value={watchGradientStart}
+                                  onChange={(e) => {
+                                    form.setValue('gradientStart', e.target.value);
+                                    // Tandai sebagai custom gradient
+                                    setSelectedGradient({...GRADIENTS[0], id: 'custom'});
+                                  }}
+                                  className="w-12 h-12 p-1 rounded-lg cursor-pointer border-2"
+                                />
+                                <Input 
+                                  type="text" 
+                                  value={watchGradientStart}
+                                  onChange={(e) => {
+                                    form.setValue('gradientStart', e.target.value);
+                                    // Tandai sebagai custom gradient
+                                    setSelectedGradient({...GRADIENTS[0], id: 'custom'});
+                                  }}
+                                  className="flex-1 h-12 text-base border-2"
+                                />
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="flex-1 space-y-2">
-                            <Label className="text-xs">Warna Akhir</Label>
-                            <div className="flex gap-2 items-center">
-                              <Input 
-                                type="color" 
-                                value={watchGradientEnd}
-                                onChange={(e) => {
-                                  form.setValue('gradientEnd', e.target.value);
-                                  // Tandai sebagai custom gradient
-                                  setSelectedGradient({...GRADIENTS[0], id: 'custom'});
-                                }}
-                                className="w-8 h-8 p-0.5 rounded-md cursor-pointer"
-                              />
-                              <Input 
-                                type="text" 
-                                value={watchGradientEnd}
-                                onChange={(e) => {
-                                  form.setValue('gradientEnd', e.target.value);
-                                  // Tandai sebagai custom gradient
-                                  setSelectedGradient({...GRADIENTS[0], id: 'custom'});
-                                }}
-                                className="flex-1 h-8 text-xs"
-                              />
+                            
+                            <div className="space-y-3">
+                              <Label className="text-sm">Warna Akhir</Label>
+                              <div className="flex gap-3 items-center">
+                                <Input 
+                                  type="color" 
+                                  value={watchGradientEnd}
+                                  onChange={(e) => {
+                                    form.setValue('gradientEnd', e.target.value);
+                                    // Tandai sebagai custom gradient
+                                    setSelectedGradient({...GRADIENTS[0], id: 'custom'});
+                                  }}
+                                  className="w-12 h-12 p-1 rounded-lg cursor-pointer border-2"
+                                />
+                                <Input 
+                                  type="text" 
+                                  value={watchGradientEnd}
+                                  onChange={(e) => {
+                                    form.setValue('gradientEnd', e.target.value);
+                                    // Tandai sebagai custom gradient
+                                    setSelectedGradient({...GRADIENTS[0], id: 'custom'});
+                                  }}
+                                  className="flex-1 h-12 text-base border-2"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 bg-orange-50 border border-orange-100 rounded-md">
-                        <div className="flex items-start gap-2">
-                          <Lock className="h-4 w-4 text-orange-500 mt-0.5" />
+                      <div className="p-6 bg-orange-50 border-2 border-orange-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                          <div className="bg-orange-100 p-2 rounded-lg">
+                            <Lock className="h-5 w-5 text-orange-600" />
+                          </div>
                           <div>
-                            <p className="text-sm font-medium text-orange-800">Fitur Pro</p>
-                            <p className="text-xs text-orange-700">
+                            <p className="text-base font-semibold text-orange-800">Fitur Pro</p>
+                            <p className="text-sm text-orange-700">
                               Gradient warna untuk dompet hanya tersedia bagi pengguna Pro. 
                               Upgrade sekarang untuk mengakses semua fitur premium!
                             </p>
@@ -652,20 +812,24 @@ export default function WalletForm() {
               </Tabs>
             </div>
 
-            {/* Submit buttons - Ubah ke style full width */}
-            <div className=" gap-2 grid grid-cols-2 pt-4">
-            <Button
+            {/* Submit buttons - Enhanced styling */}
+            <div className="grid grid-cols-2 gap-4 pt-6">
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate(-1)}
-                className="w-full"
+                className="h-12 text-base font-medium border-2 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="h-12 text-base font-medium bg-primary hover:bg-primary/90 transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-5 w-5 animate-spin" />
                     Menyimpan...
                   </span>
                   ) : id ? (
@@ -674,7 +838,6 @@ export default function WalletForm() {
                   'Tambah Dompet'
                 )}
               </Button>
-              
             </div>
           </form>
         </Form>
