@@ -94,14 +94,14 @@ export function FileUpload({
           <img
             src={preview}
             alt="Preview"
-            className="w-20 h-20 rounded-lg object-cover border-2 border-gray-200"
+            className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover border-2 border-gray-200 shadow-sm"
           />
           {!uploading && (
             <Button
               type="button"
               variant="destructive"
               size="icon"
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+              className="absolute -top-2 -right-2 h-6 w-6 rounded-full shadow-md"
               onClick={handleClearPreview}
             >
               <X className="h-3 w-3" />
@@ -113,7 +113,7 @@ export function FileUpload({
       {/* Upload Area */}
       <div
         className={cn(
-          "border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-all",
+          "border-2 border-dashed rounded-lg p-3 sm:p-4 text-center cursor-pointer transition-all",
           dragOver ? "border-primary bg-primary/5" : "border-gray-300 hover:border-gray-400",
           disabled || uploading ? "opacity-50 cursor-not-allowed" : "",
           !preview ? "hover:bg-gray-50" : ""
@@ -141,14 +141,14 @@ export function FileUpload({
           ) : (
             <>
               {preview ? (
-                <Image className="h-6 w-6 text-gray-400" />
+                <Image className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
               ) : (
-                <Upload className="h-8 w-8 text-gray-400" />
+                <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
               )}
-              <p className="text-sm text-gray-600">
+              <p className="text-sm sm:text-base text-gray-600">
                 {preview ? "Change image" : placeholder}
               </p>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-400">
                 Drag & drop or click to browse
               </p>
               {maxSize && (

@@ -300,14 +300,14 @@ export default function WalletForm() {
 
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
-        .from('avatars') // Using same bucket as avatars for now
+        .from('wallet-logos') // Use dedicated wallet-logos bucket
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       // Get public URL
       const { data } = supabase.storage
-        .from('avatars')
+        .from('wallet-logos')
         .getPublicUrl(filePath);
 
       // Update form and preview
@@ -423,13 +423,17 @@ export default function WalletForm() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                     {logoPreview ? (
-                      <img 
-                        src={logoPreview} 
-                        alt="Logo" 
-                        className="h-5 w-5 rounded object-cover"
-                      />
+                      <div className="relative">
+                        <img 
+                          src={logoPreview} 
+                          alt="Logo" 
+                          className="h-6 w-6 rounded-lg object-cover shadow-sm border border-white/30"
+                        />
+                      </div>
                     ) : (
-                      getWalletIcon(watchType)
+                      <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                        {getWalletIcon(watchType)}
+                      </div>
                     )}
                     <h3 className="font-medium">{watchName || "Nama Dompet"}</h3>
                 </div>
@@ -526,8 +530,8 @@ export default function WalletForm() {
             />
 
             {/* Logo Upload */}
-            <div className="space-y-2">
-              <Label>Logo Dompet (Opsional)</Label>
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Logo Dompet (Opsional)</Label>
               <FileUpload
                 onFileSelect={uploadLogo}
                 preview={logoPreview}
@@ -536,7 +540,11 @@ export default function WalletForm() {
                 disabled={isSubmitting}
                 placeholder="Unggah logo dompet"
                 maxSize={2}
+                className="w-full"
               />
+              <p className="text-xs text-gray-500">
+                Logo akan ditampilkan pada kartu dompet Anda. Format yang didukung: JPG, PNG, GIF (maks. 2MB)
+              </p>
             </div>
 
             {/* Tabs for color selection */}
@@ -566,14 +574,14 @@ export default function WalletForm() {
                       <FormItem>
                         <FormControl>
                           <div className="space-y-3">
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-3">
                               {WALLET_COLORS.map((color) => (
                                 <button
                                   key={color}
                                   type="button"
                                   className={cn(
-                                    "w-full aspect-square rounded-full border-2", 
-                                    field.value === color ? "border-black shadow-sm scale-110" : "border-transparent"
+                                    "w-full aspect-square rounded-full border-2 transition-all duration-200", 
+                                    field.value === color ? "border-black shadow-md scale-110" : "border-transparent hover:border-gray-300"
                                   )}
                                   style={{ backgroundColor: color }}
                                   onClick={() => handleColorChange(color)}
@@ -585,8 +593,8 @@ export default function WalletForm() {
                               <button
                                 type="button"
                                 className={cn(
-                                  "w-full aspect-square rounded-full border-2 overflow-hidden relative", 
-                                  field.value === 'custom' ? "border-black shadow-sm scale-110" : "border-transparent"
+                                  "w-full aspect-square rounded-full border-2 overflow-hidden relative transition-all duration-200", 
+                                  field.value === 'custom' ? "border-black shadow-md scale-110" : "border-transparent hover:border-gray-300"
                                 )}
                                 onClick={() => handleColorChange('custom')}
                                 aria-label="Pilih warna kustom"
@@ -609,14 +617,14 @@ export default function WalletForm() {
                             </div>
                             
                             {field.value === 'custom' && (
-                              <div className="flex gap-2 items-center">
+                              <div className="flex gap-2 items-center mt-3">
                                 <Input 
                                   type="color" 
                                   value={customColor}
                                   onChange={(e) => {
                                     setCustomColor(e.target.value);
                                   }}
-                                  className="w-8 h-8 p-0.5 rounded-md cursor-pointer"
+                                  className="w-10 h-10 p-1 rounded-lg cursor-pointer border-2"
                                 />
                                 <Input
                                   type="text"
@@ -624,7 +632,7 @@ export default function WalletForm() {
                                   onChange={(e) => {
                                     setCustomColor(e.target.value);
                                   }}
-                                  className="flex-1 h-8 text-xs"
+                                  className="flex-1 h-10 text-sm"
                                   placeholder="#000000"
                                 />
                               </div>
@@ -739,29 +747,37 @@ export default function WalletForm() {
               </Tabs>
             </div>
 
-            {/* Submit buttons - Ubah ke style full width */}
-            <div className=" gap-2 grid grid-cols-2 pt-4">
-            <Button
+            {/* Submit buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate(-1)}
-                className="w-full"
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || logoUploading} 
+                className="w-full sm:flex-1 order-1 sm:order-2"
+              >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Menyimpan...
                   </span>
-                  ) : id ? (
+                ) : logoUploading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Mengunggah logo...
+                  </span>
+                ) : id ? (
                   'Simpan Perubahan'
                 ) : (
                   'Tambah Dompet'
                 )}
               </Button>
-              
             </div>
           </form>
         </Form>
