@@ -9,6 +9,11 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJh
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Validate configuration
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.error('❌ Supabase configuration missing. Please check your environment variables.');
+}
+
 // Konfigurasi untuk memperpanjang durasi sesi menjadi 30 hari dan memastikan persistensi sesi
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
@@ -31,3 +36,18 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     },
   },
 });
+
+// Test connection on startup (in development)
+if (import.meta.env.DEV) {
+  supabase.auth.getSession()
+    .then(({ error }) => {
+      if (error) {
+        console.warn('⚠️ Supabase connection test failed:', error.message);
+      } else {
+        console.log('✅ Supabase connection successful');
+      }
+    })
+    .catch((error) => {
+      console.warn('⚠️ Supabase connection test error:', error.message);
+    });
+}
