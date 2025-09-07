@@ -90,30 +90,38 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
       <div className="relative">
         <Card 
           className={cn(
-            "relative p-3 sm:p-4 overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300",
-            "before:content-[''] before:absolute before:inset-0 before:bg-black/10 before:opacity-0 group-hover:before:opacity-100 before:transition-opacity"
+            "relative p-4 sm:p-6 overflow-hidden group cursor-pointer",
+            "hover:shadow-xl hover:shadow-black/10 hover:-translate-y-1",
+            "transition-all duration-300 ease-out",
+            "border-0 backdrop-blur-sm",
+            "before:content-[''] before:absolute before:inset-0 before:bg-white/5 before:opacity-0",
+            "hover:before:opacity-100 before:transition-all before:duration-300"
           )}
           style={cardStyle}
           onClick={handleCardClick}
         >
-          <div className="flex justify-between items-start mb-2 sm:mb-4 ">
-            <div className="flex items-center gap-1 sm:gap-2 max-w-[70%] text-white">
+          <div className="flex justify-between items-start mb-3 sm:mb-5">
+            <div className="flex items-center gap-2 sm:gap-3 max-w-[70%] text-white">
               {wallet.logo_url ? (
-                <img
-                  src={wallet.logo_url}
-                  alt={`${wallet.name} logo`}
-                  className="h-4 w-4 sm:h-5 sm:w-5 rounded object-cover"
-                  onError={(e) => {
-                    console.error("Failed to load wallet logo");
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+                <div className="relative">
+                  <img
+                    src={wallet.logo_url}
+                    alt={`${wallet.name} logo`}
+                    className="h-5 w-5 sm:h-6 sm:w-6 rounded object-cover border border-white/20"
+                    onError={(e) => {
+                      console.error("Failed to load wallet logo");
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
               ) : (
-                getWalletIcon(wallet.type || "cash")
+                <div className="p-1 rounded-lg bg-white/10">
+                  {getWalletIcon(wallet.type || "cash")}
+                </div>
               )}
-              <h3 className="text-sm sm:text-lg font-semibold truncate ">{wallet.name} </h3>
+              <h3 className="text-sm sm:text-lg font-semibold truncate">{wallet.name}</h3>
               {wallet.is_default && (
-                <span className="bg-white/20 text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
+                <span className="bg-white/25 backdrop-blur-sm text-[10px] sm:text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium border border-white/20">
                   Default
                 </span>
               )}
@@ -123,11 +131,11 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="h-6 w-6 sm:h-8 sm:w-8 p-0 text-white hover:bg-white/20"
+                    className="h-8 w-8 sm:h-10 sm:w-10 p-0 text-white hover:bg-white/20 rounded-full transition-all duration-200"
                     size="icon"
                     aria-label="Menu dompet"
                   >
-                    <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -157,13 +165,14 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
             </div>
           </div>
 
-          <div className="space-y-0 sm:space-y-1">
-            <p className="text-base sm:text-2xl font-bold leading-tight break-words text-white">
+          <div className="space-y-1 sm:space-y-2">
+            <p className="text-lg sm:text-2xl xl:text-3xl font-bold leading-tight text-white drop-shadow-sm">
               {formatCurrency(wallet.balance)}
             </p>
-            <p className="text-xs sm:text-sm opacity-90 text-white">
+            <p className="text-xs sm:text-sm opacity-80 text-white/90 font-medium">
               {wallet.type === "bank" ? "Rekening Bank" : 
-               wallet.type === "savings" ? "Tabungan" : "Uang Tunai"}
+               wallet.type === "savings" ? "Tabungan" : 
+               wallet.type === "investment" ? "E-Wallet" : "Uang Tunai"}
             </p>
           </div>
         </Card>

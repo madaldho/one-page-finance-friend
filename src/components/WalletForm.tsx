@@ -345,14 +345,15 @@ export default function WalletForm() {
           <h1 className="text-xl font-bold">{id ? 'Edit Dompet' : 'Tambah Dompet'}</h1>
         </div>
 
-        <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-gray-100">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-7">
             {/* Preview Card */}
             <Card
               className={cn(
-                  "p-4 transition-all duration-300 mb-4",
-                  watchUseGradient && "bg-gradient-to-r"
+                  "p-6 transition-all duration-300 mb-6 border-0 shadow-lg hover:shadow-xl",
+                  "backdrop-blur-sm relative overflow-hidden",
+                  watchUseGradient && "bg-gradient-to-br"
               )}
               style={{
                   background: watchUseGradient 
@@ -361,30 +362,40 @@ export default function WalletForm() {
                 color: 'white'
               }}
             >
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2">
-                    {watchLogoUrl ? (
-                      <img
-                        src={watchLogoUrl}
-                        alt="Logo dompet"
-                        className="h-5 w-5 rounded object-cover"
-                        onError={(e) => {
-                          console.error("Failed to load wallet logo in preview");
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      getWalletIcon(watchType)
-                    )}
-                    <h3 className="font-medium">{watchName || "Nama Dompet"}</h3>
-                </div>
-                <div>
-                  <p className="text-sm opacity-80">Saldo</p>
-                  <p className="text-xl font-bold">
-                      {formatCurrency(watchBalance)}
-                  </p>
+              <div className="relative z-10">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                      {watchLogoUrl ? (
+                        <div className="p-1 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30">
+                          <img
+                            src={watchLogoUrl}
+                            alt="Logo dompet"
+                            className="h-6 w-6 rounded object-cover"
+                            onError={(e) => {
+                              console.error("Failed to load wallet logo in preview");
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="p-2 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30">
+                          {getWalletIcon(watchType)}
+                        </div>
+                      )}
+                      <h3 className="font-semibold text-lg drop-shadow-sm">{watchName || "Nama Dompet"}</h3>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm opacity-90 font-medium">Saldo</p>
+                    <p className="text-2xl font-bold drop-shadow-sm">
+                        {formatCurrency(watchBalance)}
+                    </p>
+                  </div>
                 </div>
               </div>
+              {/* Subtle pattern overlay */}
+              <div className="absolute inset-0 bg-white/5 opacity-50" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+              }}></div>
             </Card>
 
             {/* Nama Dompet */}
@@ -392,10 +403,14 @@ export default function WalletForm() {
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nama Dompet</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-sm font-semibold text-gray-700">Nama Dompet</FormLabel>
                   <FormControl>
-                    <Input placeholder="Contoh: Dompet Harian" {...field} />
+                    <Input 
+                      placeholder="Contoh: Dompet Harian" 
+                      {...field}
+                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl transition-all duration-200"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -407,15 +422,15 @@ export default function WalletForm() {
               control={form.control}
               name="type"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipe Dompet</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-sm font-semibold text-gray-700">Tipe Dompet</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}
                     value={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl transition-all duration-200">
                         <SelectValue placeholder="Pilih tipe dompet" />
                       </SelectTrigger>
                     </FormControl>
@@ -456,13 +471,14 @@ export default function WalletForm() {
               control={form.control}
               name="balance"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Saldo {id ? 'Saat Ini' : 'Awal'}</FormLabel>
+                <FormItem className="space-y-3">
+                  <FormLabel className="text-sm font-semibold text-gray-700">Saldo {id ? 'Saat Ini' : 'Awal'}</FormLabel>
                   <FormControl>
                     <CurrencyInput
                       placeholder="0"
                       value={field.value}
                       onChange={(value) => field.onChange(value)}
+                      className="h-11 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl transition-all duration-200"
                     />
                   </FormControl>
                   <FormMessage />
@@ -489,20 +505,20 @@ export default function WalletForm() {
             />
 
             {/* Tabs for color selection */}
-            <div className="space-y-3">
-              <FormLabel className="text-sm font-medium">Warna</FormLabel>
+            <div className="space-y-4">
+              <FormLabel className="text-sm font-semibold text-gray-700">Warna</FormLabel>
               <Tabs value={colorTab} onValueChange={handleColorTabChange}>
-                <TabsList className="grid w-full grid-cols-2 h-9 rounded-full p-0.5 mb-4">
-                  <TabsTrigger value="solid" className="rounded-full text-xs h-8">Solid</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 h-11 rounded-xl p-1 mb-5 bg-gray-100">
+                  <TabsTrigger value="solid" className="rounded-lg text-sm h-9 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-200">Solid</TabsTrigger>
                   <TabsTrigger 
                     value="gradient" 
-                    className="rounded-full text-xs h-8" 
+                    className="rounded-lg text-sm h-9 data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all duration-200" 
                     disabled={!isPro}
                   >
                     {!isPro && <Lock className="h-3.5 w-3.5 mr-1" />}
                     Gradient
                     {!isPro && (
-                      <span className="ml-1 text-[10px] bg-orange-100 text-orange-700 px-1 rounded-full">Pro</span>
+                      <span className="ml-1 text-[10px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">Pro</span>
                     )}
                   </TabsTrigger>
                 </TabsList>
@@ -689,16 +705,20 @@ export default function WalletForm() {
             </div>
 
             {/* Submit buttons - Ubah ke style full width */}
-            <div className=" gap-2 grid grid-cols-2 pt-4">
+            <div className="gap-3 grid grid-cols-2 pt-6">
             <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate(-1)}
-                className="w-full"
+                className="w-full h-12 rounded-xl border-gray-200 hover:bg-gray-50 text-gray-700 font-medium transition-all duration-200"
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5"
+              >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
