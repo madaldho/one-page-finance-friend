@@ -128,6 +128,7 @@ function App() {
           </>} />
           <Route path="/home" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <Index />
             </ProtectedRoute>
           } />
@@ -142,6 +143,7 @@ function App() {
           {/* Halaman Upgrade */}
           <Route path="/upgrade" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <Upgrade />
             </ProtectedRoute>
           } />
@@ -149,6 +151,7 @@ function App() {
           {/* Rute lainnya dengan AuthRedirect */}
           <Route path="/profile" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <Profile />
             </ProtectedRoute>
           } />
@@ -166,41 +169,49 @@ function App() {
           
           <Route path="/settings" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <Settings />
             </ProtectedRoute>
           } />
           <Route path="/analysis" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <Analysis />
             </ProtectedRoute>
           } />
           <Route path="/wallet-detail" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <WalletDetailPage />
             </ProtectedRoute>
           } />
           <Route path="/wallet/:id" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <WalletDetail />
             </ProtectedRoute>
           } />
           <Route path="/wallet/add" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <WalletForm />
             </ProtectedRoute>
           } />
           <Route path="/wallet/edit/:id" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <WalletForm />
             </ProtectedRoute>
           } />
           <Route path="/transaction/:type" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <TransactionPage />
             </ProtectedRoute>
           } />
           <Route path="/transaction/:type/:id" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <TransactionPage />
             </ProtectedRoute>
           } />
@@ -304,21 +315,25 @@ function App() {
           
           <Route path="/categories" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <Categories />
             </ProtectedRoute>
           } />
           <Route path="/categories/add" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <CategoryForm />
             </ProtectedRoute>
           } />
           <Route path="/categories/edit/:id" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <CategoryForm />
             </ProtectedRoute>
           } />
           <Route path="/transactions" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <Transactions />
             </ProtectedRoute>
           } />
@@ -377,6 +392,7 @@ function App() {
           {/* Tambahkan route untuk Device Manager */}
           <Route path="/trusted-devices" element={
             <ProtectedRoute>
+              <AuthRedirect />
               <DeviceManagerPage />
             </ProtectedRoute>
           } />
