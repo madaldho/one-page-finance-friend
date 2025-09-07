@@ -34,7 +34,8 @@ import {
   Umbrella,
   Percent,
   X,
-  PlayCircle
+  PlayCircle,
+  Sparkles
 } from "lucide-react";
 import { Transaction, Wallet, Budget, Loan, Saving, Category } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +53,9 @@ import LoansCard from "@/components/LoansCard";
 import TransactionList from "@/components/TransactionList";
 import TransactionActions from "@/components/TransactionActions";
 import WalletForm from "@/components/WalletForm";
+import { FinancialInsightsDashboard } from "@/components/FinancialInsightsDashboard";
+import { FinancialGoalsComponent } from "@/components/FinancialGoalsComponent";
+import { EnhancedTransactionForm } from "@/components/EnhancedTransactionForm";
 import {
   Dialog,
   DialogContent,
@@ -177,6 +181,9 @@ const Index = () => {
 
   const [showAddWallet, setShowAddWallet] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showEnhancedTransaction, setShowEnhancedTransaction] = useState(false);
+  const [showFinancialInsights, setShowFinancialInsights] = useState(false);
+  const [showFinancialGoals, setShowFinancialGoals] = useState(false);
 
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
@@ -841,6 +848,86 @@ const Index = () => {
             </section>
           )}
 
+          {/* Financial Insights Section */}
+          <section className="mb-5">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-1.5">
+                <BarChart2 className="w-4 h-4 text-gray-500" />
+                <h2 className="text-base font-medium text-gray-700">
+                  Wawasan Keuangan
+                </h2>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowFinancialInsights(true)}
+                className="h-8 px-3 text-xs font-medium hover:bg-gray-100 text-gray-700">
+                Lihat Detail
+              </Button>
+            </div>
+            <Card className="p-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-green-600 font-semibold text-lg">
+                    {formatCurrency(totalIncome)}
+                  </div>
+                  <div className="text-xs text-gray-500">Pemasukan</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-red-600 font-semibold text-lg">
+                    {formatCurrency(totalExpense)}
+                  </div>
+                  <div className="text-xs text-gray-500">Pengeluaran</div>
+                </div>
+                <div className="text-center">
+                  <div className={`font-semibold text-lg ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatCurrency(totalIncome - totalExpense)}
+                  </div>
+                  <div className="text-xs text-gray-500">Saldo Bersih</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-blue-600 font-semibold text-lg">
+                    {totalIncome > 0 ? ((totalIncome - totalExpense) / totalIncome * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-xs text-gray-500">Tingkat Tabungan</div>
+                </div>
+              </div>
+            </Card>
+          </section>
+
+          {/* Financial Goals Section */}
+          <section className="mb-5">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-1.5">
+                <Target className="w-4 h-4 text-gray-500" />
+                <h2 className="text-base font-medium text-gray-700">
+                  Target Keuangan
+                </h2>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowFinancialGoals(true)}
+                className="h-8 px-3 text-xs font-medium hover:bg-gray-100 text-gray-700">
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                Kelola
+              </Button>
+            </div>
+            <Card className="p-4">
+              <div className="text-center py-6">
+                <Target className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500 mb-2">Tetapkan target keuangan Anda</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFinancialGoals(true)}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  Buat Target
+                </Button>
+              </div>
+            </Card>
+          </section>
+
           {/* Transactions List Section menjadi Top Statistics Section */}
           <section className="mb-20">
             <Card>
@@ -940,9 +1027,16 @@ const Index = () => {
           </section>
         </main>
 
-        {/* Fixed Action Buttons at Bottom */}
+        {/* Enhanced Fixed Action Buttons at Bottom */}
         <div className="fixed bottom-20 left-0 right-0 flex justify-center z-50 px-4">
-          <div className="flex gap-2 p-2 bg-white rounded-full shadow-lg max-w-md w-full justify-between">
+          <div className="flex gap-2 p-2 bg-white rounded-full shadow-lg max-w-lg w-full justify-between">
+            <Button
+              className="bg-purple-500 hover:bg-purple-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
+              onClick={() => setShowEnhancedTransaction(true)}
+              aria-label="Transaksi Cerdas">
+              <Sparkles className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline ml-1">Smart</span>
+            </Button>
             <Button
               className="bg-green-500 hover:bg-green-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
               onClick={() => navigate("/transaction/income")}
@@ -967,6 +1061,43 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Enhanced Transaction Form Dialog */}
+      <Dialog open={showEnhancedTransaction} onOpenChange={setShowEnhancedTransaction}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tambah Transaksi Cerdas</DialogTitle>
+          </DialogHeader>
+          <EnhancedTransactionForm
+            onSubmitSuccess={() => {
+              setShowEnhancedTransaction(false);
+              fetchData();
+            }}
+            onCancel={() => setShowEnhancedTransaction(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Financial Insights Dialog */}
+      <Dialog open={showFinancialInsights} onOpenChange={setShowFinancialInsights}>
+        <DialogContent className="sm:max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Wawasan Keuangan</DialogTitle>
+          </DialogHeader>
+          <FinancialInsightsDashboard />
+        </DialogContent>
+      </Dialog>
+
+      {/* Financial Goals Dialog */}
+      <Dialog open={showFinancialGoals} onOpenChange={setShowFinancialGoals}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Target Keuangan</DialogTitle>
+          </DialogHeader>
+          <FinancialGoalsComponent />
+        </DialogContent>
+      </Dialog>
+
     </Layout>
   );
 };
