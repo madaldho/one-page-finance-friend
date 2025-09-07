@@ -100,6 +100,21 @@ const ResetPasswordPage = () => {
         
         if (error) throw error;
         
+        // Setelah password berhasil diatur, pastikan email tersinkronisasi di database
+        if (user?.email) {
+          const { error: profileUpdateError } = await supabase
+            .from('profiles')
+            .update({ 
+              email: user.email,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user.id);
+            
+          if (profileUpdateError) {
+            console.error('Error updating profile email:', profileUpdateError);
+          }
+        }
+        
         toast({
           title: 'Password berhasil diatur',
           description: 'Sekarang Anda dapat login menggunakan email dan password'

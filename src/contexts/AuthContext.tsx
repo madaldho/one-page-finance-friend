@@ -394,26 +394,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log("Mencoba auto login...");
       
-      // 1. Pertama, periksa apakah ada sesi aktif
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError) {
-        console.error("Error getting session for auto login:", sessionError);
-        return false;
-      }
-      
-      // Jika sudah ada sesi aktif, gunakan saja
-      if (sessionData?.session) {
-        console.log("Sesi aktif ditemukan, melanjutkan dengan sesi yang ada");
-        setSession(sessionData.session);
-        setUser(sessionData.session.user);
-        await fetchProfile();
-        return true;
-      }
-      
-      console.log("Tidak ada sesi aktif, mencoba login dengan trusted device...");
-      
-      // 2. Jika tidak ada sesi, coba login dengan trusted device
+      // Coba ambil user data tanpa sesi dulu
       const { data } = await supabase.auth.getUser();
       if (data && data.user) {
         console.log("User data ditemukan:", data.user.id);
@@ -423,17 +404,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Hasil verifikasi perangkat:", isVerified);
         
         if (isVerified) {
-          console.log("Perangkat terverifikasi, refreshing session...");
+          console.log("Perangkat terverifikasi, mencoba refresh session...");
           
           // Refresh sesi untuk mendapatkan sesi baru
           const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
           
-          if (refreshError) {
-            console.error("Error refreshing session during auto login:", refreshError);
-            return false;
-          }
-          
-          if (refreshData && refreshData.session) {
+          if (!refreshError && refreshData && refreshData.session) {
             console.log("Berhasil refresh sesi, user login otomatis");
             setSession(refreshData.session);
             setUser(refreshData.session.user);
@@ -449,7 +425,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               duration: 4000,
             });
           
-          return true;
+            return true;
+          } else {
+            console.log("Gagal refresh session:", refreshError);
           }
         } else {
           console.log("Perangkat tidak terverifikasi atau sudah kedaluwarsa");
@@ -458,7 +436,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("Tidak ada data user yang ditemukan");
       }
       
-      console.log("Auto login gagal, perlu login manual");
       return false;
     } catch (error) {
       console.error("Auto login failed:", error);
@@ -511,24 +488,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const setupAuth = async () => {
       setIsLoading(true);
       try {
-        // Coba auto login saat aplikasi dimuat
-        const autoLoginSuccess = await autoLogin();
+        // Prioritas: periksa sesi aktif terlebih dahulu untuk menghindari white screen
+        console.log("Memeriksa sesi yang ada...");
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        if (!autoLoginSuccess) {
-          // Jika auto login gagal, coba dapatkan sesi secara normal
-          console.log("Auto login gagal, memeriksa sesi secara normal...");
-          const { data: { session } } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.error('Error getting session:', sessionError);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (session && session.user) {
+          console.log("Sesi aktif ditemukan, menggunakan sesi yang ada");
+          setSession(session);
+          setUser(session.user);
           
-          if (session) {
-            setSession(session);
-            setUser(session.user ?? null);
-            
-            // Fetch user profile only if we have a session
-            const userProfile = await fetchProfile();
-            if (!userProfile) {
-              // If no profile exists but we have a session, create one
-              await ensureUserProfile();
-            }
+          // Fetch user profile
+          const userProfile = await fetchProfile();
+          if (!userProfile) {
+            // If no profile exists but we have a session, create one
+            await ensureUserProfile();
+          }
+        } else {
+          // Hanya coba auto login jika tidak ada sesi aktif
+          console.log("Tidak ada sesi aktif, mencoba auto login...");
+          const autoLoginSuccess = await autoLogin();
+          
+          if (!autoLoginSuccess) {
+            console.log("Auto login gagal, pengguna perlu login manual");
           }
         }
       } catch (error) {

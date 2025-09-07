@@ -147,17 +147,21 @@ const AuthCallback = () => {
         if (insertError) {
           console.error('Error creating profile:', insertError);
           
-          // Try upsert if insert fails
+          // Try upsert if insert fails - this ensures email sync
           const { data: upsertedProfile, error: upsertError } = await supabase
             .from('profiles')
-            .upsert(newProfile)
+            .upsert({
+              ...newProfile,
+              // Ensure email is always updated for Google accounts
+              email: email
+            })
             .select()
             .single();
             
           if (upsertError) {
             console.error('Error upserting profile:', upsertError);
           } else {
-            console.log("Profile upserted successfully");
+            console.log("Profile upserted successfully with email sync");
           }
         } else {
           console.log("Profile inserted successfully");
@@ -192,6 +196,23 @@ const AuthCallback = () => {
         }
       } else {
         console.log("User profile already exists, skipping creation");
+        
+        // Pastikan email tersinkronisasi untuk pengguna Google yang sudah ada
+        if (email && profile) {
+          const { error: syncError } = await supabase
+            .from('profiles')
+            .update({ 
+              email: email,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId);
+            
+          if (syncError) {
+            console.error('Error syncing email for existing Google user:', syncError);
+          } else {
+            console.log("Email synced for existing Google user");
+          }
+        }
       }
     } catch (error) {
       console.error('Error ensuring user profile:', error);

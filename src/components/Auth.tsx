@@ -104,22 +104,38 @@ const Auth = () => {
           description: "Silakan periksa email Anda untuk instruksi reset password.",
         });
       } else if (isSignUp) {
-        // Check if user exists before sign up
-        const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
-          email,
-          password: "dummy-password-just-to-check", // Just for checking, will likely fail
-        });
-        
-        // If the sign in returns a user or specific error, the account already exists
-        if (existingUser?.user || (checkError && checkError.message.includes('Invalid login credentials'))) {
-          toast({
-            title: "❌ Email Sudah Terdaftar",
-            description: "Akun dengan email ini sudah ada. Silakan login atau reset password.",
-            variant: "destructive",
+        // Check if user exists before sign up - improved logic
+        try {
+          const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
+            email,
+            password: "dummy-password-check", // This will fail but tells us if email exists
           });
-          setIsSignUp(false);
-          setLoading(false);
-          return;
+          
+          // If we get here with a user, email exists
+          if (existingUser?.user) {
+            toast({
+              title: "❌ Email Sudah Terdaftar",
+              description: "Akun dengan email ini sudah ada. Silakan login atau reset password.",
+              variant: "destructive",
+            });
+            setIsSignUp(false);
+            setLoading(false);
+            return;
+          }
+        } catch (checkError: any) {
+          // Check if it's specifically an "Invalid login credentials" error
+          // This means user exists but password is wrong
+          if (checkError?.message?.includes('Invalid login credentials')) {
+            toast({
+              title: "❌ Email Sudah Terdaftar", 
+              description: "Akun dengan email ini sudah ada. Silakan login atau reset password.",
+              variant: "destructive",
+            });
+            setIsSignUp(false);
+            setLoading(false);
+            return;
+          }
+          // If it's a different error (like "Email not confirmed"), proceed with signup
         }
         
         // Proceed with signup if user doesn't exist
@@ -136,12 +152,23 @@ const Auth = () => {
         });
         setIsSignUp(false); // Switch to login view after successful registration
       } else {
+        // Login with email and password
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          // Provide more specific error messages
+          if (error.message.includes('Invalid login credentials')) {
+            throw new Error('Email atau password salah. Pastikan password sudah diatur jika Anda menggunakan akun Google.');
+          } else if (error.message.includes('Email not confirmed')) {
+            throw new Error('Silakan konfirmasi email Anda terlebih dahulu.');
+          } else if (error.message.includes('Too many requests')) {
+            throw new Error('Terlalu banyak percobaan login. Silakan tunggu beberapa menit.');
+          }
+          throw error;
+        }
         
         toast({
           title: "🎉 Login Berhasil",
@@ -481,7 +508,13 @@ const Auth = () => {
                 </label>
               </div>
               
-              
+              <button
+                type="button"
+                onClick={toggleForgotPassword}
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                Lupa Password?
+              </button>
             </div>
           )}
           
