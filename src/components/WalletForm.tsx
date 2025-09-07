@@ -285,42 +285,97 @@ export default function WalletForm() {
     }
   };
 
-  // Logo upload functions
+  // Logo upload functions with enhanced error handling
   const uploadLogo = async (file: File) => {
     try {
       setLogoUploading(true);
       
+      // Validate user authentication
       if (!user) {
-        throw new Error('User not authenticated');
+        throw new Error('Pengguna tidak terautentikasi. Silakan login kembali.');
       }
 
-      const fileExt = file.name.split('.').pop();
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error('Tipe file tidak didukung. Gunakan JPG, PNG, GIF, atau WebP.');
+      }
+
+      // Validate file size (2MB limit)
+      const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+      if (file.size > maxSize) {
+        throw new Error('Ukuran file terlalu besar. Maksimal 2MB.');
+      }
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!fileExt) {
+        throw new Error('File tidak memiliki ekstensi yang valid.');
+      }
+
       const filename = `${user.id}-${Date.now()}.${fileExt}`;
       const filePath = `wallet-logos/${filename}`;
 
+      // Check if old logo exists and clean it up
+      if (form.getValues('logoUrl')) {
+        try {
+          const oldPath = form.getValues('logoUrl').split('/').pop();
+          if (oldPath && oldPath.includes(user.id)) {
+            await supabase.storage
+              .from('wallet-logos')
+              .remove([`wallet-logos/${oldPath}`]);
+          }
+        } catch (cleanupError) {
+          console.warn('Could not clean up old logo:', cleanupError);
+          // Don't fail upload if cleanup fails
+        }
+      }
+
       // Upload file to storage
       const { error: uploadError } = await supabase.storage
-        .from('wallet-logos') // Use dedicated wallet-logos bucket
-        .upload(filePath, file);
+        .from('wallet-logos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        if (uploadError.message.includes('Duplicate')) {
+          throw new Error('File dengan nama yang sama sudah ada. Coba lagi.');
+        } else if (uploadError.message.includes('NotFound')) {
+          throw new Error('Bucket penyimpanan tidak ditemukan. Hubungi administrator.');
+        } else {
+          throw new Error(`Gagal mengunggah file: ${uploadError.message}`);
+        }
+      }
 
       // Get public URL
       const { data } = supabase.storage
         .from('wallet-logos')
         .getPublicUrl(filePath);
 
+      if (!data.publicUrl) {
+        throw new Error('Gagal mendapatkan URL file yang diunggah.');
+      }
+
       // Update form and preview
       form.setValue('logoUrl', data.publicUrl);
       setLogoPreview(data.publicUrl);
       
       toast({
-        title: "Logo Diunggah",
-        description: "Logo dompet berhasil diunggah",
+        title: "Logo Berhasil Diunggah",
+        description: "Logo dompet berhasil diunggah dan disimpan",
       });
     } catch (error: unknown) {
       console.error('Error uploading logo:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mengunggah logo';
+      let errorMessage = 'Terjadi kesalahan saat mengunggah logo';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
       toast({
         title: "Gagal Mengunggah Logo",
         description: errorMessage,
@@ -331,9 +386,41 @@ export default function WalletForm() {
     }
   };
 
-  const clearLogo = () => {
-    form.setValue('logoUrl', '');
-    setLogoPreview(null);
+  const clearLogo = async () => {
+    try {
+      const currentLogoUrl = form.getValues('logoUrl');
+      
+      // Clean up the file from storage if it exists
+      if (currentLogoUrl && user) {
+        const fileName = currentLogoUrl.split('/').pop();
+        if (fileName && fileName.includes(user.id)) {
+          try {
+            await supabase.storage
+              .from('wallet-logos')
+              .remove([`wallet-logos/${fileName}`]);
+          } catch (error) {
+            console.warn('Could not remove logo file:', error);
+            // Don't fail the clear operation if file removal fails
+          }
+        }
+      }
+      
+      // Clear form values and preview
+      form.setValue('logoUrl', '');
+      setLogoPreview(null);
+      
+      toast({
+        title: "Logo Dihapus",
+        description: "Logo dompet berhasil dihapus",
+      });
+    } catch (error) {
+      console.error('Error clearing logo:', error);
+      toast({
+        title: "Gagal Menghapus Logo",
+        description: "Terjadi kesalahan saat menghapus logo",
+        variant: "destructive",
+      });
+    }
   };
 
   const getWalletIcon = (type: string) => {
