@@ -744,6 +744,7 @@ export type Database = {
           gradient: string | null
           id: string
           is_default: boolean | null
+          logo_url: string | null
           name: string
           type: string
           updated_at: string | null
@@ -756,6 +757,7 @@ export type Database = {
           gradient?: string | null
           id?: string
           is_default?: boolean | null
+          logo_url?: string | null
           name: string
           type: string
           updated_at?: string | null
@@ -768,6 +770,7 @@ export type Database = {
           gradient?: string | null
           id?: string
           is_default?: boolean | null
+          logo_url?: string | null
           name?: string
           type?: string
           updated_at?: string | null

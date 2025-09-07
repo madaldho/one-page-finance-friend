@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { LogoUpload } from '@/components/ui/LogoUpload';
 import { 
   Loader2, 
   CreditCard, 
@@ -71,6 +72,7 @@ const formSchema = z.object({
   type: z.enum(["cash", "bank", "investment", "savings"]),
   balance: z.coerce.number().min(0, "Saldo tidak boleh negatif"),
   color: z.string().min(1, "Warna harus dipilih"),
+  logo_url: z.string().nullable().optional(),
   useGradient: z.boolean().default(false),
   gradientStart: z.string().optional(),
   gradientEnd: z.string().optional(),
@@ -98,6 +100,7 @@ export default function WalletForm() {
       type: "cash",
       balance: 0,
       color: WALLET_COLORS[0],
+      logo_url: null,
       useGradient: false,
       gradientStart: GRADIENTS[0].start,
       gradientEnd: GRADIENTS[0].end,
@@ -108,6 +111,7 @@ export default function WalletForm() {
   const watchName = form.watch('name');
   const watchBalance = form.watch('balance');
   const watchColor = form.watch('color');
+  const watchLogoUrl = form.watch('logo_url');
   const watchUseGradient = form.watch('useGradient');
   const watchGradientStart = form.watch('gradientStart');
   const watchGradientEnd = form.watch('gradientEnd');
@@ -170,6 +174,7 @@ export default function WalletForm() {
           type: (data.type as "cash" | "bank" | "investment" | "savings") || "cash",
           balance: data.balance || 0,
           color: data.color || WALLET_COLORS[0],
+          logo_url: data.logo_url || null,
           useGradient: !!data.gradient,
           gradientStart: data.gradient ? data.color : GRADIENTS[0].start,
           gradientEnd: data.gradient || GRADIENTS[0].end,
@@ -233,6 +238,7 @@ export default function WalletForm() {
         balance: formValues.balance,
         color: useGradient ? formValues.gradientStart : (formValues.color === 'custom' ? customColor : formValues.color),
         gradient: useGradient ? `${formValues.gradientStart}, ${formValues.gradientEnd}` : null,
+        logo_url: formValues.logo_url,
         user_id: user.id,
       };
 
@@ -357,7 +363,19 @@ export default function WalletForm() {
             >
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                    {getWalletIcon(watchType)}
+                    {watchLogoUrl ? (
+                      <img
+                        src={watchLogoUrl}
+                        alt="Logo dompet"
+                        className="h-5 w-5 rounded object-cover"
+                        onError={(e) => {
+                          console.error("Failed to load wallet logo in preview");
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      getWalletIcon(watchType)
+                    )}
                     <h3 className="font-medium">{watchName || "Nama Dompet"}</h3>
                 </div>
                 <div>
@@ -445,6 +463,24 @@ export default function WalletForm() {
                       placeholder="0"
                       value={field.value}
                       onChange={(value) => field.onChange(value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Logo Upload */}
+            <FormField
+              control={form.control}
+              name="logo_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <LogoUpload
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <FormMessage />

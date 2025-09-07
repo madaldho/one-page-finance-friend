@@ -98,7 +98,19 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
         >
           <div className="flex justify-between items-start mb-2 sm:mb-4 ">
             <div className="flex items-center gap-1 sm:gap-2 max-w-[70%] text-white">
-              {getWalletIcon(wallet.type || "cash")}
+              {wallet.logo_url ? (
+                <img
+                  src={wallet.logo_url}
+                  alt={`${wallet.name} logo`}
+                  className="h-4 w-4 sm:h-5 sm:w-5 rounded object-cover"
+                  onError={(e) => {
+                    console.error("Failed to load wallet logo");
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                getWalletIcon(wallet.type || "cash")
+              )}
               <h3 className="text-sm sm:text-lg font-semibold truncate ">{wallet.name} </h3>
               {wallet.is_default && (
                 <span className="bg-white/20 text-[10px] sm:text-xs px-1 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
