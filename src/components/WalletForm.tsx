@@ -42,6 +42,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { hasProAccess, UserSubscriptionProfile } from '@/utils/subscription';
+import { FileUpload } from '@/components/FileUpload';
 
 // Warna preset untuk dompet
 const WALLET_COLORS = [
@@ -74,6 +75,7 @@ const formSchema = z.object({
   useGradient: z.boolean().default(false),
   gradientStart: z.string().optional(),
   gradientEnd: z.string().optional(),
+  logoUrl: z.string().optional(),
 });
 
 export default function WalletForm() { 
@@ -90,6 +92,10 @@ export default function WalletForm() {
   const [selectedGradient, setSelectedGradient] = useState(GRADIENTS[0]);
   const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
   const [isPro, setIsPro] = useState(false);
+  
+  // Logo upload state
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -101,6 +107,7 @@ export default function WalletForm() {
       useGradient: false,
       gradientStart: GRADIENTS[0].start,
       gradientEnd: GRADIENTS[0].end,
+      logoUrl: '',
     },
   });
 
@@ -173,7 +180,13 @@ export default function WalletForm() {
           useGradient: !!data.gradient,
           gradientStart: data.gradient ? data.color : GRADIENTS[0].start,
           gradientEnd: data.gradient || GRADIENTS[0].end,
+          logoUrl: data.logo_url || '',
         });
+
+        // Set logo preview if exists
+        if (data.logo_url) {
+          setLogoPreview(data.logo_url);
+        }
 
         if (data.gradient) {
           // Hanya set colorTab ke gradient jika pengguna adalah Pro
@@ -233,6 +246,7 @@ export default function WalletForm() {
         balance: formValues.balance,
         color: useGradient ? formValues.gradientStart : (formValues.color === 'custom' ? customColor : formValues.color),
         gradient: useGradient ? `${formValues.gradientStart}, ${formValues.gradientEnd}` : null,
+        logo_url: formValues.logoUrl || null,
         user_id: user.id,
       };
 
@@ -269,6 +283,57 @@ export default function WalletForm() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Logo upload functions
+  const uploadLogo = async (file: File) => {
+    try {
+      setLogoUploading(true);
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const filename = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `wallet-logos/${filename}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars') // Using same bucket as avatars for now
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update form and preview
+      form.setValue('logoUrl', data.publicUrl);
+      setLogoPreview(data.publicUrl);
+      
+      toast({
+        title: "Logo Diunggah",
+        description: "Logo dompet berhasil diunggah",
+      });
+    } catch (error: unknown) {
+      console.error('Error uploading logo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mengunggah logo';
+      toast({
+        title: "Gagal Mengunggah Logo",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const clearLogo = () => {
+    form.setValue('logoUrl', '');
+    setLogoPreview(null);
   };
 
   const getWalletIcon = (type: string) => {
@@ -357,7 +422,15 @@ export default function WalletForm() {
             >
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                    {getWalletIcon(watchType)}
+                    {logoPreview ? (
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo" 
+                        className="h-5 w-5 rounded object-cover"
+                      />
+                    ) : (
+                      getWalletIcon(watchType)
+                    )}
                     <h3 className="font-medium">{watchName || "Nama Dompet"}</h3>
                 </div>
                 <div>
@@ -451,6 +524,20 @@ export default function WalletForm() {
                 </FormItem>
               )}
             />
+
+            {/* Logo Upload */}
+            <div className="space-y-2">
+              <Label>Logo Dompet (Opsional)</Label>
+              <FileUpload
+                onFileSelect={uploadLogo}
+                preview={logoPreview}
+                onClearPreview={clearLogo}
+                uploading={logoUploading}
+                disabled={isSubmitting}
+                placeholder="Unggah logo dompet"
+                maxSize={2}
+              />
+            </div>
 
             {/* Tabs for color selection */}
             <div className="space-y-3">
