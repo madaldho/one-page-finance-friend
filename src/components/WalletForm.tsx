@@ -42,6 +42,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { hasProAccess, UserSubscriptionProfile } from '@/utils/subscription';
+import { FileUpload } from '@/components/FileUpload';
 
 // Warna preset untuk dompet
 const WALLET_COLORS = [
@@ -74,6 +75,7 @@ const formSchema = z.object({
   useGradient: z.boolean().default(false),
   gradientStart: z.string().optional(),
   gradientEnd: z.string().optional(),
+  logoUrl: z.string().optional(),
 });
 
 export default function WalletForm() { 
@@ -90,6 +92,10 @@ export default function WalletForm() {
   const [selectedGradient, setSelectedGradient] = useState(GRADIENTS[0]);
   const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
   const [isPro, setIsPro] = useState(false);
+  
+  // Logo upload state
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -101,6 +107,7 @@ export default function WalletForm() {
       useGradient: false,
       gradientStart: GRADIENTS[0].start,
       gradientEnd: GRADIENTS[0].end,
+      logoUrl: '',
     },
   });
 
@@ -173,7 +180,13 @@ export default function WalletForm() {
           useGradient: !!data.gradient,
           gradientStart: data.gradient ? data.color : GRADIENTS[0].start,
           gradientEnd: data.gradient || GRADIENTS[0].end,
+          logoUrl: data.logo_url || '',
         });
+
+        // Set logo preview if exists
+        if (data.logo_url) {
+          setLogoPreview(data.logo_url);
+        }
 
         if (data.gradient) {
           // Hanya set colorTab ke gradient jika pengguna adalah Pro
@@ -233,6 +246,7 @@ export default function WalletForm() {
         balance: formValues.balance,
         color: useGradient ? formValues.gradientStart : (formValues.color === 'custom' ? customColor : formValues.color),
         gradient: useGradient ? `${formValues.gradientStart}, ${formValues.gradientEnd}` : null,
+        logo_url: formValues.logoUrl || null,
         user_id: user.id,
       };
 
@@ -269,6 +283,57 @@ export default function WalletForm() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Logo upload functions
+  const uploadLogo = async (file: File) => {
+    try {
+      setLogoUploading(true);
+      
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const filename = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `wallet-logos/${filename}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('wallet-logos') // Use dedicated wallet-logos bucket
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('wallet-logos')
+        .getPublicUrl(filePath);
+
+      // Update form and preview
+      form.setValue('logoUrl', data.publicUrl);
+      setLogoPreview(data.publicUrl);
+      
+      toast({
+        title: "Logo Diunggah",
+        description: "Logo dompet berhasil diunggah",
+      });
+    } catch (error: unknown) {
+      console.error('Error uploading logo:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat mengunggah logo';
+      toast({
+        title: "Gagal Mengunggah Logo",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const clearLogo = () => {
+    form.setValue('logoUrl', '');
+    setLogoPreview(null);
   };
 
   const getWalletIcon = (type: string) => {
@@ -357,7 +422,19 @@ export default function WalletForm() {
             >
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                    {getWalletIcon(watchType)}
+                    {logoPreview ? (
+                      <div className="relative">
+                        <img 
+                          src={logoPreview} 
+                          alt="Logo" 
+                          className="h-6 w-6 rounded-lg object-cover shadow-sm border border-white/30"
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                        {getWalletIcon(watchType)}
+                      </div>
+                    )}
                     <h3 className="font-medium">{watchName || "Nama Dompet"}</h3>
                 </div>
                 <div>
@@ -452,6 +529,24 @@ export default function WalletForm() {
               )}
             />
 
+            {/* Logo Upload */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Logo Dompet (Opsional)</Label>
+              <FileUpload
+                onFileSelect={uploadLogo}
+                preview={logoPreview}
+                onClearPreview={clearLogo}
+                uploading={logoUploading}
+                disabled={isSubmitting}
+                placeholder="Unggah logo dompet"
+                maxSize={2}
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500">
+                Logo akan ditampilkan pada kartu dompet Anda. Format yang didukung: JPG, PNG, GIF (maks. 2MB)
+              </p>
+            </div>
+
             {/* Tabs for color selection */}
             <div className="space-y-3">
               <FormLabel className="text-sm font-medium">Warna</FormLabel>
@@ -479,14 +574,14 @@ export default function WalletForm() {
                       <FormItem>
                         <FormControl>
                           <div className="space-y-3">
-                            <div className="grid grid-cols-5 gap-2">
+                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 sm:gap-3">
                               {WALLET_COLORS.map((color) => (
                                 <button
                                   key={color}
                                   type="button"
                                   className={cn(
-                                    "w-full aspect-square rounded-full border-2", 
-                                    field.value === color ? "border-black shadow-sm scale-110" : "border-transparent"
+                                    "w-full aspect-square rounded-full border-2 transition-all duration-200", 
+                                    field.value === color ? "border-black shadow-md scale-110" : "border-transparent hover:border-gray-300"
                                   )}
                                   style={{ backgroundColor: color }}
                                   onClick={() => handleColorChange(color)}
@@ -498,8 +593,8 @@ export default function WalletForm() {
                               <button
                                 type="button"
                                 className={cn(
-                                  "w-full aspect-square rounded-full border-2 overflow-hidden relative", 
-                                  field.value === 'custom' ? "border-black shadow-sm scale-110" : "border-transparent"
+                                  "w-full aspect-square rounded-full border-2 overflow-hidden relative transition-all duration-200", 
+                                  field.value === 'custom' ? "border-black shadow-md scale-110" : "border-transparent hover:border-gray-300"
                                 )}
                                 onClick={() => handleColorChange('custom')}
                                 aria-label="Pilih warna kustom"
@@ -522,14 +617,14 @@ export default function WalletForm() {
                             </div>
                             
                             {field.value === 'custom' && (
-                              <div className="flex gap-2 items-center">
+                              <div className="flex gap-2 items-center mt-3">
                                 <Input 
                                   type="color" 
                                   value={customColor}
                                   onChange={(e) => {
                                     setCustomColor(e.target.value);
                                   }}
-                                  className="w-8 h-8 p-0.5 rounded-md cursor-pointer"
+                                  className="w-10 h-10 p-1 rounded-lg cursor-pointer border-2"
                                 />
                                 <Input
                                   type="text"
@@ -537,7 +632,7 @@ export default function WalletForm() {
                                   onChange={(e) => {
                                     setCustomColor(e.target.value);
                                   }}
-                                  className="flex-1 h-8 text-xs"
+                                  className="flex-1 h-10 text-sm"
                                   placeholder="#000000"
                                 />
                               </div>
@@ -652,29 +747,37 @@ export default function WalletForm() {
               </Tabs>
             </div>
 
-            {/* Submit buttons - Ubah ke style full width */}
-            <div className=" gap-2 grid grid-cols-2 pt-4">
-            <Button
+            {/* Submit buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100">
+              <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate(-1)}
-                className="w-full"
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+              <Button 
+                type="submit" 
+                disabled={isSubmitting || logoUploading} 
+                className="w-full sm:flex-1 order-1 sm:order-2"
+              >
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Menyimpan...
                   </span>
-                  ) : id ? (
+                ) : logoUploading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Mengunggah logo...
+                  </span>
+                ) : id ? (
                   'Simpan Perubahan'
                 ) : (
                   'Tambah Dompet'
                 )}
               </Button>
-              
             </div>
           </form>
         </Form>
