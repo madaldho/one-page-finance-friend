@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from './components/ui/toaster';
 import ScrollToTop from './components/ScrollToTop';
 import SessionManager from './components/SessionManager';
+import ErrorBoundary from './components/ErrorBoundary';
 import Auth from './components/Auth';
 import Index from './pages/Index';
 import Profile from './pages/Profile';
@@ -114,6 +115,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
+    <ErrorBoundary>
       <AuthProvider>
       <div className="min-h-screen bg-gray-50">
         <ScrollToTop />
@@ -420,6 +422,7 @@ function App() {
           <Toaster />
       </div>
       </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
