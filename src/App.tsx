@@ -55,6 +55,7 @@ import AdminUsers from './pages/admin/Users';
 
 // Tambahkan import DeviceManagerPage
 import DeviceManagerPage from './pages/DeviceManagerPage';
+import UIDemo from './pages/UIDemo';
 
 // Create a wrapper component to handle auth redirects
 const AuthRedirect = () => {
@@ -406,6 +407,9 @@ function App() {
               </ProtectedProRoute>
             </ProtectedRoute>
           } />
+          
+          {/* UI Demo Route */}
+          <Route path="/ui-demo" element={<UIDemo />} />
           
           {/* Tambahkan route untuk Device Manager */}
           <Route path="/trusted-devices" element={
