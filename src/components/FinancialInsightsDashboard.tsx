@@ -106,7 +106,7 @@ export function FinancialInsightsDashboard({ className }: FinancialInsightsDashb
     if (user) {
       fetchFinancialInsights();
     }
-  }, [user, selectedPeriod]);
+  }, [user, selectedPeriod]); // fetchFinancialInsights is a stable function
 
   const fetchFinancialInsights = async () => {
     if (!user) return;
@@ -179,9 +179,27 @@ export function FinancialInsightsDashboard({ className }: FinancialInsightsDashb
   };
 
   const processFinancialData = (
-    transactions: any[], 
-    budgets: any[], 
-    goals: any[],
+    transactions: Array<{
+      id: string;
+      amount: number;
+      type: string;
+      date: string;
+      category_id?: string;
+      categories?: { name: string; color?: string };
+    }>, 
+    budgets: Array<{
+      id: string;
+      amount: number;
+      category_id?: string;
+      categories?: { name: string };
+    }>, 
+    goals: Array<{
+      id: string;
+      name: string;
+      target_amount: number;
+      current_amount: number;
+      target_date?: string;
+    }>,
     startDate: Date,
     endDate: Date
   ): FinancialInsight => {
@@ -432,7 +450,7 @@ export function FinancialInsightsDashboard({ className }: FinancialInsightsDashb
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     </RechartsPieChart>
                   </ResponsiveContainer>
                 </div>
@@ -484,7 +502,7 @@ export function FinancialInsightsDashboard({ className }: FinancialInsightsDashb
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis tickFormatter={(value) => formatCurrency(value)} />
-                    <Tooltip formatter={(value: any) => formatCurrency(value)} />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Legend />
                     <Bar dataKey="income" fill="#10b981" name="Pemasukan" />
                     <Bar dataKey="expense" fill="#ef4444" name="Pengeluaran" />

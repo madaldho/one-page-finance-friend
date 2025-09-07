@@ -116,7 +116,7 @@ export function FinancialGoalsComponent() {
     if (user) {
       fetchGoals();
     }
-  }, [user]);
+  }, [user]); // fetchGoals is a stable function
 
   const fetchGoals = async () => {
     if (!user) return;

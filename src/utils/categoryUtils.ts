@@ -217,7 +217,7 @@ export function getSmartCategorySuggestions(
 
 // Get icon component by name
 export function getCategoryIcon(iconName: string) {
-  const iconMap: Record<string, any> = {
+  const iconMap: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
     Utensils,
     ShoppingBag,
     Car,
@@ -252,8 +252,16 @@ export function getCategoryIcon(iconName: string) {
 export async function createCategoryFromSuggestion(
   suggestion: CategorySuggestion,
   userId: string,
-  supabase: any
-): Promise<any> {
+  supabase: {
+    from: (table: string) => {
+      insert: (data: unknown[]) => {
+        select: () => {
+          single: () => Promise<{ data: unknown; error: unknown }>;
+        };
+      };
+    };
+  }
+): Promise<unknown> {
   const { data, error } = await supabase
     .from('categories')
     .insert([

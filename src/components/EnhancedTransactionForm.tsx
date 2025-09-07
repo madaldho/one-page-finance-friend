@@ -131,7 +131,7 @@ export function EnhancedTransactionForm({
     if (transactionId) {
       fetchTransaction();
     }
-  }, [transactionId]);
+  }, [transactionId]); // fetchInitialData and fetchTransaction are stable functions
 
   const fetchInitialData = async () => {
     try {
