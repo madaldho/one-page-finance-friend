@@ -1,9 +1,8 @@
-import React, { useState, useEffect, forwardRef } from "react";
+import React, { useState, useEffect, forwardRef, memo } from "react";
 import { Input } from "./input";
 import { formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
 import { NumericKeyboard } from "./NumericKeyboard";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useMobileCurrencyInput } from "@/hooks/use-mobile-form-optimization";
 
 export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value?: number;
@@ -14,7 +13,7 @@ export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLI
   className?: string;
 }
 
-const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
+const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
   ({ 
     value, 
     onChange, 
@@ -26,23 +25,13 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
   }, ref) => {
     const [showKeyboard, setShowKeyboard] = useState(false);
     const [displayValue, setDisplayValue] = useState<string>("");
-    const [inputValue, setInputValue] = useState<number>(value || 0);
-    const isMobile = useIsMobile();
     
-    // Menggunakan debounce untuk mengurangi lag saat input
-    const debouncedValue = useDebounce(inputValue, 150);
-
-    // Update ke parent hanya setelah debounce selesai
-    useEffect(() => {
-      if (onChange) {
-        onChange(debouncedValue);
-      }
-    }, [debouncedValue, onChange]);
+    // Gunakan optimized mobile hook untuk performa yang lebih baik
+    const { inputValue, updateValue, isMobile } = useMobileCurrencyInput(value, onChange);
 
     // Update display value when value changes from parent
     useEffect(() => {
       if (value !== undefined) {
-        setInputValue(value);
         setDisplayValue(formatNumberWithSeparator(value));
       }
     }, [value]);
@@ -69,12 +58,12 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       // Format untuk tampilan dengan pemisah ribuan
       setDisplayValue(formatNumberWithSeparator(numericValue));
       
-      // Update state lokal (akan di-debounce sebelum mengirim ke parent)
-      setInputValue(numericValue);
+      // Update state lokal menggunakan optimized hook
+      updateValue(numericValue);
     };
 
     const handleSetAmount = (val: number) => {
-      setInputValue(val);
+      updateValue(val);
     };
 
     return (
@@ -113,7 +102,7 @@ const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       </div>
     );
   }
-);
+));
 
 CurrencyInput.displayName = "CurrencyInput";
 

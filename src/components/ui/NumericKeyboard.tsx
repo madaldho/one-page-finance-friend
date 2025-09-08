@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { safeMathEval } from "@/utils/mathParser";
+import { useThrottle } from "@/hooks/use-debounce";
 
 /**
  * presentationMode: "modal" | "bottom-sheet"
@@ -41,7 +43,7 @@ const isMobileOrTablet = () => {
   return isMobile || isSmallScreen;
 };
 
-export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
+export const NumericKeyboard: React.FC<NumericKeyboardProps> = memo(({
   open,
   initialValue = 0,
   onClose,
@@ -97,8 +99,8 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
     if (open) setExpression(initialValue ? initialValue.toString() : "");
   }, [open, initialValue]);
 
-  // Only allow numbers and math ops
-  const handleKey = (key: string) => {
+  // Only allow numbers and math ops - throttled for better performance on mobile
+  const handleKey = useThrottle((key: string) => {
     if (key === "back") {
       setExpression((prev) => prev.slice(0, -1));
     } else if (["+", "-", "×", "÷"].includes(key)) {
@@ -111,19 +113,37 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
       // Numbers
       setExpression((prev) => prev + key);
     }
-  };
+  }, 50); // 50ms throttle for rapid key presses
 
-  const getEvaluatedValue = () => {
+  const getEvaluatedValue = useCallback(() => {
+    // Replace keyboard symbols with standard math operators
     let exp = expression.replace(/÷/g, "/").replace(/×/g, "*").replace(/,/g, ".");
-    try {
-      // eslint-disable-next-line no-eval
-      let val = eval(exp);
-      if (isNaN(val)) return 0;
-      return val;
-    } catch {
-      return 0;
-    }
-  };
+    
+    // Use safe math parser instead of eval for better performance and security
+    return safeMathEval(exp);
+  }, [expression]); // Memoize evaluation untuk menghindari kalkulasi berulang
+  const keyGrid = useMemo(() => KEYS.flat().map((key, i) => (
+    <button
+      key={i}
+      onClick={() => handleKey(key)}
+      className={`
+        text-2xl py-2 rounded-lg transition active:bg-gray-300 w-full h-14
+        ${key === "back" ? "bg-gray-200 hover:bg-gray-300 flex items-center justify-center" : ""}
+        ${["+", "-", "×", "÷"].includes(key) ? "bg-gray-200 text-blue-600 font-semibold" : ""}
+      `}
+      type="button"
+    >
+      {key === "back" ? (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17 9.5L14 12.5L17 15.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M14 12.5H9" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
+          <path d="M21 12.5C21 16.9183 17.4183 20.5 13 20.5C8.58172 20.5 5 16.9183 5 12.5C5 8.08172 8.58172 4.5 13 4.5C17.4183 4.5 21 8.08172 21 12.5Z" stroke="#EF4444" strokeWidth="1.5"/>
+        </svg>
+      ) : (
+        key
+      )}
+    </button>
+  )), [handleKey]); // Memoisasi berdasarkan handleKey
 
   // Jika tidak di perangkat mobile dan tidak dipaksa tampil, jangan tampilkan keyboard
   if ((!isMobile && !forceShow) || !open) return null;
@@ -157,28 +177,7 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
             </span>
           </div>
           <div className="grid grid-cols-4 gap-3 bg-gray-100 rounded-xl py-4 px-2 mb-1">
-            {KEYS.flat().map((key, i) => (
-              <button
-                key={i}
-                onClick={() => handleKey(key)}
-                className={`
-                  text-2xl py-2 rounded-lg transition active:bg-gray-300 w-full h-14
-                  ${key === "back" ? "bg-gray-200 hover:bg-gray-300 flex items-center justify-center" : ""}
-                  ${["+", "-", "×", "÷"].includes(key) ? "bg-gray-200 text-blue-600 font-semibold" : ""}
-                `}
-                type="button"
-              >
-                {key === "back" ? (
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17 9.5L14 12.5L17 15.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M14 12.5H9" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
-                    <path d="M21 12.5C21 16.9183 17.4183 20.5 13 20.5C8.58172 20.5 5 16.9183 5 12.5C5 8.08172 8.58172 4.5 13 4.5C17.4183 4.5 21 8.08172 21 12.5Z" stroke="#EF4444" strokeWidth="1.5"/>
-                  </svg>
-                ) : (
-                  key
-                )}
-              </button>
-            ))}
+            {keyGrid}
           </div>
           <Button
             className="w-full mt-1"
@@ -212,27 +211,7 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
         </div>
         {/* Keyboard grid */}
         <div className="grid grid-cols-4 gap-3 bg-gray-100 rounded-xl py-6 px-2 mb-3">
-          {KEYS.flat().map((key, i) => (
-            <button
-              key={i}
-              onClick={() => handleKey(key)}
-              className={`
-                text-2xl py-2 rounded-lg transition active:bg-gray-300 h-14
-                ${key === "back" ? "bg-gray-200 hover:bg-gray-300 flex items-center justify-center" : ""}
-                ${["+", "-", "×", "÷"].includes(key) ? "bg-gray-200 text-blue-600 font-semibold" : ""}
-              `}
-            >
-              {key === "back" ? (
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M17 9.5L14 12.5L17 15.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M14 12.5H9" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
-                  <path d="M21 12.5C21 16.9183 17.4183 20.5 13 20.5C8.58172 20.5 5 16.9183 5 12.5C5 8.08172 8.58172 4.5 13 4.5C17.4183 4.5 21 8.08172 21 12.5Z" stroke="#EF4444" strokeWidth="1.5"/>
-                </svg>
-              ) : (
-                key
-              )}
-            </button>
-          ))}
+          {keyGrid}
         </div>
         <Button
           className="w-full mt-2"
@@ -246,4 +225,7 @@ export const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
       </div>
     </div>
   );
-};
+});
+
+// Add display name for debugging
+NumericKeyboard.displayName = "NumericKeyboard";
