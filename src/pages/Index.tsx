@@ -682,8 +682,7 @@ const Index = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {wallets.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">{wallets.length === 0 ? (
                 <div className="col-span-full">
                   <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 text-center shadow-lg border border-white/30">
                     <div className="w-16 h-16 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
