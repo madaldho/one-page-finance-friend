@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -78,7 +78,7 @@ const formSchema = z.object({
   logoUrl: z.string().optional(),
 });
 
-export default function WalletForm() { 
+const WalletForm = memo(() => { 
   const { toast } = useToast();
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -785,4 +785,7 @@ export default function WalletForm() {
       </div>
     </Layout>
   );
-}
+});
+
+WalletForm.displayName = "WalletForm";
+export default WalletForm;

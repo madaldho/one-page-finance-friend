@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, CircleDollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +22,7 @@ interface AssetUpdateFormProps {
   asset: Asset;
 }
 
-export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
+export const AssetUpdateForm = memo(({ asset }: AssetUpdateFormProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -187,4 +187,6 @@ export function AssetUpdateForm({ asset }: AssetUpdateFormProps) {
       </Card>
     </div>
   );
-}
+});
+
+AssetUpdateForm.displayName = "AssetUpdateForm";

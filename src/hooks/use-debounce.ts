@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 
 /**
  * Hook untuk debounce value untuk mengurangi lag saat mengetik pada input
@@ -34,15 +34,15 @@ export function useThrottle<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number = 300
 ): (...args: Parameters<T>) => void {
-  const [lastCalled, setLastCalled] = useState(0);
-
-  return (...args: Parameters<T>) => {
+  const lastCalledRef = useRef(0);
+  
+  return useCallback((...args: Parameters<T>) => {
     const now = Date.now();
-    if (now - lastCalled >= delay) {
+    if (now - lastCalledRef.current >= delay) {
       callback(...args);
-      setLastCalled(now);
+      lastCalledRef.current = now;
     }
-  };
+  }, [callback, delay]); // Menggunakan useCallback untuk memoization yang lebih baik
 }
 
 /**
