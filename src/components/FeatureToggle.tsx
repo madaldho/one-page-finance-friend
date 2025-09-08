@@ -66,28 +66,24 @@ const FeatureToggle = ({
   
   // Handler untuk touch end event
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Jika navigate aktif (ada link dan feature aktif), JANGAN ganggu event default
+    if (canNavigate) return;
+
+    // Hanya preventDefault saat kita benar-benar akan menangani toggle sendiri
     e.preventDefault();
-    
-    // Jika tidak ada touchStartTime, ada kesalahan
+
     if (touchStartTime === null) return;
-    
-    // Hitung durasi sentuhan
+
     const touchDuration = Date.now() - touchStartTime;
-    
-    // Reset touch start time
     setTouchStartTime(null);
-    
-    // Jika sentuhan terlalu lama (> 300ms), jangan trigger toggle (mungkin pengguna scroll)
+
+    // Jika sentuhan terlalu lama (> 300ms), asumsi user scroll
     if (touchDuration > 300) return;
-    
-    // Biarkan event handler StatusBadge menanganinya jika target adalah toggle button
+
+    // Biarkan StatusBadge menangani jika target adalah tombol toggle
     const target = e.target as HTMLElement;
     if (target.closest('.status-badge')) return;
-    
-    // Jika manageLink aktif, biarkan navigasi berlangsung
-    if (canNavigate) return;
-    
-    // Jika tidak, aktifkan toggle
+
     if (!disabled && !loading) {
       onToggle();
     }
@@ -183,8 +179,8 @@ const FeatureToggle = ({
   return (
     <div 
       className={`border-b border-gray-100 ${canNavigate ? 'hover:bg-gray-50' : ''}`}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      // Pasang handler touch hanya saat TIDAK navigate, agar tap di iOS tidak diblok
+      {...(!canNavigate ? { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd } : {})}
     >
       {canNavigate ? (
         <Link to={managementLink!} className="block">

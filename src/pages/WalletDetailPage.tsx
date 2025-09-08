@@ -13,6 +13,8 @@ interface Wallet {
   name: string;
   balance: number;
   color?: string;
+  logo_url?: string; // URL logo yang di-upload (field yang benar dari database)
+  type?: 'cash' | 'bank' | 'savings' | string;
 }
 
 const WalletDetailPage = () => {
@@ -39,6 +41,7 @@ const WalletDetailPage = () => {
           return;
         }
 
+        console.log('Fetched wallets with logo data:', data); // Debug log
         setWallets(data || []);
       } catch (error) {
         console.error('Error in fetchWallets:', error);
@@ -67,7 +70,10 @@ const WalletDetailPage = () => {
     value: wallet.balance,
     color: wallet.color || '#6366F1', // Default color jika tidak ada
     percentage: (wallet.balance / (totalBalance || 1)) * 100,
+    icon: wallet.logo_url, // Tambahkan logo untuk grafik
   }));
+
+  console.log('Chart data with logos:', walletChartData); // Debug log
 
   // Tampilan loading
   const renderLoading = () => (
@@ -174,17 +180,29 @@ const WalletDetailPage = () => {
                 {wallets.map((wallet) => (
                   <div 
                     key={wallet.id} 
-                    className="p-4 hover:bg-gray-50 transition-colors"
+                    className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/wallets/${wallet.id}`)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <div 
-                          className="w-10 h-10 rounded-full flex items-center justify-center mr-3"
+                          className="w-10 h-10 rounded-full flex items-center justify-center mr-3 overflow-hidden"
                           style={{ backgroundColor: wallet.color ? `${wallet.color}15` : '#6366F115' }}
                         >
+                          {wallet.logo_url ? (
+                            <img 
+                              src={wallet.logo_url} 
+                              alt={wallet.name}
+                              className="w-full h-full object-cover rounded-full"
+                              onError={(e) => {
+                                // Jika gambar gagal dimuat, tampilkan icon default
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                          ) : null}
                           <Wallet 
-                            className="w-5 h-5" 
+                            className={`w-5 h-5 ${wallet.logo_url ? 'hidden' : ''}`}
                             style={{ color: wallet.color || '#6366F1' }} 
                           />
                         </div>

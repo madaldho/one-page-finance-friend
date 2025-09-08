@@ -158,111 +158,149 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32">
-        <h1 className="text-xl font-bold mb-6">Profil Saya</h1>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative">
+        {/* Static Beautiful Background Pattern */}
+        <div className="absolute inset-0 opacity-40">
+          <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-xl"></div>
+          <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-xl"></div>
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-xl"></div>
+          <div className="absolute -bottom-32 -right-32 w-72 h-72 bg-gradient-to-br from-pink-300 to-rose-400 rounded-full mix-blend-multiply filter blur-xl"></div>
+        </div>
         
-        <Card className="bg-white rounded-lg shadow">
-          <CardHeader>
-            <CardTitle>Informasi Akun</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center mb-6">
-              <div className="relative mb-4">
-                {avatar ? (
-                  <img 
-                    src={avatar} 
-                    alt="Avatar" 
-                    className="w-24 h-24 rounded-full object-cover border-2 border-primary"
-                    onError={(e) => {
-                      console.log("Gambar avatar gagal dimuat");
-                      // Tampilkan avatar default
-                      setAvatar("");
-                    }}
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="w-8 h-8 text-gray-400" />
-                  </div>
-                )}
-                <label className="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer hover:bg-primary/90 transition-colors">
-                  {uploading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+        <div className="container mx-auto px-4 py-6 pb-32 max-w-2xl relative z-10">
+          {/* Clean Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-1">Profil Saya</h1>
+            <p className="text-gray-600">Kelola informasi akun dan pengaturan pribadi Anda</p>
+          </div>
+        
+          {/* Main Profile Card */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden mb-6">
+            {/* Header Section */}
+            <div className="px-6 py-6 border-b border-gray-100">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  {avatar ? (
+                    <img 
+                      src={avatar} 
+                      alt="Avatar" 
+                      className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 shadow-md"
+                      onError={(e) => {
+                        console.log("Gambar avatar gagal dimuat");
+                        setAvatar("");
+                      }}
+                    />
                   ) : (
-                    <Camera className="w-4 h-4" />
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center border-2 border-gray-200 shadow-md">
+                      <User className="w-7 h-7 text-white" />
+                    </div>
                   )}
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={uploadAvatar}
-                    disabled={uploading}
-                  />
-                </label>
+                  <label className="absolute -bottom-1 -right-1 bg-indigo-500 text-white p-1.5 rounded-full cursor-pointer hover:bg-indigo-600 transition-colors shadow-md">
+                    {uploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={uploadAvatar}
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {form.watch("name") || "Pengguna Baru"}
+                  </h2>
+                  <p className="text-gray-600 text-sm">{user?.email}</p>
+                  {uploading && (
+                    <p className="text-sm text-indigo-600 mt-1 flex items-center gap-2">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Sedang Mengunggah...
+                    </p>
+                  )}
+                </div>
               </div>
-              {uploading && <p className="text-sm text-gray-500">Sedang Mengunggah...</p>}
             </div>
             
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nama</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Masukkan nama kamu"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div>
-                  <FormLabel htmlFor="email">Email</FormLabel>
-                  <Input
-                    id="email"
-                    value={user?.email || ""}
-                    disabled
-                    className="bg-gray-50"
+            {/* Form Section */}
+            <div className="p-6 space-y-6">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-gray-700 font-medium">Nama Lengkap</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Masukkan nama lengkap Anda"
+                            className="border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 rounded-lg h-11 bg-white"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Email tidak dapat diubah</p>
-                </div>
-                
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Menyimpan...
-                    </>
-                  ) : (
-                    "Simpan Profil"
-                  )}
-                </Button>
-              </form>
-            </Form>
-
-            {/* Tambahkan link ke halaman reset password */}
-            <div className="border-t mt-6 pt-4">
+                  
+                  <div>
+                    <FormLabel className="text-gray-700 font-medium">Email</FormLabel>
+                    <Input
+                      value={user?.email || ""}
+                      disabled
+                      className="bg-gray-50 border-gray-200 rounded-lg h-11 mt-2"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Email tidak dapat diubah
+                    </p>
+                  </div>
+                  
+                  <Button
+                    type="submit"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white border-0 rounded-lg h-11 font-medium transition-colors"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Menyimpan...
+                      </>
+                    ) : (
+                      "Simpan Perubahan"
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </div>
+          </div>
+          
+          {/* Security Section */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <LockKeyhole className="w-5 h-5 text-orange-600" />
+                Keamanan Akun
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">Kelola password dan keamanan akun</p>
+            </div>
+            
+            <div className="p-6">
               <Link 
                 to="/reset-password" 
-                className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-md transition-colors"
+                className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-xl transition-colors group"
               >
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-50 rounded-md mr-3">
-                    <LockKeyhole className="h-5 w-5 text-blue-600" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <LockKeyhole className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium">
+                    <h4 className="font-medium text-gray-900">
                       {isGoogleAccount ? 'Atur Password Akun' : 'Ubah Password'}
-                    </h3>
+                    </h4>
                     <p className="text-sm text-gray-500">
                       {isGoogleAccount 
                         ? 'Tambahkan password untuk akun Google Anda' 
@@ -270,11 +308,11 @@ const Profile = () => {
                     </p>
                   </div>
                 </div>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
+                <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
               </Link>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </Layout>
   );

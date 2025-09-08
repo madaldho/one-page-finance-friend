@@ -12,6 +12,7 @@ interface WalletTransactionsChartProps {
     value: number;
     color?: string;
     percentage: number;
+    icon?: string; // URL icon yang di-upload
   }>;
 }
 
@@ -38,6 +39,7 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
       saldo: wallet.value,
       color: wallet.color || `hsl(${wallet.name.charCodeAt(0) % 360}, 70%, 50%)`,
       percentage: wallet.percentage,
+      logo_url: wallet.icon, // Gunakan logo_url yang konsisten
     }))
     .sort((a, b) => b.saldo - a.saldo);
 
@@ -111,7 +113,22 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
                         return (
                           <div className="bg-white p-3 rounded-md shadow-md border border-gray-100 text-xs">
                             <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }}></div>
+                              <div className="w-4 h-4 rounded-full flex items-center justify-center overflow-hidden" 
+                                   style={{ backgroundColor: data.color ? `${data.color}20` : '#6366F120' }}>
+                                {data.logo_url ? (
+                                  <img 
+                                    src={data.logo_url} 
+                                    alt={data.name}
+                                    className="w-full h-full object-cover rounded-full"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                    }}
+                                  />
+                                ) : null}
+                                <div className={`w-2 h-2 rounded-full ${data.logo_url ? 'hidden' : ''}`} 
+                                     style={{ backgroundColor: data.color }}></div>
+                              </div>
                               <p className="font-medium">{data.name}</p>
                             </div>
                             <p className="font-medium mt-1">{formatCurrency(data.saldo)} ({data.percentage.toFixed(1)}%)</p>
@@ -172,7 +189,23 @@ export function WalletTransactionsChart({ walletChartData }: WalletTransactionsC
                       <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="px-2 py-2 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="w-2 h-2 rounded-full mr-2" style={{ backgroundColor: wallet.color }}></div>
+                            <div className="w-6 h-6 rounded-full mr-2 flex items-center justify-center overflow-hidden" 
+                                 style={{ backgroundColor: wallet.color ? `${wallet.color}20` : '#6366F120' }}>
+                              {wallet.logo_url ? (
+                                <img 
+                                  src={wallet.logo_url} 
+                                  alt={wallet.name}
+                                  className="w-full h-full object-cover rounded-full"
+                                  onError={(e) => {
+                                    // Jika gambar gagal dimuat, tampilkan dot warna
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                              ) : null}
+                              <div className={`w-2 h-2 rounded-full ${wallet.logo_url ? 'hidden' : ''}`} 
+                                   style={{ backgroundColor: wallet.color }}></div>
+                            </div>
                             <div className="text-sm text-gray-700">{wallet.name}</div>
                           </div>
                         </td>

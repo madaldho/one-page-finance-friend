@@ -39,7 +39,7 @@ import {
 import { Transaction, Wallet, Budget, Loan, Saving, Category } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link, useLocation } from "react-router-dom";
-import Header from "@/components/Header";
+import Header from "@/components/HeaderNew";
 import Layout from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -615,63 +615,89 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gray-50">
-        <main className="container mx-auto px-4 pb-32 pt-2">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+        {/* Animated Background Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 animate-gradient-x"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/40 to-transparent"></div>
+        
+        <main className="container mx-auto px-4 pb-32 pt-2 relative z-10">
           <Header />
           <TutorialNotification />
+          
+          {/* Hero Balance Section */}
+          {wallets.length > 0 && (
+            <section className="mb-8">
+              <div 
+                onClick={handleTotalBalanceClick}
+                className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 shadow-2xl cursor-pointer hover:shadow-3xl transition-all duration-300 group"
+              >
+                <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400/30 to-pink-400/30 rounded-full -translate-y-16 translate-x-16 animate-pulse"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-400/30 to-cyan-400/30 rounded-full translate-y-12 -translate-x-12 animate-pulse"></div>
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                        <CircleDollarSign className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-white/90 text-sm font-medium">Total Saldo</p>
+                        <p className="text-white/70 text-xs">{wallets.length} Dompet Aktif</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-white/60 group-hover:text-white/90 transition-colors" />
+                  </div>
+                  
+                  <div className="text-white">
+                    <p className="text-3xl font-bold tracking-tight">
+                      {formatCurrency(
+                        wallets.reduce((total, wallet) => total + wallet.balance, 0)
+                      )}
+                    </p>
+                    <p className="text-white/80 text-sm mt-1">Dalam {wallets.length} dompet berbeda</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* Wallet Section */}
-          <section className="mb-5">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-1.5">
-                <CircleDollarSign className="w-4 h-4 text-gray-500" />
-                <h2 className="text-base font-medium text-gray-700">
+          <section className="mb-8">
+            <div className="flex justify-between items-center mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+                  <WalletIcon className="w-4 h-4 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">
                   Dompet & Rekening
                 </h2>
               </div>
               <Button
                 size="sm"
-                variant="ghost"
                 onClick={handleAddWallet}
-                className="h-8 px-3 text-xs font-medium hover:bg-gray-100 text-gray-700">
-                <Plus className="w-3.5 h-3.5 mr-1" />
+                className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white border-0 rounded-xl px-4 py-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200">
+                <Plus className="w-4 h-4 mr-1" />
                 Tambah
               </Button>
             </div>
 
-            {/* Total Balance - Minimalist Strip */}
-            {wallets.length > 0 && (
-              <div 
-                onClick={handleTotalBalanceClick}
-                className="flex items-center justify-between mb-3 px-3 py-2 bg-gradient-to-r from-gray-50 to-gray-100 rounded-md border border-gray-200 shadow-sm cursor-pointer hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <CircleDollarSign className="h-4 w-4 text-gray-500" />
-                  <span className="text-xs font-medium text-gray-500">
-                    Total Saldo
-                  </span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="font-semibold text-gray-800">
-                    {formatCurrency(
-                      wallets.reduce((total, wallet) => total + wallet.balance, 0)
-                    )}
-                  </div>
-                  <ChevronRight className="h-4 w-4 text-gray-400" />
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {wallets.length === 0 ? (
-                <Card className="col-span-full flex flex-col items-center justify-center py-8 text-center">
-                  <WalletIcon className="w-8 h-8 text-gray-400 mb-2" />
-                  <p className="text-gray-500 mb-2">Belum ada dompet</p>
-                  <Button
-                    onClick={handleAddWallet}
-                    className="bg-gray-800 text-white hover:bg-gray-800 transition-colors">
-                    <Plus className="w-4 h-4 mr-2" /> Tambah Dompet
-                  </Button>
-                </Card>
+                <div className="col-span-full">
+                  <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 text-center shadow-lg border border-white/30">
+                    <div className="w-16 h-16 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <WalletIcon className="w-8 h-8 text-indigo-500" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum ada dompet</h3>
+                    <p className="text-gray-500 mb-4">Mulai dengan menambahkan dompet pertama Anda</p>
+                    <Button
+                      onClick={handleAddWallet}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white border-0 rounded-xl px-6 py-2 font-medium shadow-lg hover:shadow-xl transition-all duration-200">
+                      <Plus className="w-4 h-4 mr-2" /> Tambah Dompet Pertama
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <>
                   {wallets.map((wallet) => (
@@ -713,256 +739,283 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Budget Card Section */}
-          {settings.show_budgeting && (
-            <section className="mb-5">
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b p-4 flex flex-row items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center mr-2">
-                      <span className="text-xs text-green-700 font-bold">
-                        A
-                      </span>
+          {/* Financial Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {/* Budget Card Section */}
+            {settings.show_budgeting && (
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-4">
+                  <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <span className="text-lg font-bold">A</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">Anggaran</h3>
+                        <p className="text-white/80 text-sm">Kelola pengeluaran</p>
+                      </div>
                     </div>
-                    <CardTitle className="text-base font-medium text-green-800">
-                      Anggaran{" "}
-                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20 p-2 rounded-lg"
+                      onClick={() => navigate("/budgets")}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-green-600 hover:text-green-700 p-0 flex items-center"
-                    onClick={() => navigate("/budgets")}>
-                    Kelola <ChevronRight className="h-3 w-3 ml-1" />
-                  </Button>
-                </CardHeader>
-                <CardContent className="p-0">
+                </div>
+                <div className="p-4">
                   {budgets && budgets.length > 0 ? (
                     <BudgetCard budgets={budgets.slice(0, 2)} />
                   ) : (
-                    <div className="text-center py-6">
-                      <p className="text-gray-500 mb-2">Belum ada anggaran</p>
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 mb-3">Belum ada anggaran</p>
                       <Button
                         variant="outline"
                         size="sm"
+                        className="rounded-lg border-green-200 text-green-600 hover:bg-green-50"
                         onClick={() => navigate("/budgets")}>
                         <Plus className="w-4 h-4 mr-1" /> Tambah Anggaran
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </section>
-          )}
+                </div>
+              </div>
+            )}
 
-          {/* Savings Card Section */}
-          {settings.show_savings && (
-            <section className="mb-5">
-              <Card>
-                <CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 border-b p-4 flex flex-row items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center mr-2">
-                      <PiggyBank className="h-3 w-3 text-amber-700" />
-                    </div>
-                    <CardTitle className="text-base font-medium text-amber-800">
-                      Target Tabungan
-                    </CardTitle>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-amber-600 hover:text-amber-700 p-0 flex items-center"
-                    onClick={() => navigate("/savings")}>
-                    Kelola <ChevronRight className="h-3 w-3 ml-1" />
-                  </Button>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {savings && savings.length > 0 ? (
-                    <SavingsCard savings={savings} />
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-gray-500 mb-2">Belum ada tabungan</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate("/savings")}>
-                        <Plus className="w-4 h-4 mr-1" /> Tambah Tabungan
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </section>
-          )}
-
-          {/* Loans Card Section */}
-          {settings.show_loans && (
-            <section className="mb-5">
-              {loans && loans.length > 0 ? (
-                <LoansCard
-                  loans={loans}
-                  loading={isLoading}
-                  onViewAll={() => navigate("/loans")}
-                />
-              ) : (
-                <Card>
-                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b p-4 flex flex-row items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                        <span className="text-xs text-blue-700 font-bold">
-                          H
-                        </span>
+            {/* Savings Card Section */}
+            {settings.show_savings && (
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div className="bg-gradient-to-r from-amber-500 to-yellow-500 p-4">
+                  <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <PiggyBank className="h-5 w-5" />
                       </div>
-                      <CardTitle className="text-base font-medium text-blue-800">
-                        Hutang & Piutang
-                      </CardTitle>
+                      <div>
+                        <h3 className="font-semibold text-lg">Tabungan</h3>
+                        <p className="text-white/80 text-sm">Target & progres</p>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-blue-600 hover:text-blue-700 p-0 flex items-center"
-                      onClick={() => navigate("/loans")}>
-                      Kelola <ChevronRight className="h-3 w-3 ml-1" />
+                      className="text-white hover:bg-white/20 p-2 rounded-lg"
+                      onClick={() => navigate("/savings")}>
+                      <ChevronRight className="h-4 w-4" />
                     </Button>
-                  </CardHeader>
-                  <CardContent className="text-center py-6">
-                    <p className="text-gray-500 mb-2">
-                      Belum ada hutang atau piutang
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate("/loans")}>
-                      <Plus className="w-4 h-4 mr-1" /> Tambah Hutang/Piutang
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </section>
-          )}
-
-          {/* Transactions List Section menjadi Top Statistics Section */}
-          <section className="mb-20">
-            <Card>
-              <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b p-4 flex flex-row items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                    <span className="text-xs text-blue-700 font-bold">S</span>
                   </div>
-                  <CardTitle className="text-base font-medium text-gray-800">
-                    Statistik Teratas
-                  </CardTitle>
                 </div>
-                <Select
-                  defaultValue="expenses"
-                  onValueChange={(value) => loadTopStatistics(value)}
-                >
-                  <SelectTrigger className="w-[180px] h-8 text-xs">
-                    <SelectValue placeholder="Pilih statistik" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expenses">Pengeluaran Terbesar</SelectItem>
-                    <SelectItem value="income">Pemasukan Terbesar</SelectItem>
-                    <SelectItem value="wallets">Dompet Paling Sering Digunakan</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardHeader>
-              <CardContent className="p-4">
+                <div className="p-4">
+                  {savings && savings.length > 0 ? (
+                    <SavingsCard savings={savings} />
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 mb-3">Belum ada target tabungan</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg border-amber-200 text-amber-600 hover:bg-amber-50"
+                        onClick={() => navigate("/savings")}>
+                        <Plus className="w-4 h-4 mr-1" /> Tambah Target
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Loans Card Section */}
+            {settings.show_loans && (
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-4">
+                  <div className="flex items-center justify-between text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <span className="text-lg font-bold">H</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">Hutang & Piutang</h3>
+                        <p className="text-white/80 text-sm">Kelola kewajiban</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20 p-2 rounded-lg"
+                      onClick={() => navigate("/loans")}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  {loans && loans.length > 0 ? (
+                    <LoansCard
+                      loans={loans}
+                      loading={isLoading}
+                      onViewAll={() => navigate("/loans")}
+                    />
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 mb-3">Belum ada hutang atau piutang</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg border-blue-200 text-blue-600 hover:bg-blue-50"
+                        onClick={() => navigate("/loans")}>
+                        <Plus className="w-4 h-4 mr-1" /> Tambah Data
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Statistics Section */}
+          <section className="mb-20">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-900 to-gray-700 p-6">
+                <div className="flex items-center justify-between text-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                      <BarChart2 className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Statistik Teratas</h3>
+                      <p className="text-white/80 text-sm">Analisis aktivitas keuangan Anda</p>
+                    </div>
+                  </div>
+                  <Select
+                    defaultValue="expenses"
+                    onValueChange={(value) => loadTopStatistics(value)}
+                  >
+                    <SelectTrigger className="w-[200px] h-10 bg-white/10 border-white/20 text-white rounded-lg">
+                      <SelectValue placeholder="Pilih statistik" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="expenses">Pengeluaran Terbesar</SelectItem>
+                      <SelectItem value="income">Pemasukan Terbesar</SelectItem>
+                      <SelectItem value="wallets">Dompet Paling Sering</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="p-6">
                 {isLoadingStats ? (
-                  <div className="flex justify-center items-center h-32">
-                    <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                  <div className="flex justify-center items-center h-40">
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                      <p className="text-gray-500">Memuat statistik...</p>
+                    </div>
                   </div>
                 ) : currentStats.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Tidak ada data statistik yang tersedia</p>
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <BarChart2 className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Data</h3>
+                    <p className="text-gray-500">Statistik akan muncul setelah Anda melakukan transaksi</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3 flex items-center">
-                      {currentStatType === "expenses" && <ArrowUpRight className="w-4 h-4 mr-1.5 text-red-500" />}
-                      {currentStatType === "income" && <ArrowDownRight className="w-4 h-4 mr-1.5 text-green-500" />}
-                      {currentStatType === "wallets" && <WalletIcon className="w-4 h-4 mr-1.5 text-blue-500" />}
-                      {currentStatType === "expenses" && "5 Pengeluaran Terbesar"}
-                      {currentStatType === "income" && "5 Pemasukan Terbesar"}
-                      {currentStatType === "wallets" && "5 Dompet Paling Sering Digunakan"}
-                    </h3>
-                    {currentStats.map((item, index) => (
-                      <div 
-                        key={index} 
-                        className={`flex items-center justify-between p-3.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors`}
-                      >
-                        <div className="flex items-center w-3/4">
-                          <div 
-                            className={`w-11 h-11 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-sm`}
-                            style={{ 
-                              background: `linear-gradient(to right, ${getStatItemColor(item, currentStatType)}, ${getStatItemColor(item, currentStatType)}dd)`,
-                              color: 'white'
-                            }}
-                          >
-                            {getStatItemIcon(item, currentStatType)}
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-6">
+                      {currentStatType === "expenses" && <ArrowUpRight className="w-5 h-5 text-red-500" />}
+                      {currentStatType === "income" && <ArrowDownRight className="w-5 h-5 text-green-500" />}
+                      {currentStatType === "wallets" && <WalletIcon className="w-5 h-5 text-blue-500" />}
+                      <h4 className="text-lg font-semibold text-gray-800">
+                        {currentStatType === "expenses" && "5 Pengeluaran Terbesar"}
+                        {currentStatType === "income" && "5 Pemasukan Terbesar"}
+                        {currentStatType === "wallets" && "5 Dompet Paling Sering Digunakan"}
+                      </h4>
+                    </div>
+                    
+                    <div className="grid gap-3">
+                      {currentStats.map((item, index) => (
+                        <div 
+                          key={index} 
+                          className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-all duration-200 group"
+                        >
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className="relative">
+                              <div 
+                                className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform"
+                                style={{ 
+                                  background: `linear-gradient(135deg, ${getStatItemColor(item, currentStatType)}, ${getStatItemColor(item, currentStatType)}cc)`,
+                                  color: 'white'
+                                }}
+                              >
+                                {getStatItemIcon(item, currentStatType)}
+                              </div>
+                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                {index + 1}
+                              </div>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-gray-900 truncate text-lg">
+                                {item.name || item.title || item.category || "Tidak ada nama"}
+                              </p>
+                              {item.date && (
+                                <p className="text-sm text-gray-500 mt-1">{formatDate(item.date)}</p>
+                              )}
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className={`font-medium text-gray-800 truncate`}>
-                              {item.name || item.title || item.category || "Tidak ada nama"}
+                          
+                          <div className="text-right">
+                            <p className={cn(
+                              "font-bold text-lg whitespace-nowrap",
+                              currentStatType === 'expenses' ? "text-red-600" : 
+                              currentStatType === 'income' ? "text-green-600" :
+                              currentStatType === 'wallets' ? "text-blue-600" : "text-gray-900"
+                            )}>
+                              {item.amount 
+                                ? formatCurrency(item.amount) 
+                                : <>
+                                    <span>{item.count || 0}</span>
+                                    <span className="text-sm text-gray-500 ml-1">transaksi</span>
+                                  </>
+                              }
                             </p>
-                            {item.date && (
-                              <p className="text-xs text-gray-500 mt-0.5">{formatDate(item.date)}</p>
+                            {item.percentage && (
+                              <p className="text-sm text-gray-500 mt-1">{item.percentage}% dari total</p>
                             )}
                           </div>
                         </div>
-                        <div className="text-right w-1/4 flex-shrink-0">
-                          <p className={cn(
-                            "font-semibold text-sm sm:text-base whitespace-nowrap",
-                            currentStatType === 'expenses' ? "text-red-600" : 
-                            currentStatType === 'income' ? "text-green-600" :
-                            currentStatType === 'wallets' ? "text-blue-600" : "text-gray-900"
-                          )}>
-                            {item.amount 
-                              ? formatCurrency(item.amount) 
-                              : <>
-                                  <span className={`font-bold`}>
-                                    {item.count || 0}
-                                  </span>
-                                  <span className="text-xs text-gray-500 ml-1">transaksi</span>
-                                </>
-                            }
-                          </p>
-                          {item.percentage && (
-                            <p className="text-xs text-gray-500 mt-0.5">{item.percentage}% dari total</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </section>
         </main>
 
-        {/* Fixed Action Buttons at Bottom */}
+        {/* Modern Floating Action Buttons */}
         <div className="fixed bottom-20 left-0 right-0 flex justify-center z-50 px-4">
-          <div className="flex gap-2 p-2 bg-white rounded-full shadow-lg max-w-md w-full justify-between">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-3 flex gap-3 border border-white/20">
             <Button
-              className="bg-green-500 hover:bg-green-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
+              className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
               onClick={() => navigate("/transaction/income")}
               aria-label="Tambah Pemasukan">
-              <Plus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline ml-1">Pemasukan</span>
+              <Plus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Pemasukan</span>
             </Button>
+            
             <Button
-              className="bg-red-500 hover:bg-red-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
+              className="bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
               onClick={() => navigate("/transaction/expense")}
               aria-label="Tambah Pengeluaran">
-              <Minus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline ml-1">Pengeluaran</span>
+              <Minus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Pengeluaran</span>
             </Button>
+            
             <Button
-              className="bg-blue-500 hover:bg-blue-600 px-3 sm:px-4 rounded-full text-sm h-10 flex-1"
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
               onClick={() => navigate("/transaction/transfer")}
               aria-label="Tambah Transfer">
-              <ArrowRight className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline ml-1">Transfer</span>
+              <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Transfer</span>
             </Button>
           </div>
         </div>
