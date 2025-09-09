@@ -206,19 +206,21 @@ export function CategoryForm() {
         result = updatedData;
       } else {
         // Buat data baru secara eksplisit tanpa property yang tidak dibutuhkan
-        const newCategoryData = {
+        const newCategoryData: Database['public']['Tables']['categories']['Insert'] = {
           name: values.name,
           type: values.type,
           color: values.color,
           icon: values.icon,
           user_id: userId,
+          // Tidak perlu sort_order karena sudah ada DEFAULT 0 di database
         };
 
         console.log('Data to insert:', newCategoryData);
+        console.log('User ID:', userId);
 
         const { data: newData, error } = await supabase
           .from('categories')
-          .insert(newCategoryData)
+          .insert([newCategoryData])
           .select('*')
           .single();
         
