@@ -192,82 +192,87 @@ const Categories = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-24 max-w-3xl">
-        {/* Header */}
-        <header className="sticky top-0 z-10  pt-2 pb-4">
-          <div className="flex items-center mb-4">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-9 w-9 rounded-full mr-2" 
-              onClick={() => navigate("/settings")}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl font-bold">Kategori</h1>
-            
-            <div className="ml-auto flex items-center gap-2">
-              {showSearch ? (
-                <div className="relative flex-1 w-full animation-fade-in">
-                  <Input
-                    placeholder="Cari kategori..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-3 pr-8 h-9 w-full rounded-full border-gray-200 focus:border-primary"
-                    autoFocus
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 rounded-full"
-                    onClick={() => {
-                      setSearchQuery('');
-                      setShowSearch(false);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-          </div>
-              ) : (
-                <>
-            <Button 
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-3xl">
+        {/* Header dengan glassmorphism effect */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+          <div className="flex items-center justify-between gap-2">
+            {showSearch ? (
+              <div className="relative w-full animation-fade-in">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Cari kategori..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-8 h-10 w-full rounded-full border-gray-200 focus:border-primary"
+                  autoFocus
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 rounded-full"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setShowSearch(false);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-9 w-9 rounded-full" 
+                    className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl border border-white/30 flex-shrink-0"
+                    onClick={() => navigate("/settings")}
+                    aria-label="Kembali"
+                  >
+                    <ChevronLeft className="h-5 w-5 text-gray-700" />
+                  </Button>
+                  <div className="min-w-0">
+                    <h1 className="text-lg font-bold text-gray-800 truncate">Kategori</h1>
+                    <p className="text-xs text-gray-500 truncate">Kelola kategori transaksi</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-10 w-10 rounded-xl" 
                     onClick={() => setShowSearch(true)}
                   >
                     <Search className="h-5 w-5" />
-            </Button>
+                  </Button>
                   
-            <Button 
-              size="sm"
-                    className="h-9 rounded-full px-4"
+                  <Button 
+                    size="sm"
+                    className="h-10 rounded-xl px-3"
                     onClick={handleAddCategory}
                   >
-                    <Plus className="w-4 h-4 mr-1" />
-              Tambah
-            </Button>
-                </>
-              )}
+                    <Plus className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Tambah</span>
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-          {/* Tabs Filter */}
+        {/* Tabs Filter */}
         <Tabs 
           defaultValue="all" 
           value={selectedType}
           onValueChange={(value) => setSelectedType(value as 'all' | 'income' | 'expense')}
-            className="w-full"
-          >
-            <TabsList className="grid w-full grid-cols-3 h-9 rounded-full p-0.5">
-              <TabsTrigger value="all" className="rounded-full text-xs h-8">Semua</TabsTrigger>
-              <TabsTrigger value="income" className="rounded-full text-xs h-8">Pemasukan</TabsTrigger>
-              <TabsTrigger value="expense" className="rounded-full text-xs h-8">Pengeluaran</TabsTrigger>
+          className="w-full mb-4"
+        >
+          <TabsList className="grid w-full grid-cols-3 h-9 rounded-full p-0.5">
+            <TabsTrigger value="all" className="rounded-full text-xs h-8">Semua</TabsTrigger>
+            <TabsTrigger value="income" className="rounded-full text-xs h-8">Pemasukan</TabsTrigger>
+            <TabsTrigger value="expense" className="rounded-full text-xs h-8">Pengeluaran</TabsTrigger>
           </TabsList>
-        </Tabs>
-        </header>
-
-        {/* Category List */}
+        </Tabs>        {/* Category List */}
         <main className="mt-4">
         {loading ? (
             <div className="space-y-2">

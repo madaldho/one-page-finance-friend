@@ -34,14 +34,14 @@ const AddDebtPage = () => {
       if (user) {
         const { data, error } = await supabase
           .from('wallets')
-          .select('*')
+          .select('id, name, color, balance, type, gradient, logo_url')
           .eq('user_id', user.id);
 
         if (error) {
           console.error("Error fetching wallets:", error);
           toast.error("Gagal memuat daftar wallet");
         } else if (data) {
-          setWallets(data);
+          setWallets(data as Wallet[]);
         }
       }
     };
@@ -193,12 +193,22 @@ const AddDebtPage = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32 max-w-md">
-        <div className="flex items-center mb-6">
-          <Link to="/loans" className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-xl font-bold">Tambah Hutang</h1>
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-md">
+        {/* Header dengan glassmorphism effect */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+          <div className="flex items-center gap-3">
+            <Link 
+              to="/loans"
+              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-700" />
+            </Link>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">Tambah Hutang</h1>
+              <p className="text-xs text-gray-500">Catat hutang yang harus dibayar</p>
+            </div>
+          </div>
         </div>
         
         <Card className="shadow-sm border-0">

@@ -1,3 +1,9 @@
 {
-  "appPort": 8080
+    "appPort": 8080,
+    "apiUrl": "http://localhost:8080/api",
+    "env": "development",
+    "featureFlags": {
+        "newUI": true,
+        "betaMode": false
+    }
 }

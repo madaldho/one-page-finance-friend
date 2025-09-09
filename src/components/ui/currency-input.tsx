@@ -1,8 +1,6 @@
 import React, { useState, useEffect, forwardRef, memo } from "react";
 import { Input } from "./input";
 import { formatNumberWithSeparator, parseFormattedNumber } from "@/lib/utils";
-import { NumericKeyboard } from "./NumericKeyboard";
-import { useMobileCurrencyInput } from "@/hooks/use-mobile-form-optimization";
 
 export interface CurrencyInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   value?: number;
@@ -23,11 +21,7 @@ const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
     error, 
     ...props 
   }, ref) => {
-    const [showKeyboard, setShowKeyboard] = useState(false);
     const [displayValue, setDisplayValue] = useState<string>("");
-    
-    // Gunakan optimized mobile hook untuk performa yang lebih baik
-    const { inputValue, updateValue, isMobile } = useMobileCurrencyInput(value, onChange);
 
     // Update display value when value changes from parent
     useEffect(() => {
@@ -36,16 +30,7 @@ const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
       }
     }, [value]);
 
-    const handleInputFocus = (e: React.FocusEvent<HTMLInputElement> | React.MouseEvent<HTMLInputElement, MouseEvent>) => {
-      if (isMobile) {
-        e.preventDefault();
-        setShowKeyboard(true);
-      }
-    };
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (isMobile) return; // Tidak perlu handle di mobile karena menggunakan NumericKeyboard
-      
       // Mengambil nilai dari input
       const inputStr = e.target.value;
       
@@ -58,12 +43,10 @@ const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
       // Format untuk tampilan dengan pemisah ribuan
       setDisplayValue(formatNumberWithSeparator(numericValue));
       
-      // Update state lokal menggunakan optimized hook
-      updateValue(numericValue);
-    };
-
-    const handleSetAmount = (val: number) => {
-      updateValue(val);
+      // Update parent component
+      if (onChange) {
+        onChange(numericValue);
+      }
     };
 
     return (
@@ -77,25 +60,11 @@ const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
           ref={ref}
           type="text"
           value={displayValue}
-          readOnly={isMobile} // hanya readonly untuk mobile
-          onFocus={handleInputFocus}
-          onClick={handleInputFocus}
-          onChange={handleInputChange} // tambahkan onChange handler untuk desktop
-          className={`${showPrefix ? 'pl-10' : ''} ${className || ''} ${isMobile ? "cursor-pointer" : ""}`}
+          onChange={handleInputChange}
+          className={`${showPrefix ? 'pl-10' : ''} ${className || ''}`}
           aria-invalid={!!error}
-          inputMode="numeric"
           {...props}
         />
-        {/* Show keyboard only on mobile/tablet */}
-        {isMobile && (
-          <NumericKeyboard
-            open={showKeyboard}
-            initialValue={value}
-            onClose={() => setShowKeyboard(false)}
-            onSubmit={handleSetAmount}
-            presentationMode="bottom-sheet"
-          />
-        )}
         {error && (
           <p className="text-sm text-red-500 mt-1">{error}</p>
         )}

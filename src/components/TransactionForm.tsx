@@ -203,7 +203,7 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
                             <div className="space-y-2">
                                 <Label htmlFor="amount" className="text-sm font-medium text-gray-700">Jumlah</Label>
                                 <Input
-                                    type="number"
+                                    type="text"
                                     id="amount"
                                     value={amount}
                                     onChange={(e) => setAmount(e.target.value)}
@@ -284,9 +284,9 @@ const TransactionForm = ({ transactionId, open, setOpen }: TransactionFormProps)
                                         id: cat.id,
                                         name: cat.name,
                                         user_id: '',
-                                        type: cat.type || 'expense',
-                                        icon: cat.icon || '',
-                                        color: cat.color || '#6B7280',
+                                        type: (cat as any).type || 'expense',
+                                        icon: (cat as any).icon || '',
+                                        color: (cat as any).color || '#6B7280',
                                         sort_order: 0,
                                         created_at: '',
                                         updated_at: ''

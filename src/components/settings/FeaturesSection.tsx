@@ -232,16 +232,20 @@ const FeaturesSection = ({
   // Loading state dipersingkat, hanya tampilkan spinner kecil
   if (loading) {
     return (
-      <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h2 className="font-semibold">Fitur</h2>
-          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-        </div>
-        <div className="p-4">
-          <div className="space-y-4">
-            {['budgeting', 'savings', 'loans'].map((feature, index) => (
-              <div key={index} className="h-14 bg-gray-100 rounded-lg animate-pulse"></div>
-            ))}
+      <section className="mb-8">
+        <div className="backdrop-blur-sm bg-white/80 rounded-xl shadow-sm border border-white/20 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100/50">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium text-gray-900">Fitur</h2>
+              <div className="animate-spin h-4 w-4 border-2 border-indigo-500 border-t-transparent rounded-full"></div>
+            </div>
+          </div>
+          <div className="p-5">
+            <div className="space-y-4">
+              {['budgeting', 'savings', 'loans'].map((feature, index) => (
+                <div key={index} className="h-14 bg-gray-100 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -249,45 +253,55 @@ const FeaturesSection = ({
   }
 
   return (
-    <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b border-gray-100">
-        <h2 className="font-semibold">Fitur</h2>
-        <div className="flex items-center">
-          <span className="text-xs text-gray-500 mr-2">Status:</span>
-          {renderStatusBadge()}
+    <section className="mb-8">
+      <div className="backdrop-blur-sm bg-white/80 rounded-xl shadow-sm border border-white/20 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-3 h-3 text-white" />
+              </div>
+              <h2 className="text-lg font-medium text-gray-900">Fitur</h2>
+            </div>
+            <div className="flex items-center">
+              <span className="text-xs text-gray-500 mr-2">Status:</span>
+              {renderStatusBadge()}
+            </div>
+          </div>
+          <p className="text-sm text-gray-500 mt-1">Kelola fitur yang tersedia di aplikasi</p>
         </div>
-      </div>
-      
-      <div className={isProUser ? '' : 'opacity-70'}>
-        <FeatureToggle
-          icon={<DollarSign className="w-4 h-4 text-blue-600" />}
-          title="Budgeting"
-          description="Atur dan pantau anggaran keuangan kamu"
-          checked={effectiveSettings.show_budgeting}
-          onToggle={() => handleToggleClick('show_budgeting')}
-          managementLink={isProUser || effectiveSettings.show_budgeting ? "/budgets" : undefined}
-          loading={toggleLoading.show_budgeting}
-          disabled={!isProUser && !effectiveSettings.show_budgeting}
-          extraElement={!isProUser && renderProBadge()}
-        />
-      </div>
-      
-      <div className={`border-b border-gray-100 ${isProUser ? '' : 'opacity-70'}`}>
-        <FeatureToggle
-          icon={<PiggyBank className="w-4 h-4 text-green-600" />}
-          title="Tabungan"
-          description="Atur target dan pantau tabungan kamu"
-          checked={effectiveSettings.show_savings}
-          onToggle={() => handleToggleClick('show_savings')}
-          managementLink={isProUser || effectiveSettings.show_savings ? "/savings" : undefined}
-          loading={toggleLoading.show_savings}
-          disabled={!isProUser && !effectiveSettings.show_savings}
-          extraElement={!isProUser && renderProBadge()}
-        />
-      </div>
-      
-      <div className={isProUser ? '' : 'opacity-70'}>
-        <FeatureToggle
+        
+        <div className="divide-y divide-gray-100/50">
+          <div className={isProUser ? '' : 'opacity-70'}>
+            <FeatureToggle
+              icon={<DollarSign className="w-4 h-4 text-blue-600" />}
+              title="Budgeting"
+              description="Atur dan pantau anggaran keuangan kamu"
+              checked={effectiveSettings.show_budgeting}
+              onToggle={() => handleToggleClick('show_budgeting')}
+              managementLink={isProUser || effectiveSettings.show_budgeting ? "/budgets" : undefined}
+              loading={toggleLoading.show_budgeting}
+              disabled={!isProUser && !effectiveSettings.show_budgeting}
+              extraElement={!isProUser && renderProBadge()}
+            />
+          </div>
+          
+          <div className={isProUser ? '' : 'opacity-70'}>
+            <FeatureToggle
+              icon={<PiggyBank className="w-4 h-4 text-green-600" />}
+              title="Tabungan"
+              description="Atur target dan pantau tabungan kamu"
+              checked={effectiveSettings.show_savings}
+              onToggle={() => handleToggleClick('show_savings')}
+              managementLink={isProUser || effectiveSettings.show_savings ? "/savings" : undefined}
+              loading={toggleLoading.show_savings}
+              disabled={!isProUser && !effectiveSettings.show_savings}
+              extraElement={!isProUser && renderProBadge()}
+            />
+          </div>
+          
+          <div className={isProUser ? '' : 'opacity-70'}>
+            <FeatureToggle
           icon={<CreditCard className="w-4 h-4 text-red-600" />}
           title="Hutang & Piutang"
           description="Kelola data hutang dan piutang"
@@ -330,6 +344,8 @@ const FeaturesSection = ({
           </div>
         </div>
       )}
+        </div>
+      </div>
     </section>
   );
 };

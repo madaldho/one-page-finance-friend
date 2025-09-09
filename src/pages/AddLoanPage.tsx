@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,8 @@ import { useEffect } from 'react';
 import { Wallet } from '@/types';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft } from 'lucide-react';
+import Layout from '@/components/Layout';
 
 const AddLoanPage = () => {
   const [formData, setFormData] = useState({
@@ -36,7 +38,7 @@ const AddLoanPage = () => {
         }
 
         if (data) {
-          setWallets(data);
+          setWallets(data as any);
         }
       }
     };
@@ -138,9 +140,30 @@ const AddLoanPage = () => {
   };
 
   return (
-    <div className="container mx-auto mt-10">
-      <h2 className="text-2xl font-bold mb-5">Add Receivable</h2>
-      <form onSubmit={handleSubmit} className="max-w-md">
+    <Layout>
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-md">
+        {/* Header dengan glassmorphism effect */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+          <div className="flex items-center gap-3">
+            <Link 
+              to="/loans"
+              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-700" />
+            </Link>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">Tambah Piutang</h1>
+              <p className="text-xs text-gray-500">Catat pinjaman yang diberikan</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/20"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7))',
+          }}
+        >
         <div className="mb-4">
           <Label htmlFor="description">Description</Label>
           <Input
@@ -156,7 +179,7 @@ const AddLoanPage = () => {
         <div className="mb-4">
           <Label htmlFor="amount">Amount</Label>
           <Input
-            type="number"
+            type="text"
             id="amount"
             name="amount"
             value={formData.amount}
@@ -215,7 +238,8 @@ const AddLoanPage = () => {
           </Button>
         </div>
       </form>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

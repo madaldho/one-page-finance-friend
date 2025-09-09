@@ -182,14 +182,16 @@ export function CategoryForm() {
         
         result = updatedData;
       } else {
+        const newCategoryData = {
+          id: generateUUID(),
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
         const { data: newData, error } = await supabase
           .from('categories')
-          .insert({
-            id: generateUUID(),
-            ...data,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .insert(newCategoryData)
           .select('*')
           .single();
         
@@ -244,19 +246,24 @@ export function CategoryForm() {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-24 max-w-lg">
-        <div className="flex items-center mb-6">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-9 w-9 rounded-full mr-2" 
-            onClick={() => navigate('/categories')}
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">
-            {isEditing ? 'Edit Kategori' : 'Tambah Kategori'}
-          </h1>
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-lg pt-6 md:pt-4">
+        {/* Header dengan glassmorphism effect */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+              onClick={() => navigate('/categories')}
+              aria-label="Kembali"
+            >
+              <ChevronLeft className="h-5 w-5 text-gray-700" />
+            </Button>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">{isEditing ? 'Edit Kategori' : 'Tambah Kategori'}</h1>
+              <p className="text-xs text-gray-500">Form kategori transaksi</p>
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -278,25 +285,24 @@ export function CategoryForm() {
         ) : (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: selectedColor }}>
-                <div className="flex items-center gap-4 mb-6">
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20">
+          <div className="flex items-center gap-4 mb-6">
             <div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-sm"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-sm"
               style={{ backgroundColor: selectedColor }}
             >
-                    <i className={`fas fa-${selectedIcon} text-lg`}></i>
+              <i className={`fas fa-${selectedIcon} text-lg`}></i>
             </div>
             <div className="flex-1">
-                    <h3 className="font-medium text-sm">
+              <h3 className="font-medium text-sm">
                 {form.watch('name') || 'Nama Kategori'}
               </h3>
-                    <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {selectedType === 'income' ? 'Pemasukan' : 'Pengeluaran'}
               </p>
             </div>
           </div>
-
-                <div className="space-y-4">
+          <div className="space-y-4">
             <FormField
               control={form.control}
               name="name"
@@ -347,7 +353,7 @@ export function CategoryForm() {
               )}
             />
           </div>
-        </Card>
+  </div>
 
         <Card className="p-4">
                 <h3 className="font-medium text-sm mb-4">Kustomisasi</h3>

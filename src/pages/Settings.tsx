@@ -326,42 +326,32 @@ const Settings = () => {
   
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative">
-        {/* Static Beautiful Background Pattern */}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+        {/* Background decoration */}
         <div className="absolute inset-0 opacity-30">
           <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
           <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
         
-        <div className="container mx-auto p-4 pb-32 max-w-2xl relative z-10">
-          {/* Header dengan tombol kembali */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate(-1)}
-                  className="p-2 hover:bg-white/70 rounded-lg"
-                >
-                  <ArrowLeft className="w-5 h-5 text-gray-600" />
-                </Button>
-                <h1 className="text-2xl font-bold text-gray-900">Pengaturan</h1>
-              </div>
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 md:pt-4">
+          {/* Header dengan glassmorphism effect */}
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+            <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  navigate("/");
-                }}
-                className="p-2 hover:bg-red-50 rounded-lg text-red-600 hover:text-red-700"
+                onClick={() => navigate(-1)}
+                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0"
+                aria-label="Kembali"
               >
-                <LogOut className="w-5 h-5" />
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
               </Button>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Pengaturan</h1>
+                <p className="text-xs text-gray-500">Kelola preferensi dan konfigurasi aplikasi</p>
+              </div>
             </div>
-            <p className="text-gray-600">Kelola preferensi dan konfigurasi aplikasi Anda</p>
           </div>
         
         <ProfileSection user={user} />
@@ -374,80 +364,80 @@ const Settings = () => {
         />
         
         <section className="mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl border border-white/30 overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-6 py-4 border-b border-white/30">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+          <div className="backdrop-blur-sm bg-white/80 rounded-xl shadow-sm border border-white/20 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100/50">
+              <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                <div className="w-5 h-5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
                   <Blocks className="w-3 h-3 text-white" />
                 </div>
                 Konfigurasi Sistem
               </h2>
-              <p className="text-sm text-gray-600 mt-1">Atur komponen dan fitur aplikasi</p>
+              <p className="text-sm text-gray-500 mt-1">Atur komponen dan fitur aplikasi</p>
             </div>
           
             <div className="divide-y divide-gray-100/50">
-              <div className="hover:bg-white/50 transition-all duration-200">
+              <div className="hover:bg-gray-50/50 transition-all duration-200">
                 <div 
-                  className="flex items-center justify-between p-6 cursor-pointer group"
+                  className="flex items-center justify-between p-5 cursor-pointer group"
                   onClick={() => navigate('/assets')}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <House className="w-6 h-6 text-purple-600" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                      <House className="w-4 h-4 text-purple-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Manajemen Aset</h3>
+                      <h3 className="font-medium text-gray-900 text-sm">Manajemen Aset</h3>
                       <p className="text-sm text-gray-500 mt-0.5">
                         Kelola aset dan pantau nilai kekayaan Anda
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center">
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
                   </div>
                 </div>
               </div>
 
-              <div className="hover:bg-white/50 transition-all duration-200">
+              <div className="hover:bg-gray-50/50 transition-all duration-200">
                 <div 
-                  className="flex items-center justify-between p-6 cursor-pointer group"
+                  className="flex items-center justify-between p-5 cursor-pointer group"
                   onClick={() => navigate('/categories')}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-blue-100 to-cyan-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Blocks className="w-6 h-6 text-blue-600" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-100 to-cyan-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                      <Blocks className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Kategori Transaksi</h3>
+                      <h3 className="font-medium text-gray-900 text-sm">Kategori Transaksi</h3>
                       <p className="text-sm text-gray-500 mt-0.5">
                         Kelola kategori untuk transaksi pemasukan dan pengeluaran
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center">
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
                   </div>
                 </div>
               </div>
 
-              <div className="hover:bg-white/50 transition-all duration-200">
+              <div className="hover:bg-gray-50/50 transition-all duration-200">
                 <div 
-                  className="flex items-center justify-between p-6 cursor-pointer group"
+                  className="flex items-center justify-between p-5 cursor-pointer group"
                   onClick={() => navigate('/trusted-devices')}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                      <Smartphone className="w-6 h-6 text-green-600" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                      <Smartphone className="w-4 h-4 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Perangkat Terpercaya</h3>
+                      <h3 className="font-medium text-gray-900 text-sm">Perangkat Terpercaya</h3>
                       <p className="text-sm text-gray-500 mt-0.5">
                         Kelola perangkat yang diingat untuk login otomatis
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center">
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
+                    <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
                   </div>
                 </div>
               </div>

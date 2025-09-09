@@ -90,7 +90,7 @@ const SavingsManagement = () => {
         .eq("user_id", user?.id);
 
       if (walletsError) throw walletsError;
-      setWallets(walletsData as Wallet[]);
+      setWallets(walletsData as any);
 
     } catch (error: any) {
       console.error("Error fetching savings data:", error.message);
@@ -591,7 +591,7 @@ const SavingsManagement = () => {
       if (error) throw error;
       
       if (data) {
-        setTransactions(data as SavingTransaction[]);
+        setTransactions(data as any);
       } else {
         setTransactions([]);
       }
@@ -617,13 +617,21 @@ const SavingsManagement = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32 max-w-xl">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center">
-            <Link to="/settings" className="mr-2">
-              <ArrowLeft className="h-5 w-5" />
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-xl pt-6 md:pt-4">
+        {/* Header dengan glassmorphism effect */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+          <div className="flex items-center gap-3">
+            <Link 
+              to="/settings"
+              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-700" />
             </Link>
-            <h1 className="text-xl font-bold">Tabungan/Celengan</h1>
+            <div>
+              <h1 className="text-lg font-bold text-gray-800">Tabungan/Celengan</h1>
+              <p className="text-xs text-gray-500">Atur target tabungan dan alokasi otomatis</p>
+            </div>
           </div>
         </div>
 
@@ -888,7 +896,7 @@ const SavingsManagement = () => {
               <div>
                 <label htmlFor="deposit-amount" className="block text-sm font-medium mb-1">Jumlah Setoran*</label>
                 <input 
-                  type="number"
+                  type="text"
                   id="deposit-amount"
                   placeholder="100000" 
                   className="w-full rounded-md border border-gray-300 p-2"

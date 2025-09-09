@@ -36,7 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
         {children}
       </div>
       
-      <nav className="fixed bottom-0 left-0 w-full backdrop-blur-xl border-t border-white/30 px-4 py-2 shadow-2xl z-[100]">
+  <nav className="fixed bottom-0 left-0 w-full backdrop-blur-xl border-t border-white/30 px-4 py-2 shadow-2xl z-40">
         <div className="max-w-md mx-auto">
           <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/50 p-2">
             <div className="flex items-center justify-between">

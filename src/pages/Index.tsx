@@ -461,30 +461,37 @@ const Index = () => {
 
       // Menggunakan if-else sebagai pengganti switch-case
       if (type === "expenses") {
-        // Ambil pengeluaran terbesar
+        // Ambil pengeluaran terbesar, kecuali kategori transfer/admin
         const { data, error } = await supabase
           .from("transactions")
           .select("*")
           .eq("user_id", user.id)
           .eq("type", "expense")
           .order("amount", { ascending: false })
-          .limit(5);
+          .limit(20); // ambil lebih banyak, filter di bawah
 
         if (error) throw error;
-        statsData = data || [];
+        // filter kategori
+        statsData = (data || []).filter(tx => {
+          const cat = (tx.category || "").toLowerCase();
+          return cat !== "transfer" && cat !== "admin";
+        }).slice(0, 5);
       } 
       else if (type === "income") {
-        // Ambil pemasukan terbesar
+        // Ambil pemasukan terbesar, kecuali kategori transfer/admin
         const { data, error } = await supabase
           .from("transactions")
           .select("*")
           .eq("user_id", user.id)
           .eq("type", "income")
           .order("amount", { ascending: false })
-          .limit(5);
+          .limit(20);
 
         if (error) throw error;
-        statsData = data || [];
+        statsData = (data || []).filter(tx => {
+          const cat = (tx.category || "").toLowerCase();
+          return cat !== "transfer" && cat !== "admin";
+        }).slice(0, 5);
       } 
       else if (type === "wallets") {
         // Hitung manual jumlah transaksi per dompet
@@ -619,11 +626,14 @@ const Index = () => {
         {/* Animated Background Gradients */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 animate-gradient-x"></div>
         <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/40 to-transparent"></div>
-        
+
         <main className="container mx-auto px-4 pb-32 pt-2 relative z-10">
           <Header />
           <TutorialNotification />
-          
+
+          {/* Modern Floating Action Buttons - tetap floating di bawah, z-index tinggi */}
+          {/* ...existing code... */}
+
           {/* Hero Balance Section */}
           {wallets.length > 0 && (
             <section className="mb-8">
@@ -931,57 +941,63 @@ const Index = () => {
                     </div>
                     
                     <div className="grid gap-3">
-                      {currentStats.map((item, index) => (
-                        <div 
-                          key={index} 
-                          className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-all duration-200 group"
-                        >
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className="relative">
-                              <div 
-                                className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform"
-                                style={{ 
-                                  background: `linear-gradient(135deg, ${getStatItemColor(item, currentStatType)}, ${getStatItemColor(item, currentStatType)}cc)`,
-                                  color: 'white'
-                                }}
-                              >
-                                {getStatItemIcon(item, currentStatType)}
+                      {currentStats.map((item, index) => {
+                        // Ambil data wallet
+                        const wallet = wallets.find(w => w.id === item.id || w.id === item.wallet_id);
+                        return (
+                          <div 
+                            key={index} 
+                            className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-all duration-200 group"
+                          >
+                            <div className="flex items-center gap-4 flex-1">
+                              {/* Logo dompet */}
+                              <div className="relative">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform"
+                                  style={{ 
+                                    background: currentStatType === 'wallets' && wallet?.color ? wallet.color : `linear-gradient(135deg, ${getStatItemColor(item, currentStatType)}, ${getStatItemColor(item, currentStatType)}cc)`, 
+                                    color: 'white' 
+                                  }}>
+                                  {wallet?.logo_url && currentStatType === 'wallets' ? (
+                                    <img src={wallet.logo_url} alt={wallet.name} className="w-8 h-8 object-contain rounded-lg" />
+                                  ) : (
+                                    getStatItemIcon(item, currentStatType)
+                                  )}
+                                </div>
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                  {index + 1}
+                                </div>
                               </div>
-                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                                {index + 1}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-gray-900 truncate text-lg">
+                                  {item.name || item.title || item.category || "Tidak ada nama"}
+                                </p>
+                                {item.date && (
+                                  <p className="text-sm text-gray-500 mt-1">{formatDate(item.date)}</p>
+                                )}
                               </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-gray-900 truncate text-lg">
-                                {item.name || item.title || item.category || "Tidak ada nama"}
+                            <div className="text-right">
+                              <p className={cn(
+                                "font-bold text-lg whitespace-nowrap",
+                                currentStatType === 'expenses' ? "text-red-600" : 
+                                currentStatType === 'income' ? "text-green-600" :
+                                currentStatType === 'wallets' ? "text-blue-600" : "text-gray-900"
+                              )}>
+                                {item.amount 
+                                  ? formatCurrency(item.amount) 
+                                  : <>
+                                      <span>{item.count || 0}</span>
+                                      <span className="text-sm text-gray-500 ml-1">transaksi</span>
+                                    </>
+                                }
                               </p>
-                              {item.date && (
-                                <p className="text-sm text-gray-500 mt-1">{formatDate(item.date)}</p>
+                              {item.percentage && (
+                                <p className="text-sm text-gray-500 mt-1">{item.percentage}% dari total</p>
                               )}
                             </div>
                           </div>
-                          
-                          <div className="text-right">
-                            <p className={cn(
-                              "font-bold text-lg whitespace-nowrap",
-                              currentStatType === 'expenses' ? "text-red-600" : 
-                              currentStatType === 'income' ? "text-green-600" :
-                              currentStatType === 'wallets' ? "text-blue-600" : "text-gray-900"
-                            )}>
-                              {item.amount 
-                                ? formatCurrency(item.amount) 
-                                : <>
-                                    <span>{item.count || 0}</span>
-                                    <span className="text-sm text-gray-500 ml-1">transaksi</span>
-                                  </>
-                              }
-                            </p>
-                            {item.percentage && (
-                              <p className="text-sm text-gray-500 mt-1">{item.percentage}% dari total</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -990,34 +1006,32 @@ const Index = () => {
           </section>
         </main>
 
-        {/* Modern Floating Action Buttons */}
-        <div className="fixed bottom-20 left-0 right-0 flex justify-center z-50 px-4">
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-3 flex gap-3 border border-white/20">
-            <Button
-              className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
-              onClick={() => navigate("/transaction/income")}
-              aria-label="Tambah Pemasukan">
-              <Plus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Pemasukan</span>
-            </Button>
-            
-            <Button
-              className="bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
-              onClick={() => navigate("/transaction/expense")}
-              aria-label="Tambah Pengeluaran">
-              <Minus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Pengeluaran</span>
-            </Button>
-            
-            <Button
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
-              onClick={() => navigate("/transaction/transfer")}
-              aria-label="Tambah Transfer">
-              <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Transfer</span>
-            </Button>
+          {/* Modern Floating Action Buttons - floating fixed di bawah, z-index lebih tinggi dari nav */}
+          <div className="fixed bottom-24 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none">
+            <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-3 flex gap-3 border border-white/20 pointer-events-auto">
+              <Button
+                className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
+                onClick={() => navigate("/transaction/income")}
+                aria-label="Tambah Pemasukan">
+                <Plus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Pemasukan</span>
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
+                onClick={() => navigate("/transaction/expense")}
+                aria-label="Tambah Pengeluaran">
+                <Minus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Pengeluaran</span>
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
+                onClick={() => navigate("/transaction/transfer")}
+                aria-label="Tambah Transfer">
+                <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Transfer</span>
+              </Button>
+            </div>
           </div>
-        </div>
       </div>
     </Layout>
   );

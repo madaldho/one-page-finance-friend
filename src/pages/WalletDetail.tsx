@@ -93,6 +93,7 @@ interface Wallet {
   color?: string;
   gradient?: string;
   icon?: string;
+  logo_url?: string; // URL logo yang di-upload
   user_id: string;
   created_at?: string;
   updated_at?: string;
@@ -700,84 +701,136 @@ const WalletDetail = () => {
         maxDailyCount={5}
         fallback={walletDetailFallback}
       >
-        <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigate(-1)}
-              className="rounded-full"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-            <h1 className="text-2xl font-semibold">Detail Dompet</h1>
-          </div>
-
-          {/* Wallet Card */}
-          <Card className="mb-6 p-6" style={getCardStyle()}>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">{wallet.name}</h2>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="text-white hover:bg-white/20"
-                      size="icon"
-                      aria-label="Menu dompet"
-                    >
-                      <MoreVertical className="h-5 w-5" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => navigate(`/wallet/edit/${wallet.id}`)}
-                      className="cursor-pointer"
-                    >
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit Dompet
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="cursor-pointer text-red-600 focus:text-red-600"
-                      disabled={wallet.is_default}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Hapus Dompet
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              <p className="text-sm opacity-90">
-                {wallet.type === "bank"
-                  ? "Rekening Bank"
-                  : wallet.type === "savings"
-                  ? "Tabungan"
-                  : "Uang Tunai"}
-              </p>
-              <div className="mt-4">
-                <p className="text-sm opacity-90">Saldo Saat Ini</p>
-                <p className="text-3xl font-bold">{formatCurrency(wallet.balance)}</p>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+          <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
+            {/* Header dengan glassmorphism effect */}
+            <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => navigate(-1)}
+                  className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+                  aria-label="Kembali"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-700" />
+                </button>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-800">Detail Dompet</h1>
+                  <p className="text-xs text-gray-500">Transaksi & informasi dompet</p>
+                </div>
               </div>
             </div>
-          </Card>
 
-          {/* Filter Bar - Yang lebih sederhana */}
-          <div className="bg-white rounded-xl shadow-sm border mb-4 overflow-hidden">
-            <div className="p-3 flex items-center justify-between">
-              {/* Tombol Filter - Buka Sheet */}
-              <Sheet open={showFilters} onOpenChange={setShowFilters}>
-                <SheetTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    className="h-9 border-gray-200 px-3"
-                    onClick={() => setShowFilters(true)}
-                  >
-                    <SlidersHorizontal className="h-4 w-4 mr-2" />
-                    Filter Transaksi
-                  </Button>
-                </SheetTrigger>
+            {/* Wallet Card dengan glassmorphism dan logo */}
+            <div className="relative overflow-hidden rounded-2xl shadow-xl mb-6">
+              <div 
+                className="absolute inset-0"
+                style={{
+                  background: `linear-gradient(135deg, ${wallet.color || '#4F46E5'}, ${wallet.color || '#4F46E5'}dd)`,
+                }}
+              ></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12"></div>
+              
+              <div className="relative p-6 text-white">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    {wallet.logo_url ? (
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg border-2 border-white/30 flex-shrink-0">
+                        <img 
+                          src={wallet.logo_url} 
+                          alt={wallet.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            if (e.currentTarget.nextElementSibling) {
+                              (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                            }
+                          }}
+                        />
+                        <div 
+                          className="w-full h-full bg-white/20 items-center justify-center backdrop-blur-sm"
+                          style={{ display: 'none' }}
+                        >
+                          {getWalletIcon(wallet.type || "cash")}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 bg-white/20 rounded-2xl backdrop-blur-sm flex items-center justify-center shadow-lg border-2 border-white/30 flex-shrink-0">
+                        <div className="scale-125">
+                          {getWalletIcon(wallet.type || "cash")}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <h2 className="text-2xl font-bold drop-shadow-sm">{wallet.name}</h2>
+                      <p className="text-white/80">
+                        {wallet.type === "bank"
+                          ? "Rekening Bank"
+                          : wallet.type === "savings"
+                          ? "Tabungan"
+                          : "Uang Tunai"}
+                      </p>
+                      {wallet.is_default && (
+                        <span className="bg-white/30 text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium mt-1 inline-block backdrop-blur-sm border border-white/30">
+                          ⭐ Default
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="text-white hover:bg-white/20 w-10 h-10 rounded-xl backdrop-blur-sm border border-white/30"
+                        size="icon"
+                        aria-label="Menu dompet"
+                      >
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => navigate(`/wallet/edit/${wallet.id}`)}
+                        className="cursor-pointer"
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit Dompet
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setShowDeleteDialog(true)}
+                        className="cursor-pointer text-red-600 focus:text-red-600"
+                        disabled={wallet.is_default}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Hapus Dompet
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                
+                <div>
+                  <p className="text-white/80 text-sm mb-2">Saldo Saat Ini</p>
+                  <p className="text-4xl font-bold drop-shadow-sm">{formatCurrency(wallet.balance)}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Bar dengan glassmorphism */}
+            <div className="backdrop-blur-sm bg-white/70 rounded-2xl shadow-sm border border-white/20 mb-6 overflow-hidden">
+              <div className="p-4 flex items-center justify-between">
+                {/* Tombol Filter - Buka Sheet */}
+                <Sheet open={showFilters} onOpenChange={setShowFilters}>
+                  <SheetTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="h-10 border-white/30 bg-white/50 hover:bg-white/70 backdrop-blur-sm px-4 rounded-xl"
+                      onClick={() => setShowFilters(true)}
+                    >
+                      <SlidersHorizontal className="h-4 w-4 mr-2" />
+                      Filter Transaksi
+                    </Button>
+                  </SheetTrigger>
                 <SheetContent side="right" className="p-0 w-[85vw] sm:max-w-md">
                   <div className="flex flex-col h-full">
                     <SheetHeader className="p-4 border-b">
@@ -924,10 +977,10 @@ const WalletDetail = () => {
             )}
           </div>
 
-          {/* Transactions */}
-          <Card className="mb-24 p-1">
+          {/* Transactions dengan glassmorphism */}
+          <div className="backdrop-blur-sm bg-white/70 rounded-2xl shadow-sm border border-white/20 mb-24 p-1">
             <TransactionList
-              transactions={transactions as (Transaction & { wallet_name?: string })[]}
+              transactions={transactions as any}
               isLoading={loading}
               onFilter={(query) => setSearchTerm(query)}
               onDateRangeChange={handleDateRangeChange}
@@ -959,7 +1012,7 @@ const WalletDetail = () => {
                 navigate(`/transaction/${transaction.type}/${transaction.id}`);
               }}
             />
-          </Card>
+          </div>
           
           {/* Delete Confirmation Dialog */}
           <DeleteConfirmationDialog
@@ -972,6 +1025,7 @@ const WalletDetail = () => {
             confirmLabel="Hapus"
             cancelLabel="Batal"
           />
+          </div>
         </div>
       </PremiumFeatureCounter>
     </Layout>

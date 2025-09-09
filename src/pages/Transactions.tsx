@@ -366,38 +366,40 @@ const Transactions = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32 max-w-5xl">
-        {/* Header Bar */}
-        <div className="flex items-center justify-between px-4 py-4 mb-6 sticky top-0 z-20 bg-white/95 backdrop-blur-xl shadow-xl rounded-3xl border border-gray-100">
-          <div className="flex items-center gap-3">
-            {walletParam && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-                className="h-11 w-11 rounded-2xl hover:bg-primary/10 hover:scale-105 transition-all duration-300 shadow-sm" 
-              onClick={handleGoBack}
-            >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
-            </Button>
-            )}
-            <div className="flex flex-col">
-              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Transaksi</h1>
-              <p className="text-xs text-gray-500">{filteredTransactions.length} transaksi ditemukan</p>
-            </div>
-            {selectedWalletIds.length > 0 && (
-              <Badge variant="outline" className="ml-2 px-3 py-1.5 h-7 text-xs bg-gradient-to-r from-primary/10 to-blue-50 border-primary/20 text-primary font-medium">
-                {selectedWalletName}
-              </Badge>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-3">
-                <Sheet open={showFilters} onOpenChange={setShowFilters}>
-                  <SheetTrigger asChild>
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
+        {/* Header dengan glassmorphism effect */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {walletParam && (
                 <Button 
-                  variant="outline" 
+                  variant="ghost" 
                   size="icon" 
-                  className="relative rounded-2xl h-11 w-11 bg-white border-gray-200 hover:bg-gradient-to-r hover:from-primary/5 hover:to-blue-50 hover:border-primary/30 hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+                  className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl border border-white/30"
+                  onClick={handleGoBack}
+                  aria-label="Kembali"
+                >
+                  <ChevronLeft className="h-5 w-5 text-gray-700" />
+                </Button>
+              )}
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Transaksi</h1>
+                <p className="text-xs text-gray-500">{filteredTransactions.length} transaksi ditemukan</p>
+              </div>
+              {selectedWalletIds.length > 0 && (
+                <Badge variant="outline" className="ml-2 px-3 py-1.5 h-7 text-xs bg-gradient-to-r from-primary/10 to-blue-50 border-primary/20 text-primary font-medium">
+                  {selectedWalletName}
+                </Badge>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Sheet open={showFilters} onOpenChange={setShowFilters}>
+                <SheetTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="relative rounded-xl h-10 w-10 bg-white/70 border-white/30 hover:bg-white hover:scale-105 transition-all duration-300"
                 >
                       <Filter className="h-4 w-4 text-gray-600" />
                       {(activeTab !== 'all' || selectedWalletIds.length > 0 || selectedCategoryIds.length > 0 || searchTerm || dateRangeFilter?.from || dateRangeFilter?.to) && (
@@ -1246,7 +1248,7 @@ const Transactions = () => {
               <Plus className="h-4 w-4 mr-2" />
               Tambah Transaksi
             </Button>
-                                </div>
+          </div>
         ) : (
           <TransactionList
             transactions={filteredTransactions as BaseTransaction[]}
@@ -1255,8 +1257,9 @@ const Transactions = () => {
             onEdit={handleEditTransaction}
             onDateRangeChange={setDateRangeFilter}
           />
-              )}
-                          </div>
+        )}
+      </div>
+      </div>
     </Layout>
   );
 };

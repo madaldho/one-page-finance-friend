@@ -53,47 +53,70 @@ const ActionSection = ({ loading, handleExportData }: ActionSectionProps) => {
   };
   
   return (
-    <section className="mb-8 bg-white rounded-lg shadow-sm overflow-hidden">
-      <Button 
-        variant="ghost" 
-        className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50"
-        onClick={handleExportData}
-        disabled={loading}
-      >
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-            <FileDown className="w-4 h-4 text-gray-600" />
-          </div>
-          <span>Export Data</span>
+    <section className="mb-8">
+      <div className="backdrop-blur-sm bg-white/80 rounded-xl shadow-sm border border-white/20 overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100/50">
+          <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+            <div className="w-5 h-5 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg flex items-center justify-center">
+              <FileDown className="w-3 h-3 text-white" />
+            </div>
+            Aksi
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">Ekspor data dan kelola akun</p>
         </div>
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100"
-        onClick={handleSendEmail}
-      >
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
-            <HelpCircle className="w-4 h-4 text-gray-600" />
-          </div>
-          <span>Bantuan</span>
+        
+        <div className="divide-y divide-gray-100/50">
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-between p-5 h-auto hover:bg-gray-50/50 rounded-none"
+            onClick={handleExportData}
+            disabled={loading}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                <FileDown className="w-4 h-4 text-gray-600" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-gray-900 text-sm">Export Data</p>
+                <p className="text-sm text-gray-500">Unduh data transaksi dalam format CSV</p>
+              </div>
+            </div>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-between p-5 h-auto hover:bg-gray-50/50 rounded-none"
+            onClick={handleSendEmail}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <HelpCircle className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-gray-900 text-sm">Bantuan</p>
+                <p className="text-sm text-gray-500">Hubungi tim support untuk bantuan</p>
+              </div>
+            </div>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-between p-5 h-auto hover:bg-red-50/50 text-red-600 rounded-none"
+            onClick={handleLogout}
+            disabled={loading}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <LogOut className="w-4 h-4 text-red-600" />
+              </div>
+              <div className="text-left">
+                <p className="font-medium text-red-600 text-sm">{loading ? "Sedang Keluar..." : "Keluar"}</p>
+                <p className="text-sm text-red-500">Keluar dari akun saat ini</p>
+              </div>
+            </div>
+          </Button>
         </div>
-      </Button>
-      
-      <Button 
-        variant="ghost" 
-        className="w-full flex items-center justify-between p-4 h-auto hover:bg-gray-50 border-t border-gray-100 text-red-600"
-        onClick={handleLogout}
-        disabled={loading}
-      >
-        <div className="flex items-center">
-          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center mr-3">
-            <LogOut className="w-4 h-4 text-red-600" />
-          </div>
-          <span>{loading ? "Sedang Keluar..." : "Keluar"}</span>
-        </div>
-      </Button>
+      </div>
     </section>
   );
 };
