@@ -884,22 +884,22 @@ const Index = () => {
           {/* Statistics Section */}
           <section className="mb-20">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-gray-900 to-gray-700 p-6">
-                <div className="flex items-center justify-between text-white">
+              <div className="bg-gradient-to-r from-gray-900 to-gray-700 p-4 md:p-6">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-white">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-                      <BarChart2 className="h-6 w-6" />
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-white/20 rounded-full flex items-center justify-center">
+                      <BarChart2 className="h-5 w-5 md:h-6 md:w-6" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Statistik Teratas</h3>
-                      <p className="text-white/80 text-sm">Analisis aktivitas keuangan Anda</p>
+                      <h3 className="text-lg md:text-xl font-bold">Statistik Teratas</h3>
+                      <p className="text-white/80 text-xs md:text-sm">Analisis aktivitas keuangan Anda</p>
                     </div>
                   </div>
                   <Select
                     defaultValue="expenses"
                     onValueChange={(value) => loadTopStatistics(value)}
                   >
-                    <SelectTrigger className="w-[200px] h-10 bg-white/10 border-white/20 text-white rounded-lg">
+                    <SelectTrigger className="w-full md:w-[200px] h-9 md:h-10 bg-white/10 border-white/20 text-white rounded-lg text-sm">
                       <SelectValue placeholder="Pilih statistik" />
                     </SelectTrigger>
                     <SelectContent>
@@ -911,74 +911,74 @@ const Index = () => {
                 </div>
               </div>
               
-              <div className="p-6">
+              <div className="p-4 md:p-6">
                 {isLoadingStats ? (
-                  <div className="flex justify-center items-center h-40">
+                  <div className="flex justify-center items-center h-32 md:h-40">
                     <div className="flex flex-col items-center gap-3">
-                      <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-                      <p className="text-gray-500">Memuat statistik...</p>
+                      <Loader2 className="h-6 w-6 md:h-8 md:w-8 animate-spin text-blue-500" />
+                      <p className="text-gray-500 text-sm">Memuat statistik...</p>
                     </div>
                   </div>
                 ) : currentStats.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <BarChart2 className="h-8 w-8 text-gray-400" />
+                  <div className="text-center py-8 md:py-12">
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <BarChart2 className="h-6 w-6 md:h-8 md:w-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Belum Ada Data</h3>
-                    <p className="text-gray-500">Statistik akan muncul setelah Anda melakukan transaksi</p>
+                    <p className="text-gray-500 text-sm px-4">Statistik akan muncul setelah Anda melakukan transaksi</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-6">
-                      {currentStatType === "expenses" && <ArrowUpRight className="w-5 h-5 text-red-500" />}
-                      {currentStatType === "income" && <ArrowDownRight className="w-5 h-5 text-green-500" />}
-                      {currentStatType === "wallets" && <WalletIcon className="w-5 h-5 text-blue-500" />}
-                      <h4 className="text-lg font-semibold text-gray-800">
+                    <div className="flex items-center gap-2 mb-4 md:mb-6">
+                      {currentStatType === "expenses" && <ArrowUpRight className="w-4 h-4 md:w-5 md:h-5 text-red-500" />}
+                      {currentStatType === "income" && <ArrowDownRight className="w-4 h-4 md:w-5 md:h-5 text-green-500" />}
+                      {currentStatType === "wallets" && <WalletIcon className="w-4 h-4 md:w-5 md:h-5 text-blue-500" />}
+                      <h4 className="text-base md:text-lg font-semibold text-gray-800">
                         {currentStatType === "expenses" && "5 Pengeluaran Terbesar"}
                         {currentStatType === "income" && "5 Pemasukan Terbesar"}
                         {currentStatType === "wallets" && "5 Dompet Paling Sering Digunakan"}
                       </h4>
                     </div>
                     
-                    <div className="grid gap-3">
+                    <div className="space-y-3">
                       {currentStats.map((item, index) => {
                         // Ambil data wallet
                         const wallet = wallets.find(w => w.id === item.id || w.id === item.wallet_id);
                         return (
                           <div 
                             key={index} 
-                            className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-all duration-200 group"
+                            className="flex items-center justify-between p-3 md:p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white border border-gray-100 hover:shadow-md transition-all duration-200 group"
                           >
-                            <div className="flex items-center gap-4 flex-1">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
                               {/* Logo dompet */}
-                              <div className="relative">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform"
+                              <div className="relative flex-shrink-0">
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform"
                                   style={{ 
                                     background: currentStatType === 'wallets' && wallet?.color ? wallet.color : `linear-gradient(135deg, ${getStatItemColor(item, currentStatType)}, ${getStatItemColor(item, currentStatType)}cc)`, 
                                     color: 'white' 
                                   }}>
                                   {wallet?.logo_url && currentStatType === 'wallets' ? (
-                                    <img src={wallet.logo_url} alt={wallet.name} className="w-8 h-8 object-contain rounded-lg" />
+                                    <img src={wallet.logo_url} alt={wallet.name} className="w-6 h-6 md:w-8 md:h-8 object-contain rounded-lg" />
                                   ) : (
                                     getStatItemIcon(item, currentStatType)
                                   )}
                                 </div>
-                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                <div className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                                   {index + 1}
                                 </div>
                               </div>
                               <div className="min-w-0 flex-1">
-                                <p className="font-semibold text-gray-900 truncate text-lg">
+                                <p className="font-semibold text-gray-900 truncate text-sm md:text-lg">
                                   {item.name || item.title || item.category || "Tidak ada nama"}
                                 </p>
                                 {item.date && (
-                                  <p className="text-sm text-gray-500 mt-1">{formatDate(item.date)}</p>
+                                  <p className="text-xs text-gray-500 mt-0.5">{formatDate(item.date)}</p>
                                 )}
                               </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex-shrink-0 ml-2">
                               <p className={cn(
-                                "font-bold text-lg whitespace-nowrap",
+                                "font-bold text-sm md:text-lg whitespace-nowrap",
                                 currentStatType === 'expenses' ? "text-red-600" : 
                                 currentStatType === 'income' ? "text-green-600" :
                                 currentStatType === 'wallets' ? "text-blue-600" : "text-gray-900"
@@ -987,12 +987,12 @@ const Index = () => {
                                   ? formatCurrency(item.amount) 
                                   : <>
                                       <span>{item.count || 0}</span>
-                                      <span className="text-sm text-gray-500 ml-1">transaksi</span>
+                                      <span className="text-xs text-gray-500 ml-1">transaksi</span>
                                     </>
                                 }
                               </p>
                               {item.percentage && (
-                                <p className="text-sm text-gray-500 mt-1">{item.percentage}% dari total</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{item.percentage}% dari total</p>
                               )}
                             </div>
                           </div>

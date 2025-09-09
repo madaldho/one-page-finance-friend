@@ -307,21 +307,21 @@ const FinancialSummary = ({
   return (
     <div className="space-y-6">
       {/* Financial Health Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
         <Card className="bg-gradient-to-br from-gray-500 to-gray-600 text-white">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm">Tingkat Penghematan</p>
-                <p className="text-2xl font-bold mt-1">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-white/80 text-xs md:text-sm">Tingkat Penghematan</p>
+                <p className="text-lg md:text-2xl font-bold mt-1 truncate">
                   {savingsRate.toFixed(1)}%
                 </p>
               </div>
-              <div className="bg-white/20 p-2 rounded-full">
-                <TrendingUp size={20} />
+              <div className="bg-white/20 p-1.5 md:p-2 rounded-full self-start md:self-auto">
+                <TrendingUp size={16} className="md:w-5 md:h-5" />
               </div>
             </div>
-            <div className="mt-2 text-sm text-white/80">
+            <div className="mt-2 text-xs md:text-sm text-white/80">
               {savingsRate >= 20 ? (
                 <span>Sangat Baik</span>
               ) : savingsRate >= 10 ? (
@@ -336,57 +336,57 @@ const FinancialSummary = ({
         </Card>
 
         <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm">Total Pemasukan</p>
-                <p className="text-2xl font-bold mt-1">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-white/80 text-xs md:text-sm">Total Pemasukan</p>
+                <p className="text-lg md:text-2xl font-bold mt-1 truncate">
                   {formatToRupiah(totalIncome)}
                 </p>
               </div>
-              <div className="bg-white/20 p-2 rounded-full">
-                <ArrowUpRight size={20} />
+              <div className="bg-white/20 p-1.5 md:p-2 rounded-full self-start md:self-auto">
+                <ArrowUpRight size={16} className="md:w-5 md:h-5" />
               </div>
             </div>
-            <div className="mt-2 text-sm text-white/80">
+            <div className="mt-2 text-xs md:text-sm text-white/80">
               {transactions.filter(t => t.type === 'income').length} transaksi
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-red-500 to-red-600 text-white">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm">Total Pengeluaran</p>
-                <p className="text-2xl font-bold mt-1">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-white/80 text-xs md:text-sm">Total Pengeluaran</p>
+                <p className="text-lg md:text-2xl font-bold mt-1 truncate">
                   {formatToRupiah(totalExpense)}
                 </p>
               </div>
-              <div className="bg-white/20 p-2 rounded-full">
-                <TrendingDown size={20} />
+              <div className="bg-white/20 p-1.5 md:p-2 rounded-full self-start md:self-auto">
+                <TrendingDown size={16} className="md:w-5 md:h-5" />
               </div>
             </div>
-            <div className="mt-2 text-sm text-white/80">
+            <div className="mt-2 text-xs md:text-sm text-white/80">
               {transactions.filter(t => t.type === 'expense').length} transaksi
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-          <CardContent className="p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm">Selisih</p>
-                <p className="text-2xl font-bold mt-1">
+          <CardContent className="p-3 md:p-4">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-white/80 text-xs md:text-sm">Selisih</p>
+                <p className="text-lg md:text-2xl font-bold mt-1 truncate">
                   {formatToRupiah(totalIncome - totalExpense)}
                 </p>
               </div>
-              <div className="bg-white/20 p-2 rounded-full">
-                <DollarSign size={20} />
+              <div className="bg-white/20 p-1.5 md:p-2 rounded-full self-start md:self-auto">
+                <DollarSign size={16} className="md:w-5 md:h-5" />
               </div>
             </div>
-            <div className="mt-2 text-sm text-white/80">
+            <div className="mt-2 text-xs md:text-sm text-white/80">
               {totalIncome > totalExpense ? 'Surplus' : 'Defisit'}
             </div>
           </CardContent>
@@ -497,26 +497,26 @@ const FinancialSummary = ({
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex-col gap-2 text-sm">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full mb-2">
+          <CardFooter className="flex-col gap-2 text-sm px-4 md:px-6">
+            <div className="grid grid-cols-2 gap-2 w-full mb-2">
               {timeSpendingData.map((item, index) => (
-                <div key={index} className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full" style={{ 
+                <div key={index} className="flex items-center gap-1.5 min-w-0">
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ 
                     backgroundColor: 
                       item.name === "Pagi" ? "#fbbf24" : 
                       item.name === "Siang" ? "#0ea5e9" : 
                       item.name === "Sore" ? "#f97316" : 
                       "#7c3aed"
                   }} />
-                  <span className="text-xs whitespace-nowrap">
+                  <span className="text-xs truncate">
                     {item.name}: {formatToRupiah(item.value)}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-2 font-medium leading-none">
-              <span>Total pengeluaran: {formatToRupiah(totalExpense)}</span>
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 font-medium leading-none text-center sm:text-left">
+              <span className="text-xs sm:text-sm">Total pengeluaran: {formatToRupiah(totalExpense)}</span>
+              <TrendingUp className="h-4 w-4 text-emerald-500 mx-auto sm:mx-0" />
             </div>
             <div className="leading-none text-muted-foreground">
               Waktu pengeluaran terbanyak: {

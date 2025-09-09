@@ -76,7 +76,10 @@ const Header = () => {
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full blur-sm opacity-60"></div>
             <Avatar className="h-12 w-12 relative border-2 border-white shadow-lg">
-              <AvatarImage src={(userProfile?.avatar_url as string) || ""} />
+              <AvatarImage 
+                src={(userProfile?.avatar_url as string) || ""} 
+                className="object-cover w-full h-full aspect-square"
+              />
               <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-lg">
                 {String(fullName).charAt(0).toUpperCase()}
               </AvatarFallback>
