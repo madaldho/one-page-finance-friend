@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ReactDOM from "react-dom";
 import { Budget } from "@/types/index";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
@@ -238,8 +239,8 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
       </div>
 
       {/* Budget Detail Modal */}
-      {showDetail && selectedBudget && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={handleCloseDetail}>
+      {showDetail && selectedBudget && ReactDOM.createPortal(
+        <div className="!fixed !inset-0 !bg-black/60 !z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" style={{ zIndex: 999999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} onClick={handleCloseDetail}>
           <div 
             className="bg-white rounded-t-xl sm:rounded-xl p-5 w-full max-w-md max-h-[90vh] overflow-auto animate-in slide-in-from-bottom sm:slide-in-from-center duration-300" 
             onClick={(e) => e.stopPropagation()}
@@ -335,7 +336,8 @@ const BudgetCard = ({ budgets, budget }: BudgetCardProps) => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

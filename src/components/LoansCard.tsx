@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ReactDOM from "react-dom";
 import { Loan } from "@/types";
 import { Link } from "react-router-dom";
 import { ChevronRight, CalendarDays, ArrowRight, X, Clock, Wallet, User, FileText, AlertCircle } from "lucide-react";
@@ -136,8 +137,8 @@ const LoansCard = ({ loans = [], loading = false, onViewAll }: LoansCardProps) =
     </Card>
       
       {/* List Preview Modal */}
-      {showListModal && activeListType && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={handleCloseListModal}>
+      {showListModal && activeListType && ReactDOM.createPortal(
+        <div className="!fixed !inset-0 !bg-black/60 !z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" style={{ zIndex: 999999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} onClick={handleCloseListModal}>
           <div 
             className="bg-white rounded-t-xl sm:rounded-xl p-5 w-full max-w-md max-h-[90vh] overflow-auto animate-in slide-in-from-bottom sm:slide-in-from-center duration-300" 
             onClick={(e) => e.stopPropagation()}
@@ -246,12 +247,13 @@ const LoansCard = ({ loans = [], loading = false, onViewAll }: LoansCardProps) =
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       
       {/* Loan Detail Modal */}
-      {showDetail && selectedLoan && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" onClick={handleCloseDetail}>
+      {showDetail && selectedLoan && ReactDOM.createPortal(
+        <div className="!fixed !inset-0 !bg-black/60 !z-[999999] flex items-end sm:items-center justify-center p-0 sm:p-4 backdrop-blur-sm animate-in fade-in duration-300" style={{ zIndex: 999999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} onClick={handleCloseDetail}>
           <div 
             className="bg-white rounded-t-xl sm:rounded-xl p-5 w-full max-w-md max-h-[90vh] overflow-auto animate-in slide-in-from-bottom sm:slide-in-from-center duration-300" 
             onClick={(e) => e.stopPropagation()}
@@ -364,8 +366,9 @@ const LoansCard = ({ loans = [], loading = false, onViewAll }: LoansCardProps) =
               </div>
             </div>
           </div>
-          </div>
-        )}
+        </div>,
+        document.body
+      )}
     </>
   );
 };
