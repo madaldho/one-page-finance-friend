@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -23,11 +23,41 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
 import { Database } from '@/integrations/supabase/types'
-import { ChevronLeft, Loader2, CheckCircle } from 'lucide-react'
+import { 
+  ChevronLeft, 
+  Loader2, 
+  CheckCircle,
+  DollarSign,
+  ShoppingCart,
+  Car,
+  Home,
+  Utensils,
+  GraduationCap,
+  Heart,
+  Gamepad2,
+  Gift,
+  Plane,
+  Briefcase,
+  Bus,
+  Shirt,
+  Coffee,
+  Calendar,
+  PiggyBank,
+  CreditCard,
+  Banknote,
+  HandHeart,
+  ShoppingBag,
+  Stethoscope,
+  Book,
+  Smartphone,
+  Wifi,
+  University
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import Layout from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
+import ColorPicker from '@/components/ColorPicker'
 
 type Category = Database['public']['Tables']['categories']['Row']
 
@@ -39,40 +69,32 @@ const formSchema = z.object({
 })
 
 const icons = [
-  { value: 'dollar', label: 'Dollar' },
-  { value: 'shopping-cart', label: 'Shopping Cart' },
-  { value: 'car', label: 'Car' },
-  { value: 'home', label: 'Home' },
-  { value: 'utensils', label: 'Food' },
-  { value: 'graduation-cap', label: 'Education' },
-  { value: 'heart', label: 'Health' },
-  { value: 'gamepad', label: 'Entertainment' },
-  { value: 'gift', label: 'Gift' },
-  { value: 'plane', label: 'Travel' },
-  { value: 'briefcase', label: 'Work' },
-  { value: 'bus', label: 'Transport' },
-  { value: 'tshirt', label: 'Clothing' },
-  { value: 'coffee', label: 'Coffee' },
-  { value: 'calendar', label: 'Events' },
-  { value: 'piggy-bank', label: 'Saving' },
-  { value: 'credit-card', label: 'Credit Card' },
-  { value: 'money-bill', label: 'Money' },
-  { value: 'hand-holding-usd', label: 'Income' },
-  { value: 'shopping-bag', label: 'Shopping' },
-  { value: 'medkit', label: 'Medical' },
-  { value: 'book', label: 'Education' },
-  { value: 'mobile-alt', label: 'Mobile' },
-  { value: 'wifi', label: 'Internet' },
-  { value: 'university', label: 'Bank' },
+  { value: 'DollarSign', label: 'Dollar', component: DollarSign },
+  { value: 'ShoppingCart', label: 'Shopping Cart', component: ShoppingCart },
+  { value: 'Car', label: 'Car', component: Car },
+  { value: 'Home', label: 'Home', component: Home },
+  { value: 'Utensils', label: 'Food', component: Utensils },
+  { value: 'GraduationCap', label: 'Education', component: GraduationCap },
+  { value: 'Heart', label: 'Health', component: Heart },
+  { value: 'Gamepad2', label: 'Entertainment', component: Gamepad2 },
+  { value: 'Gift', label: 'Gift', component: Gift },
+  { value: 'Plane', label: 'Travel', component: Plane },
+  { value: 'Briefcase', label: 'Work', component: Briefcase },
+  { value: 'Bus', label: 'Transport', component: Bus },
+  { value: 'Shirt', label: 'Clothing', component: Shirt },
+  { value: 'Coffee', label: 'Coffee', component: Coffee },
+  { value: 'Calendar', label: 'Events', component: Calendar },
+  { value: 'PiggyBank', label: 'Saving', component: PiggyBank },
+  { value: 'CreditCard', label: 'Credit Card', component: CreditCard },
+  { value: 'Banknote', label: 'Money', component: Banknote },
+  { value: 'HandHeart', label: 'Income', component: HandHeart },
+  { value: 'ShoppingBag', label: 'Shopping', component: ShoppingBag },
+  { value: 'Stethoscope', label: 'Medical', component: Stethoscope },
+  { value: 'Book', label: 'Education', component: Book },
+  { value: 'Smartphone', label: 'Mobile', component: Smartphone },
+  { value: 'Wifi', label: 'Internet', component: Wifi },
+  { value: 'University', label: 'Bank', component: University },
 ]
-
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0,
-        v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
 
 export function CategoryForm() {
   const { id } = useParams();
@@ -93,7 +115,7 @@ export function CategoryForm() {
       name: '',
       type: 'expense' as const,
       color: '#6E59A5',
-      icon: 'dollar',
+      icon: 'DollarSign',
     },
   });
 
@@ -105,9 +127,9 @@ export function CategoryForm() {
     if (isEditing && id) {
       fetchCategory(id);
     }
-  }, [id]);
+  }, [id, isEditing, fetchCategory]);
 
-  const fetchCategory = async (categoryId: string) => {
+  const fetchCategory = useCallback(async (categoryId: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -123,7 +145,7 @@ export function CategoryForm() {
           name: data.name,
           type: data.type as 'income' | 'expense',
           color: data.color || '#6E59A5',
-          icon: data.icon || 'dollar',
+          icon: data.icon || 'DollarSign',
         });
       }
     } catch (error) {
@@ -137,76 +159,108 @@ export function CategoryForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [form, toast, navigate]);
 
+  const formValues = form.watch();
   useEffect(() => {
     if (submitError) {
       setSubmitError(null);
     }
-  }, [form.watch(), submitError]);
+  }, [formValues, submitError]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setSubmitting(true);
       setSubmitError(null);
       
-      const userData = await supabase.auth.getUser();
-      if (!userData.data.user) {
-        throw new Error('User not found');
+      // Debug: Check auth status
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError || !session?.user) {
+        throw new Error('Anda tidak terautentikasi. Silakan login ulang.');
       }
 
-      const userId = userData.data.user.id;
+      const userId = session.user.id;
+      console.log('🔍 Debug - User ID:', userId);
       
-      const data = {
-        name: values.name,
-        type: values.type,
-        color: values.color,
-        icon: values.icon,
-        user_id: userId,
-      };
-
       let result;
 
       if (isEditing && id) {
+        // Update existing category
+        const updateData: Database['public']['Tables']['categories']['Update'] = {
+          name: values.name,
+          type: values.type,
+          color: values.color,
+          icon: values.icon,
+          updated_at: new Date().toISOString(),
+        };
+
+        console.log('🔍 Debug - Update data:', updateData);
+
         const { data: updatedData, error } = await supabase
           .from('categories')
-          .update(data)
+          .update(updateData)
           .eq('id', id)
+          .eq('user_id', userId) // Ensure user owns the category
           .select('*')
           .single();
         
         if (error) {
-          console.error('Error updating category:', error);
-          throw new Error(error.message);
+          console.error('❌ Error updating category:', error);
+          throw new Error(`Gagal memperbarui kategori: ${error.message}`);
         }
         
         result = updatedData;
       } else {
-        const newCategoryData = {
-          id: generateUUID(),
-          ...data,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+        // Create new category - database akan auto-generate id dengan gen_random_uuid()
+        const insertData: Database['public']['Tables']['categories']['Insert'] = {
+          name: values.name.trim(),
+          type: values.type,
+          color: values.color,
+          icon: values.icon,
+          user_id: userId,
+          // id tidak disertakan, biarkan database auto-generate
+          // sort_order tidak disertakan, akan menggunakan DEFAULT 0
         };
 
+        console.log('🔍 Debug - Insert data:', insertData);
+
+        // Coba insert dengan handling error yang lebih detail
         const { data: newData, error } = await supabase
           .from('categories')
-          .insert(newCategoryData)
-          .select('*')
-          .single();
+          .insert(insertData)
+          .select('*');
         
         if (error) {
-          console.error('Error creating category:', error);
-          throw new Error(error.message);
+          console.error('❌ Database error details:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
+          
+          // Handle specific error cases
+          if (error.code === '23502') {
+            throw new Error('Error database: Kolom required tidak terisi. Coba refresh halaman dan login ulang.');
+          } else if (error.code === '42501') {
+            throw new Error('Tidak memiliki izin untuk menambah kategori. Silakan login ulang.');
+          } else {
+            throw new Error(`Gagal menyimpan kategori: ${error.message}`);
+          }
+        }
+
+        // Check if data was actually inserted
+        if (!newData || newData.length === 0) {
+          throw new Error('Kategori tidak berhasil disimpan. Tidak ada data yang dikembalikan.');
         }
         
-        result = newData;
+        result = newData[0];
+        console.log('✅ Category created successfully:', result);
       }
 
       setSuccess(true);
 
       toast({
-        title: 'Berhasil',
+        title: 'Berhasil!',
         description: `Kategori "${result.name}" berhasil ${isEditing ? 'diperbarui' : 'ditambahkan'}`,
       });
       
@@ -216,12 +270,13 @@ export function CategoryForm() {
       }, 1500);
       
     } catch (error: unknown) {
-      console.error('Error saving category:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat menyimpan kategori';
+      console.error('💥 Error saving category:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal saat menyimpan kategori';
       setSubmitError(errorMessage);
+      
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Gagal Menyimpan Kategori',
         description: errorMessage,
       });
     } finally {
@@ -291,7 +346,11 @@ export function CategoryForm() {
               className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-sm"
               style={{ backgroundColor: selectedColor }}
             >
-              <i className={`fas fa-${selectedIcon} text-lg`}></i>
+              {(() => {
+                const iconData = icons.find(i => i.value === selectedIcon);
+                const IconComponent = iconData?.component || DollarSign;
+                return <IconComponent className="w-6 h-6" />;
+              })()}
             </div>
             <div className="flex-1">
               <h3 className="font-medium text-sm">
@@ -382,20 +441,18 @@ export function CategoryForm() {
                               ))}
                             </div>
                             
-                    <div className="flex gap-2 items-center">
-                      <Input 
-                        type="color" 
-                        {...field} 
-                                className="w-8 h-8 p-0.5 rounded-md cursor-pointer"
-                                title="Pilih warna kustom"
-                      />
-                      <Input 
-                        type="text" 
-                        value={field.value}
-                        onChange={(e) => field.onChange(e.target.value)}
+                            <div className="flex gap-2 items-center">
+                              <ColorPicker
+                                selectedColor={field.value}
+                                onColorSelect={(color) => field.onChange(color)}
+                              />
+                              <Input 
+                                type="text" 
+                                value={field.value}
+                                onChange={(e) => field.onChange(e.target.value)}
                                 className="flex-1 h-8 text-xs"
-                        placeholder="#000000"
-                      />
+                                placeholder="#000000"
+                              />
                             </div>
                     </div>
                   </FormControl>
@@ -415,22 +472,33 @@ export function CategoryForm() {
                             <SelectTrigger className="h-9">
                         <SelectValue placeholder="Pilih icon">
                                 <span className="flex items-center gap-2 text-sm">
-                                  <i className={`fas fa-${field.value} text-sm`}></i>
-                            {icons.find(i => i.value === field.value)?.label}
+                                  {(() => {
+                                    const iconData = icons.find(i => i.value === field.value);
+                                    const IconComponent = iconData?.component || DollarSign;
+                                    return (
+                                      <>
+                                        <IconComponent className="w-4 h-4" />
+                                        {iconData?.label}
+                                      </>
+                                    );
+                                  })()}
                           </span>
                         </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-[200px]">
                             <div className="grid grid-cols-2 gap-1 p-1">
-                      {icons.map((icon) => (
+                      {icons.map((icon) => {
+                        const IconComponent = icon.component;
+                        return (
                                 <SelectItem key={icon.value} value={icon.value} className="text-sm p-2">
                           <span className="flex items-center gap-2">
-                                    <i className={`fas fa-${icon.value} text-xs`}></i>
+                                    <IconComponent className="w-4 h-4" />
                                     <span className="text-xs">{icon.label}</span>
                           </span>
                         </SelectItem>
-                      ))}
+                        );
+                      })}
                             </div>
                     </SelectContent>
                   </Select>
