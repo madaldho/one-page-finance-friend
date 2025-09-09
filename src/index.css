@@ -1,6 +1,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* PWA Safe Area untuk iPhone */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Styling khusus untuk PWA di iPhone */
+@media screen and (display-mode: standalone) {
+  body {
+    padding-top: max(env(safe-area-inset-top), 20px);
+  }
+}
+
 @layer base {
      :root {
         --background: 0 0% 100%;

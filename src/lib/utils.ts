@@ -26,12 +26,17 @@ export const formatDate = (dateString: string | null): string => {
 }; 
 
 export function formatNumberWithSeparator(value: string | number) {
+  if (!value && value !== 0) return '';
   const numStr = String(value).replace(/[^0-9]/g, '');
+  if (!numStr) return '';
   return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
-export function parseFormattedNumber(value: string) {
-  return parseFloat(value.replace(/\./g, ''));
+export function parseFormattedNumber(value: string): number {
+  if (!value) return 0;
+  // Hapus semua titik (separator ribuan) dan ambil hanya angka
+  const cleanValue = value.replace(/\./g, '').replace(/[^0-9]/g, '');
+  return parseInt(cleanValue, 10) || 0;
 }
 
 // Fungsi untuk memproses string jumlah uang menjadi number

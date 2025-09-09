@@ -167,6 +167,7 @@ const AddBudget = () => {
 
   // Fungsi untuk menghitung persentase berdasarkan nominal
   const handleAmountChange = (value: number) => {
+    console.log('handleAmountChange called with:', value, typeof value);
     setAmount(value);
     
     // Hanya hitung persentase jika sumber dana dipilih dan dalam mode persentase
@@ -250,7 +251,7 @@ const AddBudget = () => {
       return;
     }
 
-    if (amount <= 0) {
+    if (!amount || amount <= 0 || isNaN(amount)) {
       toast({
         title: "Jumlah Tidak Valid",
         description: "Masukkan jumlah anggaran yang valid",
@@ -315,7 +316,7 @@ const AddBudget = () => {
         source_percentage?: number;
       } = {
         category: selectedCategory,
-        amount,
+        amount: Number(amount), // Pastikan amount adalah number
         period: dbPeriod,
         start_date: formattedStartDate?.toISOString().split('T')[0],
         end_date: formattedEndDate ? formattedEndDate.toISOString().split('T')[0] : null,
@@ -330,7 +331,9 @@ const AddBudget = () => {
         budgetData.source_percentage = Number(percentage);
       }
 
-      console.log('Budget data:', budgetData);
+      console.log('Budget data to be sent:', budgetData);
+      console.log('Amount type:', typeof budgetData.amount);
+      console.log('Amount value:', budgetData.amount);
 
       const { data: budget, error } = await supabase
         .from('budgets')

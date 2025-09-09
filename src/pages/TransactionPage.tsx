@@ -1351,7 +1351,6 @@ const TransactionPage = () => {
                                       <Input
                                         type="text"
                                         inputMode="numeric"
-                                        pattern="[0-9]*"
                                         placeholder="0"
                                         value={field.value ? field.value.toString() : ""}
                                         onChange={(e) => {
@@ -1394,7 +1393,6 @@ const TransactionPage = () => {
                                       <Input
                                         type="text"
                                         inputMode="numeric"
-                                        pattern="[0-9]*"
                                         placeholder="0"
                                         value={field.value ? field.value.toString() : ""}
                                         onChange={(e) => {

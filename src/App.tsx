@@ -25,7 +25,6 @@ import LoanDetail from './pages/LoanDetail';
 import { useAuth } from './contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Categories from "@/pages/Categories";
-import AddCategoryPage from "@/pages/AddCategoryPage";
 import Transactions from "@/pages/Transactions";
 import WalletForm from "@/components/WalletForm";
 import LoanPaymentPage from './pages/LoanPaymentPage';
@@ -334,7 +333,7 @@ function App() {
           <Route path="/categories/add" element={
             <ProtectedRoute>
               <AuthRedirect />
-              <AddCategoryPage />
+              <CategoryForm />
             </ProtectedRoute>
           } />
           <Route path="/categories/edit/:id" element={

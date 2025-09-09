@@ -34,14 +34,15 @@ const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
       // Mengambil nilai dari input
       const inputStr = e.target.value;
       
-      // Hapus semua karakter non-digit dan formatting sebelumnya (titik)
+      // Hapus semua karakter non-digit
       const rawValue = inputStr.replace(/[^\d]/g, '');
       
       // Konversi ke angka
       const numericValue = rawValue ? parseInt(rawValue, 10) : 0;
       
       // Format untuk tampilan dengan pemisah ribuan
-      setDisplayValue(formatNumberWithSeparator(numericValue));
+      const formattedValue = formatNumberWithSeparator(numericValue);
+      setDisplayValue(formattedValue);
       
       // Update parent component
       if (onChange) {
@@ -60,7 +61,6 @@ const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
           ref={ref}
           type="text"
           inputMode="numeric"
-          pattern="[0-9]*"
           value={displayValue}
           onChange={handleInputChange}
           className={`${showPrefix ? 'pl-10' : ''} ${className || ''}`}
