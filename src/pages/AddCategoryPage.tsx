@@ -90,36 +90,38 @@ const AddCategoryPage = () => {
     icon: 'Utensils'
   });
   const [loading, setLoading] = useState(false);
-  const [filteredSuggestions, setFilteredSuggestions] = useState(smartSuggestions.expense.slice(0, 5));
-  const [showManualForm, setShowManualForm] = useState(false);
+  const [filteredSuggestions, setFilteredSuggestions] = useState(smartSuggestions.expense.slice(0, 8));
+  const [creationMode, setCreationMode] = useState<'suggestions' | 'manual' | null>(null);
 
-  // Update filtered suggestions when name or type changes
+  // Update filtered suggestions when type changes
   useEffect(() => {
     const suggestions = smartSuggestions[formData.type];
-    if (formData.name.trim() === '') {
-      setFilteredSuggestions(suggestions.slice(0, 5));
-    } else {
-      const filtered = suggestions.filter(suggestion =>
-        suggestion.name.toLowerCase().includes(formData.name.toLowerCase())
-      ).slice(0, 5);
-      setFilteredSuggestions(filtered);
-    }
-  }, [formData.name, formData.type]);
+    setFilteredSuggestions(suggestions.slice(0, 8));
+  }, [formData.type]);
 
   const handleQuickAdd = async (suggestion: any) => {
     setLoading(true);
     try {
-      const { error } = await supabase
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase
         .from('categories')
         .insert({
           name: suggestion.name,
           type: formData.type,
           color: suggestion.color,
           icon: suggestion.icon,
-          user_id: user!.id
-        });
+          user_id: user.id
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Gagal menyimpan kategori: ${error.message}`);
+      }
 
       toast({
         title: "Kategori Berhasil Ditambahkan",
@@ -152,17 +154,26 @@ const AddCategoryPage = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      const { data, error } = await supabase
         .from('categories')
         .insert({
           name: formData.name.trim(),
           type: formData.type,
           color: formData.color,
           icon: formData.icon,
-          user_id: user!.id
-        });
+          user_id: user.id
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(`Gagal menyimpan kategori: ${error.message}`);
+      }
 
       toast({
         title: "Kategori Berhasil Ditambahkan",
@@ -232,49 +243,83 @@ const AddCategoryPage = () => {
             </RadioGroup>
           </Card>
 
-          {/* Search/Name Input */}
-          <Card className="p-6 mb-6 backdrop-blur-sm bg-white/90 border-white/20 shadow-sm">
-            <Label className="text-sm font-medium text-gray-700 mb-3 block">
-              <Search className="w-4 h-4 inline mr-2" />
-              Cari atau Buat Kategori
-            </Label>
-            <Input
-              placeholder="Ketik nama kategori..."
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full"
-            />
-          </Card>
-
-          {/* Smart Suggestions */}
-          {filteredSuggestions.length > 0 && (
+          {/* Creation Mode Selection */}
+          {!creationMode && (
             <Card className="p-6 mb-6 backdrop-blur-sm bg-white/90 border-white/20 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-4 h-4 text-purple-600" />
-                <Label className="text-sm font-medium text-gray-700">Saran Pintar</Label>
+              <div className="text-center space-y-4">
+                <h3 className="text-lg font-semibold text-gray-800">Pilih Cara Membuat Kategori</h3>
+                <p className="text-sm text-gray-600">Gunakan saran pintar atau buat manual sesuai kebutuhan Anda</p>
+                
+                <div className="grid grid-cols-1 gap-3 mt-6">
+                  <Button
+                    onClick={() => setCreationMode('suggestions')}
+                    className="w-full justify-start h-auto p-4 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                    variant="outline"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-5 h-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Gunakan Saran Pintar</p>
+                        <p className="text-xs text-purple-600">Pilih dari kategori yang sudah disiapkan</p>
+                      </div>
+                    </div>
+                  </Button>
+                  
+                  <Button
+                    onClick={() => setCreationMode('manual')}
+                    className="w-full justify-start h-auto p-4 bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
+                    variant="outline"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Search className="w-5 h-5" />
+                      <div className="text-left">
+                        <p className="font-medium">Buat Manual</p>
+                        <p className="text-xs text-gray-600">Buat kategori sesuai keinginan Anda</p>
+                      </div>
+                    </div>
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+            </Card>
+          )}
+
+          {/* Smart Suggestions Mode */}
+          {creationMode === 'suggestions' && (
+            <Card className="p-6 mb-6 backdrop-blur-sm bg-white/90 border-white/20 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <Label className="text-sm font-medium text-gray-700">Pilih Kategori</Label>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCreationMode(null)}
+                  className="text-gray-500"
+                >
+                  Kembali
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto">
                 {filteredSuggestions.map((suggestion, index) => {
                   const IconComponent = getIconComponent(suggestion.icon);
                   return (
                     <Button
                       key={index}
                       variant="outline"
-                      className="w-full justify-start h-auto p-4 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all duration-200"
+                      className="w-full justify-start h-12 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all duration-200"
                       onClick={() => handleQuickAdd(suggestion)}
                       disabled={loading}
                     >
-                      <div className="flex items-center gap-3 w-full">
+                      <div className="flex items-center gap-3">
                         <div 
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm"
                           style={{ backgroundColor: suggestion.color }}
                         >
-                          <IconComponent className="w-5 h-5" />
+                          <IconComponent className="w-4 h-4" />
                         </div>
-                        <div className="text-left">
-                          <p className="font-medium text-gray-800">{suggestion.name}</p>
-                          <p className="text-xs text-gray-500 capitalize">{formData.type === 'expense' ? 'Pengeluaran' : 'Pemasukan'}</p>
-                        </div>
+                        <span className="font-medium text-gray-800">{suggestion.name}</span>
                       </div>
                     </Button>
                   );
@@ -283,20 +328,21 @@ const AddCategoryPage = () => {
             </Card>
           )}
 
-          {/* Manual Form Toggle */}
-          <Card className="p-6 mb-6 backdrop-blur-sm bg-white/90 border-white/20 shadow-sm">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowManualForm(!showManualForm)}
-            >
-              {showManualForm ? 'Sembunyikan' : 'Buat'} Kategori Kustom
-            </Button>
-          </Card>
-
-          {/* Manual Form */}
-          {showManualForm && (
+          {/* Manual Form Mode */}
+          {creationMode === 'manual' && (
             <Card className="p-6 mb-6 backdrop-blur-sm bg-white/90 border-white/20 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <Label className="text-sm font-medium text-gray-700">Buat Kategori Manual</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCreationMode(null)}
+                  className="text-gray-500"
+                >
+                  Kembali
+                </Button>
+              </div>
+              
               <form onSubmit={handleManualSubmit} className="space-y-6">
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-3 block">Nama Kategori</Label>
@@ -344,7 +390,7 @@ const AddCategoryPage = () => {
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => navigate('/categories')}
+                    onClick={() => setCreationMode(null)}
                     disabled={loading}
                   >
                     Batal
