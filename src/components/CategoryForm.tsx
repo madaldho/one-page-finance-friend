@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -128,9 +128,9 @@ export function CategoryForm() {
     if (isEditing && id) {
       fetchCategory(id);
     }
-  }, [id]);
+  }, [id, isEditing, fetchCategory]);
 
-  const fetchCategory = async (categoryId: string) => {
+  const fetchCategory = useCallback(async (categoryId: string) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -160,13 +160,14 @@ export function CategoryForm() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [form, toast, navigate]);
 
+  const formValues = form.watch();
   useEffect(() => {
     if (submitError) {
       setSubmitError(null);
     }
-  }, [form.watch(), submitError]);
+  }, [formValues, submitError]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
