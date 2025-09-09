@@ -781,7 +781,7 @@ const BudgetManagement = () => {
           <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-white">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-semibold text-lg">Sumber Dana Budget</h2>
+                <h2 className="font-semibold text-lg">Sumber Dana Anggaran</h2>
                 <p className="text-white/80 text-sm">Kelola sumber pendanaan anggaran Anda</p>
               </div>
               <Link
