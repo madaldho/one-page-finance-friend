@@ -123,12 +123,6 @@ export function CategoryForm() {
   const selectedColor = form.watch('color');
   const selectedType = form.watch('type');
 
-  useEffect(() => {
-    if (isEditing && id) {
-      fetchCategory(id);
-    }
-  }, [id, isEditing, fetchCategory]);
-
   const fetchCategory = useCallback(async (categoryId: string) => {
     try {
       setLoading(true);
@@ -160,6 +154,12 @@ export function CategoryForm() {
       setLoading(false);
     }
   }, [form, toast, navigate]);
+
+  useEffect(() => {
+    if (isEditing && id) {
+      fetchCategory(id);
+    }
+  }, [id, isEditing, fetchCategory]);
 
   const formValues = form.watch();
   useEffect(() => {
