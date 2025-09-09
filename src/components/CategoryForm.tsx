@@ -57,7 +57,6 @@ import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import Layout from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
-import { v4 as uuidv4 } from 'uuid'
 import ColorPicker from '@/components/ColorPicker'
 
 type Category = Database['public']['Tables']['categories']['Row']
@@ -206,12 +205,13 @@ export function CategoryForm() {
         
         result = updatedData;
       } else {
+        // Hapus manual ID generation, biarkan database yang generate dengan gen_random_uuid()
         const newCategoryData = {
-          id: uuidv4(),
           ...data,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          // Tidak perlu menyertakan id, created_at, updated_at karena database sudah handle otomatis
         };
+
+        console.log('Data to insert:', newCategoryData);
 
         const { data: newData, error } = await supabase
           .from('categories')
