@@ -187,7 +187,7 @@ export type Database = {
           color?: string | null
           created_at?: string | null
           icon?: string | null
-          id: string
+          id?: string
           name: string
           type: string
           updated_at?: string | null

@@ -205,10 +205,13 @@ export function CategoryForm() {
         
         result = updatedData;
       } else {
-        // Hapus manual ID generation, biarkan database yang generate dengan gen_random_uuid()
+        // Buat data baru secara eksplisit tanpa property yang tidak dibutuhkan
         const newCategoryData = {
-          ...data,
-          // Tidak perlu menyertakan id, created_at, updated_at karena database sudah handle otomatis
+          name: values.name,
+          type: values.type,
+          color: values.color,
+          icon: values.icon,
+          user_id: userId,
         };
 
         console.log('Data to insert:', newCategoryData);
