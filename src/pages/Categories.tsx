@@ -2,7 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Pencil, Trash2, ArrowLeft, ChevronLeft, MoreHorizontal, Search, X, LockIcon } from 'lucide-react';
+import { 
+  Plus, 
+  Pencil, 
+  Trash2, 
+  ArrowLeft, 
+  ChevronLeft, 
+  MoreHorizontal, 
+  Search, 
+  X, 
+  LockIcon,
+  DollarSign,
+  ShoppingCart,
+  Car,
+  Home,
+  Utensils,
+  GraduationCap,
+  Heart,
+  Gamepad2,
+  Gift,
+  Plane,
+  Briefcase,
+  Bus,
+  Shirt,
+  Coffee,
+  Calendar,
+  PiggyBank,
+  CreditCard,
+  Banknote,
+  HandHeart,
+  ShoppingBag,
+  Stethoscope,
+  Book,
+  Smartphone,
+  Wifi,
+  University
+} from 'lucide-react';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -43,6 +78,44 @@ interface UserProfile {
 }
 
 const MAX_FREE_CATEGORIES = 10;
+
+// Icon mapping untuk menampilkan Lucide icons
+const iconMap: { [key: string]: any } = {
+  'DollarSign': DollarSign,
+  'ShoppingCart': ShoppingCart,
+  'Car': Car,
+  'Home': Home,
+  'Utensils': Utensils,
+  'GraduationCap': GraduationCap,
+  'Heart': Heart,
+  'Gamepad2': Gamepad2,
+  'Gift': Gift,
+  'Plane': Plane,
+  'Briefcase': Briefcase,
+  'Bus': Bus,
+  'Shirt': Shirt,
+  'Coffee': Coffee,
+  'Calendar': Calendar,
+  'PiggyBank': PiggyBank,
+  'CreditCard': CreditCard,
+  'Banknote': Banknote,
+  'HandHeart': HandHeart,
+  'ShoppingBag': ShoppingBag,
+  'Stethoscope': Stethoscope,
+  'Book': Book,
+  'Smartphone': Smartphone,
+  'Wifi': Wifi,
+  'University': University,
+  // Fallback untuk icon lama yang mungkin masih ada di database
+  'dollar': DollarSign,
+  'shopping-cart': ShoppingCart,
+  'car': Car,
+  'home': Home,
+  'utensils': Utensils,
+  'coffee': Coffee,
+  'wifi': Wifi,
+  'money-bill': Banknote,
+};
 
 const Categories = () => {
   const { user } = useAuth();
@@ -324,7 +397,10 @@ const Categories = () => {
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0"
                           style={{ backgroundColor: category.color || '#6E59A5' }}
                         >
-                    <i className={`fas fa-${category.icon} text-sm`}></i>
+                    {(() => {
+                      const IconComponent = iconMap[category.icon] || DollarSign;
+                      return <IconComponent className="w-5 h-5" />;
+                    })()}
                         </div>
                   
                   <div className="ml-3 flex-1 min-w-0">
