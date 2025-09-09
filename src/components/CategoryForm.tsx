@@ -51,13 +51,16 @@ import {
   Book,
   Smartphone,
   Wifi,
-  University
+  University,
+  Sparkles,
+  Zap,
+  Building2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import Layout from '@/components/Layout'
 import { useAuth } from '@/contexts/AuthContext'
-import ColorPicker from '@/components/ColorPicker'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 type Category = Database['public']['Tables']['categories']['Row']
 
@@ -67,6 +70,39 @@ const formSchema = z.object({
   color: z.string().min(1, 'Warna harus dipilih'),
   icon: z.string().min(1, 'Icon harus dipilih'),
 })
+
+// Smart suggestions untuk kategori populer
+const smartSuggestions = {
+  expense: [
+    { name: 'Makanan & Minuman', icon: 'Utensils', color: '#FF6B6B' },
+    { name: 'Transport', icon: 'Car', color: '#4ECDC4' },
+    { name: 'Belanja', icon: 'ShoppingBag', color: '#45B7D1' },
+    { name: 'Rumah Tangga', icon: 'Home', color: '#96CEB4' },
+    { name: 'Kesehatan', icon: 'Heart', color: '#FFEAA7' },
+    { name: 'Pendidikan', icon: 'GraduationCap', color: '#DDA0DD' },
+    { name: 'Hiburan', icon: 'Gamepad2', color: '#FFB347' },
+    { name: 'Kopi & Cafe', icon: 'Coffee', color: '#8B4513' },
+    { name: 'Pakaian', icon: 'Shirt', color: '#FF69B4' },
+    { name: 'Internet & Pulsa', icon: 'Wifi', color: '#00CED1' },
+    { name: 'Listrik & Utilitas', icon: 'Zap', color: '#FFD700' },
+    { name: 'Bensin', icon: 'Car', color: '#FF4500' },
+    { name: 'Olahraga', icon: 'Heart', color: '#32CD32' },
+    { name: 'Hadiah', icon: 'Gift', color: '#FF1493' },
+    { name: 'Perjalanan', icon: 'Plane', color: '#87CEEB' }
+  ],
+  income: [
+    { name: 'Gaji', icon: 'Briefcase', color: '#2ECC71' },
+    { name: 'Bonus', icon: 'Gift', color: '#F39C12' },
+    { name: 'Investasi', icon: 'DollarSign', color: '#E74C3C' },
+    { name: 'Freelance', icon: 'Briefcase', color: '#9B59B6' },
+    { name: 'Bisnis', icon: 'Building2', color: '#34495E' },
+    { name: 'Dividen', icon: 'DollarSign', color: '#16A085' },
+    { name: 'Bunga Bank', icon: 'PiggyBank', color: '#27AE60' },
+    { name: 'Penjualan', icon: 'ShoppingBag', color: '#E67E22' },
+    { name: 'Komisi', icon: 'CreditCard', color: '#8E44AD' },
+    { name: 'Honorarium', icon: 'Book', color: '#2980B9' }
+  ]
+}
 
 const icons = [
   { value: 'DollarSign', label: 'Dollar', component: DollarSign },
@@ -94,20 +130,38 @@ const icons = [
   { value: 'Smartphone', label: 'Mobile', component: Smartphone },
   { value: 'Wifi', label: 'Internet', component: Wifi },
   { value: 'University', label: 'Bank', component: University },
+  { value: 'Zap', label: 'Electric', component: Zap },
+  { value: 'Building2', label: 'Building', component: Building2 },
+]
+
+// Warna preset yang sama dengan wallet form
+const CATEGORY_COLORS = [
+  "#6E59A5", // Purple
+  "#3b82f6", // Blue
+  "#10b981", // Green
+  "#f59e0b", // Orange
+  "#ef4444", // Red
+  "#8b5cf6", // Violet
+  "#ec4899", // Pink
+  "#14b8a6", // Teal
+  "#64748b", // Slate
+  "#000000", // Black
 ]
 
 export function CategoryForm() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [category, setCategory] = useState<Category | null>(null);
-  const [success, setSuccess] = useState(false);
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [category, setCategory] = useState<Category | null>(null)
+  const [success, setSuccess] = useState(false)
+  const [creationMode, setCreationMode] = useState<'suggestions' | 'manual' | null>(null)
+  const [customColor, setCustomColor] = useState("#6E59A5")
 
-  const isEditing = !!id;
+  const isEditing = !!id
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -117,11 +171,12 @@ export function CategoryForm() {
       color: '#6E59A5',
       icon: 'DollarSign',
     },
-  });
+  })
 
-  const selectedIcon = form.watch('icon');
-  const selectedColor = form.watch('color');
-  const selectedType = form.watch('type');
+  const selectedIcon = form.watch('icon')
+  const selectedColor = form.watch('color')
+  const selectedType = form.watch('type')
+  const watchName = form.watch('name')
 
   const fetchCategory = useCallback(async (categoryId: string) => {
     try {
@@ -141,6 +196,11 @@ export function CategoryForm() {
           color: data.color || '#6E59A5',
           icon: data.icon || 'DollarSign',
         });
+        
+        // Set custom color if not in preset
+        if (data.color && !CATEGORY_COLORS.includes(data.color)) {
+          setCustomColor(data.color);
+        }
       }
     } catch (error) {
       console.error('Error fetching category:', error);
@@ -158,6 +218,9 @@ export function CategoryForm() {
   useEffect(() => {
     if (isEditing && id) {
       fetchCategory(id);
+    } else {
+      // If creating new, don't show creation mode selection for editing
+      setCreationMode(null);
     }
   }, [id, isEditing, fetchCategory]);
 
@@ -167,6 +230,25 @@ export function CategoryForm() {
       setSubmitError(null);
     }
   }, [formValues, submitError]);
+
+  // Helper function to get icon component
+  const getIconComponent = (iconName: string) => {
+    const iconData = icons.find(i => i.value === iconName);
+    return iconData?.component || DollarSign;
+  };
+
+  // Handle smart suggestion selection
+  const handleSuggestionSelect = (suggestion: any) => {
+    form.setValue('name', suggestion.name);
+    form.setValue('color', suggestion.color);
+    form.setValue('icon', suggestion.icon);
+    setCreationMode('manual'); // Switch to manual mode for customization
+  };
+
+  // Handle color change
+  const handleColorChange = (color: string) => {
+    form.setValue('color', color);
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -189,7 +271,7 @@ export function CategoryForm() {
         const updateData: Database['public']['Tables']['categories']['Update'] = {
           name: values.name,
           type: values.type,
-          color: values.color,
+          color: values.color === 'custom' ? customColor : values.color,
           icon: values.icon,
           updated_at: new Date().toISOString(),
         };
@@ -215,7 +297,7 @@ export function CategoryForm() {
         const insertData: Database['public']['Tables']['categories']['Insert'] = {
           name: values.name.trim(),
           type: values.type,
-          color: values.color,
+          color: values.color === 'custom' ? customColor : values.color,
           icon: values.icon,
           user_id: userId,
           // id tidak disertakan, biarkan database auto-generate
@@ -299,255 +381,391 @@ export function CategoryForm() {
     '#CDDC39', // Lime
   ];
 
+  const currentSuggestions = smartSuggestions[selectedType] || [];
+
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-lg pt-6 md:pt-4">
-        {/* Header dengan glassmorphism effect */}
-        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
-              onClick={() => navigate('/categories')}
-              aria-label="Kembali"
-            >
-              <ChevronLeft className="h-5 w-5 text-gray-700" />
-            </Button>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">{isEditing ? 'Edit Kategori' : 'Tambah Kategori'}</h1>
-              <p className="text-xs text-gray-500">Form kategori transaksi</p>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
-            <p className="mt-4 text-muted-foreground">Memuat data kategori...</p>
-          </div>
-        ) : success ? (
-          <div className="flex flex-col items-center justify-center py-12 bg-card rounded-lg">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 md:pt-4 pb-32">
+          {/* Header dengan glassmorphism effect */}
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/categories')}
+                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0"
+                aria-label="Kembali"
+              >
+                <ChevronLeft className="h-5 w-5 text-gray-700" />
+              </Button>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">{isEditing ? 'Edit Kategori' : 'Tambah Kategori'}</h1>
+                <p className="text-xs text-gray-500">Form kategori transaksi</p>
+              </div>
             </div>
-            <h3 className="text-xl font-medium mb-2">Berhasil!</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Kategori telah berhasil {isEditing ? 'diperbarui' : 'ditambahkan'}. 
-              Kembali ke halaman kategori...
-            </p>
           </div>
-        ) : (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20">
-          <div className="flex items-center gap-4 mb-6">
-            <div 
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-sm"
-              style={{ backgroundColor: selectedColor }}
-            >
-              {(() => {
-                const iconData = icons.find(i => i.value === selectedIcon);
-                const IconComponent = iconData?.component || DollarSign;
-                return <IconComponent className="w-6 h-6" />;
-              })()}
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
+              <p className="mt-4 text-muted-foreground">Memuat data kategori...</p>
             </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-sm">
-                {form.watch('name') || 'Nama Kategori'}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {selectedType === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+          ) : success ? (
+            <div className="flex flex-col items-center justify-center py-12 bg-card rounded-lg">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                <CheckCircle className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-xl font-medium mb-2">Berhasil!</h3>
+              <p className="text-muted-foreground text-center mb-4">
+                Kategori telah berhasil {isEditing ? 'diperbarui' : 'ditambahkan'}. 
+                Kembali ke halaman kategori...
               </p>
             </div>
-          </div>
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                        <FormLabel className="text-sm font-medium">Nama Kategori</FormLabel>
-                  <FormControl>
-                          <Input 
-                            placeholder="Masukkan nama kategori" 
-                            {...field} 
-                            className="h-9 rounded-md"
-                          />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          ) : (
+            <div className="space-y-6">
+              {/* Preview Card */}
+              <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-6 shadow-sm border border-white/20">
+                <div className="flex items-center gap-4 mb-6">
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg transition-all duration-300"
+                    style={{ backgroundColor: selectedColor === 'custom' ? customColor : selectedColor }}
+                  >
+                    {(() => {
+                      const IconComponent = getIconComponent(selectedIcon);
+                      return <IconComponent className="w-6 h-6" />;
+                    })()}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-gray-800">
+                      {watchName || 'Nama Kategori'}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {selectedType === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                        <FormLabel className="text-sm font-medium">Tipe</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                            <SelectTrigger className="h-9 rounded-md">
-                        <SelectValue placeholder="Pilih tipe kategori" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                            <SelectItem value="income" className="flex items-center text-sm">
-                        <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                          <span>Pemasukan</span>
-                        </div>
-                      </SelectItem>
-                            <SelectItem value="expense" className="flex items-center text-sm">
-                        <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                          <span>Pengeluaran</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-  </div>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Type Selection */}
+                  <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-6 shadow-sm border border-white/20">
+                    <FormField
+                      control={form.control}
+                      name="type"
+                      render={({ field }) => (
+                        <FormItem className="space-y-3">
+                          <FormLabel className="text-sm font-medium text-gray-700">Jenis Kategori</FormLabel>
+                          <Tabs value={field.value} onValueChange={field.onChange}>
+                            <TabsList className="grid w-full grid-cols-2 h-10 rounded-xl p-1 bg-gray-100">
+                              <TabsTrigger value="expense" className="rounded-lg text-sm h-8 font-medium data-[state=active]:bg-red-100 data-[state=active]:text-red-700">
+                                Pengeluaran
+                              </TabsTrigger>
+                              <TabsTrigger value="income" className="rounded-lg text-sm h-8 font-medium data-[state=active]:bg-green-100 data-[state=active]:text-green-700">
+                                Pemasukan
+                              </TabsTrigger>
+                            </TabsList>
+                          </Tabs>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
-        <Card className="p-4">
-                <h3 className="font-medium text-sm mb-4">Kustomisasi</h3>
-                <div className="space-y-5">
-            <FormField
-              control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem>
-                        <FormLabel className="text-sm font-medium">Warna</FormLabel>
-                  <FormControl>
-                          <div className="space-y-3">                            
-                            <div className="grid grid-cols-6 gap-2">
-                              {colors.map((color) => (
-                                <button
-                                  key={color}
-                                  type="button"
-                                  className={cn(
-                                    "w-full aspect-square rounded-full border-2", 
-                                    color === field.value ? "border-black shadow-sm" : "border-transparent"
-                                  )}
-                                  style={{ backgroundColor: color }}
-                                  onClick={() => field.onChange(color)}
-                                  aria-label={`Pilih warna ${color}`}
-                                />
-                              ))}
+                  {/* Creation Mode Selection - Only for new categories */}
+                  {!isEditing && !creationMode && (
+                    <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-6 shadow-sm border border-white/20">
+                      <div className="text-center space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-800">Pilih Cara Membuat Kategori</h3>
+                        <p className="text-sm text-gray-600">Gunakan saran pintar atau buat manual sesuai kebutuhan Anda</p>
+                        
+                        <div className="grid grid-cols-1 gap-3 mt-6">
+                          <Button
+                            onClick={() => setCreationMode('suggestions')}
+                            className="w-full justify-start h-auto p-4 bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100"
+                            variant="outline"
+                            type="button"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Sparkles className="w-5 h-5" />
+                              <div className="text-left">
+                                <p className="font-medium">Gunakan Saran Pintar</p>
+                                <p className="text-xs text-purple-600">Pilih dari kategori yang sudah disiapkan</p>
+                              </div>
                             </div>
-                            
-                            <div className="flex gap-2 items-center">
-                              <ColorPicker
-                                selectedColor={field.value}
-                                onColorSelect={(color) => field.onChange(color)}
-                              />
-                              <Input 
-                                type="text" 
-                                value={field.value}
-                                onChange={(e) => field.onChange(e.target.value)}
-                                className="flex-1 h-8 text-xs"
-                                placeholder="#000000"
-                              />
+                          </Button>
+                          
+                          <Button
+                            onClick={() => setCreationMode('manual')}
+                            className="w-full justify-start h-auto p-4 bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
+                            variant="outline"
+                            type="button"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Car className="w-5 h-5" />
+                              <div className="text-left">
+                                <p className="font-medium">Buat Manual</p>
+                                <p className="text-xs text-gray-600">Buat kategori sesuai keinginan Anda</p>
+                              </div>
                             </div>
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  )}
 
-            <FormField
-              control={form.control}
-              name="icon"
-              render={({ field }) => (
-                <FormItem>
-                        <FormLabel className="text-sm font-medium">Icon</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                            <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Pilih icon">
-                                <span className="flex items-center gap-2 text-sm">
-                                  {(() => {
-                                    const iconData = icons.find(i => i.value === field.value);
-                                    const IconComponent = iconData?.component || DollarSign;
-                                    return (
-                                      <>
-                                        <IconComponent className="w-4 h-4" />
-                                        {iconData?.label}
-                                      </>
-                                    );
-                                  })()}
-                          </span>
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-h-[200px]">
-                            <div className="grid grid-cols-2 gap-1 p-1">
-                      {icons.map((icon) => {
-                        const IconComponent = icon.component;
-                        return (
-                                <SelectItem key={icon.value} value={icon.value} className="text-sm p-2">
-                          <span className="flex items-center gap-2">
-                                    <IconComponent className="w-4 h-4" />
-                                    <span className="text-xs">{icon.label}</span>
-                          </span>
-                        </SelectItem>
-                        );
-                      })}
-                            </div>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </Card>
+                  {/* Smart Suggestions Mode - Only for new categories */}
+                  {!isEditing && creationMode === 'suggestions' && (
+                    <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-6 shadow-sm border border-white/20">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-purple-600" />
+                          <h3 className="text-sm font-medium text-gray-700">Pilih Kategori</h3>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setCreationMode(null)}
+                          className="text-gray-500"
+                          type="button"
+                        >
+                          Kembali
+                        </Button>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-2 max-h-80 overflow-y-auto">
+                        {currentSuggestions.map((suggestion, index) => {
+                          const IconComponent = getIconComponent(suggestion.icon);
+                          return (
+                            <Button
+                              key={index}
+                              variant="outline"
+                              className="w-full justify-start h-12 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-all duration-200"
+                              onClick={() => handleSuggestionSelect(suggestion)}
+                              disabled={submitting}
+                              type="button"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div 
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm"
+                                  style={{ backgroundColor: suggestion.color }}
+                                >
+                                  <IconComponent className="w-4 h-4" />
+                                </div>
+                                <span className="font-medium text-gray-800">{suggestion.name}</span>
+                              </div>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-        {submitError && (
-                <div className="text-red-500 text-sm p-3 bg-red-50 rounded-md border border-red-200">
-                  {submitError}
-          </div>
-        )}
+                  {/* Manual Form Mode - Always visible when editing or manual mode selected */}
+                  {(isEditing || creationMode === 'manual') && (
+                    <>
+                      {/* Name Field */}
+                      <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-6 shadow-sm border border-white/20">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel className="text-sm font-medium text-gray-700">Nama Kategori</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  placeholder="Masukkan nama kategori" 
+                                  {...field} 
+                                  className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
 
-              <div className="flex gap-2 pt-4">
-          <Button 
-            variant="outline" 
-                  onClick={() => navigate('/categories')}
-            type="button"
-                  className="flex-1"
-                  disabled={submitting}
-          >
-            Batal
-          </Button>
-          <Button 
-            type="submit" 
-                  disabled={submitting}
-            className={cn(
-                    "flex-1",
-                    submitting && "opacity-80"
-            )}
-          >
-                  {submitting ? (
-              <span className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                      {isEditing ? 'Memperbarui...' : 'Menyimpan...'}
-              </span>
-                  ) : isEditing ? (
-              'Perbarui'
-            ) : (
-                    'Simpan'
-            )}
-          </Button>
+                      {/* Color and Icon Selection */}
+                      <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-6 shadow-sm border border-white/20">
+                        <div className="space-y-6">
+                          {/* Color Selection */}
+                          <FormField
+                            control={form.control}
+                            name="color"
+                            render={({ field }) => (
+                              <FormItem className="space-y-3">
+                                <FormLabel className="text-sm font-medium text-gray-700">Warna</FormLabel>
+                                <FormControl>
+                                  <div className="space-y-3">
+                                    <div className="flex flex-wrap gap-2">
+                                      {CATEGORY_COLORS.map((color) => (
+                                        <button
+                                          key={color}
+                                          type="button"
+                                          className={cn(
+                                            "w-8 h-8 rounded-lg border transition-all duration-200 hover:scale-110", 
+                                            field.value === color 
+                                              ? "border-2 border-gray-900 shadow-md scale-110" 
+                                              : "border border-gray-300 hover:border-gray-500"
+                                          )}
+                                          style={{ backgroundColor: color }}
+                                          onClick={() => handleColorChange(color)}
+                                          aria-label={`Pilih warna ${color}`}
+                                        />
+                                      ))}
+                                      
+                                      <button
+                                        type="button"
+                                        className={cn(
+                                          "w-8 h-8 rounded-lg border overflow-hidden relative transition-all duration-200 hover:scale-110", 
+                                          field.value === 'custom' 
+                                            ? "border-2 border-gray-900 shadow-md scale-110" 
+                                            : "border border-gray-300 hover:border-gray-500"
+                                        )}
+                                        onClick={() => handleColorChange('custom')}
+                                        aria-label="Pilih warna kustom"
+                                      >
+                                        <div 
+                                          className="w-full h-full absolute top-0 left-0"
+                                          style={{ 
+                                            background: field.value === 'custom' 
+                                              ? customColor 
+                                              : "conic-gradient(from 0deg, #ff0000, #ff9a00, #d0de21, #4fdc4a, #3fdad8, #2fc9e2, #1c7fee, #5f15f2, #ba0cf8, #fb07d9, #ff0000)" 
+                                          }}
+                                        ></div>
+                                      </button>
+                                    </div>
+                                    
+                                    {field.value === 'custom' && (
+                                      <div className="flex gap-2 items-center p-2 bg-gray-50 rounded-lg border">
+                                        <Input 
+                                          type="color" 
+                                          value={customColor}
+                                          onChange={(e) => {
+                                            setCustomColor(e.target.value);
+                                          }}
+                                          className="w-8 h-8 p-0.5 rounded border-0 cursor-pointer"
+                                        />
+                                        <Input
+                                          type="text"
+                                          value={customColor}
+                                          onChange={(e) => {
+                                            setCustomColor(e.target.value);
+                                          }}
+                                          className="flex-1 h-8 text-xs border-0 bg-transparent"
+                                          placeholder="#000000"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Icon Selection */}
+                          <FormField
+                            control={form.control}
+                            name="icon"
+                            render={({ field }) => (
+                              <FormItem className="space-y-3">
+                                <FormLabel className="text-sm font-medium text-gray-700">Icon</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200">
+                                      <SelectValue placeholder="Pilih icon">
+                                        <span className="flex items-center gap-3 text-sm">
+                                          {(() => {
+                                            const iconData = icons.find(i => i.value === field.value);
+                                            const IconComponent = iconData?.component || DollarSign;
+                                            return (
+                                              <>
+                                                <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                  <IconComponent className="w-4 h-4 text-gray-600" />
+                                                </div>
+                                                {iconData?.label}
+                                              </>
+                                            );
+                                          })()}
+                                        </span>
+                                      </SelectValue>
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent className="max-h-[300px] rounded-xl border-gray-200">
+                                    <div className="grid grid-cols-2 gap-1 p-2">
+                                      {icons.map((icon) => {
+                                        const IconComponent = icon.component;
+                                        return (
+                                          <SelectItem key={icon.value} value={icon.value} className="text-sm p-3 rounded-lg">
+                                            <span className="flex items-center gap-3">
+                                              <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center">
+                                                <IconComponent className="w-4 h-4 text-gray-600" />
+                                              </div>
+                                              <span className="text-xs">{icon.label}</span>
+                                            </span>
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </div>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {submitError && (
+                        <div className="text-red-500 text-sm p-3 bg-red-50 rounded-lg border border-red-200">
+                          {submitError}
+                        </div>
+                      )}
+
+                      {/* Submit buttons */}
+                      <div className="flex flex-col sm:flex-row gap-3 pt-6">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => navigate('/categories')}
+                          className="w-full sm:w-auto order-2 sm:order-1 h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                          disabled={submitting}
+                        >
+                          Batal
+                        </Button>
+                        <Button 
+                          type="submit" 
+                          disabled={submitting}
+                          className="w-full sm:flex-1 order-1 sm:order-2 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        >
+                          {submitting ? (
+                            <span className="flex items-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              {isEditing ? 'Memperbarui...' : 'Menyimpan...'}
+                            </span>
+                          ) : isEditing ? (
+                            'Perbarui'
+                          ) : (
+                            'Simpan'
+                          )}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </form>
+              </Form>
+            </div>
+          )}
         </div>
-      </form>
-    </Form>
-        )}
       </div>
     </Layout>
   );

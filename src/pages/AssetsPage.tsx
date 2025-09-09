@@ -228,158 +228,287 @@ export default function AssetsPage() {
 
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-xl pt-6 md:pt-4">
-        {/* Header dengan glassmorphism effect */}
-        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-          <div className="flex items-center gap-3">
-            <Link 
-              to="/settings"
-              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
-              aria-label="Kembali"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">Aset</h1>
-              <p className="text-xs text-gray-500">Kelola portofolio aset & kekayaan</p>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center text-gray-500 py-8 bg-white rounded-xl shadow-sm">
-            <div className="animate-spin w-8 h-8 border-3 border-purple-600 border-t-transparent rounded-full mb-3"></div>
-            <p className="text-sm">Memuat data aset...</p>
-          </div>
-        ) : !isProUser ? (
-          // Tampilan untuk pengguna free - tampilkan langsung fitur pro
-          renderProFeatures()
-        ) : assets.length > 0 ? (
-          <>
-            {/* Card Total Kekayaan dengan desain yang lebih modern */}
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-5">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-white">
-                <div className="flex flex-col space-y-4">
-                  <div className="flex items-center">
-                    <PieChart className="w-5 h-5 text-white/80 mr-2" />
-                    <h2 className="font-medium">Total Kekayaan</h2>
-                  </div>
-                  
-                  <p className="text-3xl font-bold">{formatCurrency(totalWealth)}</p>
-                  
-                  <div className="flex items-center text-xs text-white/80">
-                    <ArrowUpRight className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                    <span>Total dari nilai aset dan saldo dompet</span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Breakdown dengan animasi hover */}
-              <div className="p-4 divide-y">
-                <div className="pb-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
-                      <span className="text-sm font-medium">Nilai Aset</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold">{formatCurrency(totalAssetValue)}</span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                        {assetPercentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                  <Progress value={assetPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-indigo-500" />
-                </div>
-                
-                <div className="pt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                      <span className="text-sm font-medium">Saldo Dompet</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm font-semibold">{formatCurrency(totalWalletBalance)}</span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
-                        {walletPercentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                  <Progress value={walletPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-purple-500" />
-                </div>
-              </div>
-              
-              {/* Action Buttons yang lebih jelas dan responsif */}
-              <div className="p-3 bg-gray-50 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-3">
-                  <Button 
-                    onClick={() => navigate("/assets/transactions")} 
-                    variant="outline"
-                    className="h-10 text-xs border-gray-200 bg-white hover:bg-gray-50"
-                  >
-                    <ArrowUpRight className="w-3.5 h-3.5 mr-1.5" />
-                    Lihat Transaksi
-                  </Button>
-                  <Button 
-                    onClick={handleAddAsset} 
-                    className="h-10 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Tambah Aset
-                  </Button>
-                </div>
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-6xl lg:max-w-7xl relative z-10 pt-6 md:pt-4 pb-32">
+          {/* Header dengan glassmorphism effect */}
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+            <div className="flex items-center gap-3">
+              <Link 
+                to="/settings"
+                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </Link>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Manajemen Aset</h1>
+                <p className="text-xs text-gray-500">Kelola portofolio aset & pantau kekayaan</p>
               </div>
             </div>
+          </div>
 
-            {/* Daftar kategori aset dengan card yang lebih modern */}
-            <div className="space-y-5">
-              {Object.keys(assetsByCategory).map((category) => (
-                <div key={category} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100 flex items-center">
-                    <div className="bg-purple-100 p-1.5 rounded-full mr-2">
-                      {getCategoryIcon(category)}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center text-gray-500 py-12 backdrop-blur-sm bg-white/80 rounded-2xl shadow-sm border border-white/20">
+              <div className="animate-spin w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full mb-4"></div>
+              <p className="text-base font-medium">Memuat data aset...</p>
+            </div>
+          ) : !isProUser ? (
+            // Tampilan untuk pengguna free - tampilkan langsung fitur pro
+            <div className="max-w-4xl mx-auto">
+              {renderProFeatures()}
+            </div>
+          ) : assets.length > 0 ? (
+            <div className="space-y-6">
+              {/* Desktop Layout - Two Column */}
+              <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6">
+                {/* Left Column - Stats & Summary */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Card Total Kekayaan dengan desain yang lebih modern */}
+                  <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg overflow-hidden border border-white/20">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white">
+                      <div className="flex flex-col space-y-4">
+                        <div className="flex items-center">
+                          <PieChart className="w-6 h-6 text-white/80 mr-3" />
+                          <h2 className="font-semibold text-lg">Total Kekayaan</h2>
+                        </div>
+                        
+                        <p className="text-4xl font-bold">{formatCurrency(totalWealth)}</p>
+                        
+                        <div className="flex items-center text-sm text-white/80">
+                          <ArrowUpRight className="w-4 h-4 mr-2 flex-shrink-0" />
+                          <span>Total dari nilai aset dan saldo dompet</span>
+                        </div>
+                      </div>
                     </div>
-                    <h2 className="font-medium text-gray-800">
-                      {getCategoryLabel(category)}
-                    </h2>
-                    <div className="ml-auto">
-                      <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                        {assetsByCategory[category].length}
-                      </span>
+                    
+                    {/* Breakdown dengan animasi hover */}
+                    <div className="p-6 space-y-6">
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full bg-indigo-500"></div>
+                            <span className="font-medium text-gray-700">Nilai Aset</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-lg text-gray-900">{formatCurrency(totalAssetValue)}</span>
+                            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full font-medium">
+                              {assetPercentage.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                        <Progress value={assetPercentage} className="h-3 bg-gray-100" indicatorClassName="bg-indigo-500" />
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between items-center mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full bg-purple-500"></div>
+                            <span className="font-medium text-gray-700">Saldo Dompet</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-lg text-gray-900">{formatCurrency(totalWalletBalance)}</span>
+                            <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-full font-medium">
+                              {walletPercentage.toFixed(1)}%
+                            </span>
+                          </div>
+                        </div>
+                        <Progress value={walletPercentage} className="h-3 bg-gray-100" indicatorClassName="bg-purple-500" />
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="p-6 bg-gray-50/50 border-t border-gray-100">
+                      <div className="grid grid-cols-2 gap-4">
+                        <Button 
+                          onClick={() => navigate("/assets/transactions")} 
+                          variant="outline"
+                          className="h-12 font-medium border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                        >
+                          <BarChart2 className="w-4 h-4 mr-2" />
+                          Lihat Transaksi
+                        </Button>
+                        <Button 
+                          onClick={handleAddAsset} 
+                          className="h-12 font-medium bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Tambah Aset
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="divide-y divide-gray-100">
-                    {assetsByCategory[category].map((asset) => (
-                      <div key={asset.id} className="p-3 hover:bg-gray-50 transition-colors">
-                        <AssetCard asset={asset} />
+                </div>
+
+                {/* Right Column - Asset List */}
+                <div className="lg:col-span-7">
+                  <div className="space-y-4">
+                    {Object.keys(assetsByCategory).map((category) => (
+                      <div key={category} className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg overflow-hidden border border-white/20">
+                        <div className="px-6 py-4 border-b border-gray-100 flex items-center">
+                          <div className="bg-purple-100 p-2 rounded-xl mr-3">
+                            {getCategoryIcon(category)}
+                          </div>
+                          <h2 className="font-semibold text-gray-800 text-lg">
+                            {getCategoryLabel(category)}
+                          </h2>
+                          <div className="ml-auto">
+                            <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                              {assetsByCategory[category].length} item
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="divide-y divide-gray-100">
+                          {assetsByCategory[category].map((asset) => (
+                            <div key={asset.id} className="p-4 hover:bg-gray-50/50 transition-colors duration-200">
+                              <AssetCard asset={asset} />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              ))}
+              </div>
+
+              {/* Mobile Layout - Single Column */}
+              <div className="lg:hidden space-y-6">
+                {/* Card Total Kekayaan untuk mobile */}
+                <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg overflow-hidden border border-white/20">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-white">
+                    <div className="flex flex-col space-y-4">
+                      <div className="flex items-center">
+                        <PieChart className="w-5 h-5 text-white/80 mr-2" />
+                        <h2 className="font-medium">Total Kekayaan</h2>
+                      </div>
+                      
+                      <p className="text-3xl font-bold">{formatCurrency(totalWealth)}</p>
+                      
+                      <div className="flex items-center text-xs text-white/80">
+                        <ArrowUpRight className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span>Total dari nilai aset dan saldo dompet</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Breakdown */}
+                  <div className="p-4 divide-y">
+                    <div className="pb-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                          <span className="text-sm font-medium">Nilai Aset</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold">{formatCurrency(totalAssetValue)}</span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                            {assetPercentage.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      <Progress value={assetPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-indigo-500" />
+                    </div>
+                    
+                    <div className="pt-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                          <span className="text-sm font-medium">Saldo Dompet</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold">{formatCurrency(totalWalletBalance)}</span>
+                          <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full">
+                            {walletPercentage.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      <Progress value={walletPercentage} className="h-2 bg-gray-100" indicatorClassName="bg-purple-500" />
+                    </div>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="p-3 bg-gray-50 border-t border-gray-100">
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button 
+                        onClick={() => navigate("/assets/transactions")} 
+                        variant="outline"
+                        className="h-10 text-xs border-gray-200 bg-white hover:bg-gray-50"
+                      >
+                        <ArrowUpRight className="w-3.5 h-3.5 mr-1.5" />
+                        Lihat Transaksi
+                      </Button>
+                      <Button 
+                        onClick={handleAddAsset} 
+                        className="h-10 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-1.5" />
+                        Tambah Aset
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daftar kategori aset untuk mobile */}
+                <div className="space-y-5">
+                  {Object.keys(assetsByCategory).map((category) => (
+                    <div key={category} className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg overflow-hidden border border-white/20">
+                      <div className="px-4 py-3 border-b border-gray-100 flex items-center">
+                        <div className="bg-purple-100 p-1.5 rounded-full mr-2">
+                          {getCategoryIcon(category)}
+                        </div>
+                        <h2 className="font-medium text-gray-800">
+                          {getCategoryLabel(category)}
+                        </h2>
+                        <div className="ml-auto">
+                          <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {assetsByCategory[category].length}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="divide-y divide-gray-100">
+                        {assetsByCategory[category].map((asset) => (
+                          <div key={asset.id} className="p-3 hover:bg-gray-50 transition-colors">
+                            <AssetCard asset={asset} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </>
-        ) : (
-          // State kosong yang lebih menarik
-          <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Building className="h-8 w-8 text-purple-600" />
+          ) : (
+            // State kosong yang lebih menarik
+            <div className="max-w-md mx-auto">
+              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg p-8 text-center border border-white/20">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Building className="h-10 w-10 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-xl mb-3 text-gray-800">Belum ada aset</h3>
+                <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto leading-relaxed">
+                  Mulai tambahkan aset untuk memantau pertumbuhan kekayaan Anda secara real-time
+                </p>
+                <Button 
+                  onClick={handleAddAsset}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Tambah Aset Pertama
+                </Button>
+              </div>
             </div>
-            <h3 className="font-medium mb-2 text-gray-800">Belum ada aset</h3>
-            <p className="text-sm text-gray-500 mb-5 max-w-xs mx-auto">
-              Tambahkan aset untuk memantau pertumbuhan kekayaan Anda secara real-time
-            </p>
-            <Button 
-              onClick={handleAddAsset}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Tambah Aset Baru
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </Layout>
   )
