@@ -7,8 +7,66 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
+  }
   public: {
     Tables: {
+      asset_transactions: {
+        Row: {
+          admin_fee: number | null
+          amount: number
+          asset_id: string
+          created_at: string | null
+          date: string
+          id: string
+          net_amount: number
+          notes: string | null
+          transaction_id: string | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_fee?: number | null
+          amount: number
+          asset_id: string
+          created_at?: string | null
+          date: string
+          id?: string
+          net_amount: number
+          notes?: string | null
+          transaction_id?: string | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_fee?: number | null
+          amount?: number
+          asset_id?: string
+          created_at?: string | null
+          date?: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+          transaction_id?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_transactions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_value_history: {
         Row: {
           asset_id: string
@@ -179,7 +237,6 @@ export type Database = {
           icon: string | null
           id: string
           name: string
-          sort_order: number | null
           type: string
           updated_at: string | null
           user_id: string | null
@@ -190,7 +247,6 @@ export type Database = {
           icon?: string | null
           id?: string
           name: string
-          sort_order?: number | null
           type: string
           updated_at?: string | null
           user_id?: string | null
@@ -201,7 +257,6 @@ export type Database = {
           icon?: string | null
           id?: string
           name?: string
-          sort_order?: number | null
           type?: string
           updated_at?: string | null
           user_id?: string | null
@@ -379,22 +434,43 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          email: string | null
           id: string
+          is_admin: boolean | null
           name: string | null
+          subscription_end_date: string | null
+          subscription_start_date: string | null
+          subscription_type: string | null
+          trial_end: string | null
+          trial_start: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           id: string
+          is_admin?: boolean | null
           name?: string | null
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
+          subscription_type?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
+          is_admin?: boolean | null
           name?: string | null
+          subscription_end_date?: string | null
+          subscription_start_date?: string | null
+          subscription_type?: string | null
+          trial_end?: string | null
+          trial_start?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -543,6 +619,7 @@ export type Database = {
           id: string
           is_adjustment: boolean | null
           is_deleted: boolean | null
+          skip_balance_update: boolean | null
           title: string
           type: string
           updated_at: string | null
@@ -560,6 +637,7 @@ export type Database = {
           id?: string
           is_adjustment?: boolean | null
           is_deleted?: boolean | null
+          skip_balance_update?: boolean | null
           title: string
           type: string
           updated_at?: string | null
@@ -577,6 +655,7 @@ export type Database = {
           id?: string
           is_adjustment?: boolean | null
           is_deleted?: boolean | null
+          skip_balance_update?: boolean | null
           title?: string
           type?: string
           updated_at?: string | null
@@ -600,10 +679,44 @@ export type Database = {
           },
         ]
       }
+      trusted_devices: {
+        Row: {
+          created_at: string | null
+          device_name: string
+          expires_at: string
+          fingerprint: string
+          id: string
+          last_used: string | null
+          refresh_token: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_name: string
+          expires_at: string
+          fingerprint: string
+          id?: string
+          last_used?: string | null
+          refresh_token?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_name?: string
+          expires_at?: string
+          fingerprint?: string
+          id?: string
+          last_used?: string | null
+          refresh_token?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           created_at: string | null
           id: string
+          name: string | null
           show_budgeting: boolean
           show_loans: boolean
           show_savings: boolean
@@ -613,6 +726,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          name?: string | null
           show_budgeting?: boolean
           show_loans?: boolean
           show_savings?: boolean
@@ -622,6 +736,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          name?: string | null
           show_budgeting?: boolean
           show_loans?: boolean
           show_savings?: boolean
@@ -747,6 +862,7 @@ export type Database = {
           gradient: string | null
           id: string
           is_default: boolean | null
+          logo_url: string | null
           name: string
           type: string
           updated_at: string | null
@@ -759,6 +875,7 @@ export type Database = {
           gradient?: string | null
           id?: string
           is_default?: boolean | null
+          logo_url?: string | null
           name: string
           type: string
           updated_at?: string | null
@@ -771,6 +888,7 @@ export type Database = {
           gradient?: string | null
           id?: string
           is_default?: boolean | null
+          logo_url?: string | null
           name?: string
           type?: string
           updated_at?: string | null
@@ -784,22 +902,58 @@ export type Database = {
     }
     Functions: {
       adjust_wallet_balance: {
-        Args: { wallet_id_param: string; adjustment_param: number }
+        Args: { adjustment_param: number; wallet_id_param: string }
         Returns: boolean
+      }
+      clean_expired_trusted_devices: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       delete_loan_with_transactions: {
         Args: { loan_id_param: string }
         Returns: boolean
       }
+      get_decrypted_refresh_token: {
+        Args: { device_id: string }
+        Returns: string
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_admin_check: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      store_encrypted_refresh_token: {
+        Args: { device_id: string; token: string }
+        Returns: undefined
+      }
+      update_user_subscription: {
+        Args:
+          | {
+              new_subscription_type: string
+              new_trial_end?: string
+              new_trial_start?: string
+              user_id: string
+            }
+          | {
+              subscription_type: string
+              trial_end?: string
+              trial_start?: string
+              user_id: string
+            }
+        Returns: undefined
+      }
       update_wallet_balance_directly: {
-        Args: { wallet_id_param: string; new_balance_param: number }
+        Args: { new_balance_param: number; wallet_id_param: string }
         Returns: boolean
       }
       update_wallet_with_log: {
         Args: {
-          wallet_id_param: string
           amount_param: number
           description_param: string
+          wallet_id_param: string
         }
         Returns: boolean
       }
@@ -813,21 +967,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -845,14 +1003,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -868,14 +1028,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -891,14 +1053,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -906,14 +1070,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never

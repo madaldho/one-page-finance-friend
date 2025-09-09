@@ -115,8 +115,7 @@ const AddCategoryPage = () => {
           icon: suggestion.icon,
           user_id: user.id
         })
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error('Supabase error:', error);
@@ -167,8 +166,7 @@ const AddCategoryPage = () => {
           icon: formData.icon,
           user_id: user.id
         })
-        .select()
-        .single();
+        .select();
 
       if (error) {
         console.error('Supabase error:', error);
