@@ -59,6 +59,8 @@ const CurrencyInput = memo(forwardRef<HTMLInputElement, CurrencyInputProps>(
         <Input
           ref={ref}
           type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={displayValue}
           onChange={handleInputChange}
           className={`${showPrefix ? 'pl-10' : ''} ${className || ''}`}

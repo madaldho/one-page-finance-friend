@@ -173,69 +173,94 @@ export function CategoryForm() {
       setSubmitting(true);
       setSubmitError(null);
       
-      const userData = await supabase.auth.getUser();
-      if (!userData.data.user) {
-        throw new Error('User not found');
+      // Debug: Check auth status
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      if (authError || !session?.user) {
+        throw new Error('Anda tidak terautentikasi. Silakan login ulang.');
       }
 
-      const userId = userData.data.user.id;
+      const userId = session.user.id;
+      console.log('🔍 Debug - User ID:', userId);
       
-      const data = {
-        name: values.name,
-        type: values.type,
-        color: values.color,
-        icon: values.icon,
-        user_id: userId,
-      };
-
       let result;
 
       if (isEditing && id) {
-        const { data: updatedData, error } = await supabase
-          .from('categories')
-          .update(data)
-          .eq('id', id)
-          .select('*')
-          .single();
-        
-        if (error) {
-          console.error('Error updating category:', error);
-          throw new Error(error.message);
-        }
-        
-        result = updatedData;
-      } else {
-        // Buat data baru secara eksplisit tanpa property yang tidak dibutuhkan
-        const newCategoryData: Database['public']['Tables']['categories']['Insert'] = {
+        // Update existing category
+        const updateData: Database['public']['Tables']['categories']['Update'] = {
           name: values.name,
           type: values.type,
           color: values.color,
           icon: values.icon,
-          user_id: userId,
-          // Tidak perlu sort_order karena sudah ada DEFAULT 0 di database
+          updated_at: new Date().toISOString(),
         };
 
-        console.log('Data to insert:', newCategoryData);
-        console.log('User ID:', userId);
+        console.log('🔍 Debug - Update data:', updateData);
 
-        const { data: newData, error } = await supabase
+        const { data: updatedData, error } = await supabase
           .from('categories')
-          .insert([newCategoryData])
+          .update(updateData)
+          .eq('id', id)
+          .eq('user_id', userId) // Ensure user owns the category
           .select('*')
           .single();
         
         if (error) {
-          console.error('Error creating category:', error);
-          throw new Error(error.message);
+          console.error('❌ Error updating category:', error);
+          throw new Error(`Gagal memperbarui kategori: ${error.message}`);
         }
         
-        result = newData;
+        result = updatedData;
+      } else {
+        // Create new category - database akan auto-generate id dengan gen_random_uuid()
+        const insertData: Database['public']['Tables']['categories']['Insert'] = {
+          name: values.name.trim(),
+          type: values.type,
+          color: values.color,
+          icon: values.icon,
+          user_id: userId,
+          // id tidak disertakan, biarkan database auto-generate
+          // sort_order tidak disertakan, akan menggunakan DEFAULT 0
+        };
+
+        console.log('🔍 Debug - Insert data:', insertData);
+
+        // Coba insert dengan handling error yang lebih detail
+        const { data: newData, error } = await supabase
+          .from('categories')
+          .insert(insertData)
+          .select('*');
+        
+        if (error) {
+          console.error('❌ Database error details:', {
+            code: error.code,
+            message: error.message,
+            details: error.details,
+            hint: error.hint
+          });
+          
+          // Handle specific error cases
+          if (error.code === '23502') {
+            throw new Error('Error database: Kolom required tidak terisi. Coba refresh halaman dan login ulang.');
+          } else if (error.code === '42501') {
+            throw new Error('Tidak memiliki izin untuk menambah kategori. Silakan login ulang.');
+          } else {
+            throw new Error(`Gagal menyimpan kategori: ${error.message}`);
+          }
+        }
+
+        // Check if data was actually inserted
+        if (!newData || newData.length === 0) {
+          throw new Error('Kategori tidak berhasil disimpan. Tidak ada data yang dikembalikan.');
+        }
+        
+        result = newData[0];
+        console.log('✅ Category created successfully:', result);
       }
 
       setSuccess(true);
 
       toast({
-        title: 'Berhasil',
+        title: 'Berhasil!',
         description: `Kategori "${result.name}" berhasil ${isEditing ? 'diperbarui' : 'ditambahkan'}`,
       });
       
@@ -245,12 +270,13 @@ export function CategoryForm() {
       }, 1500);
       
     } catch (error: unknown) {
-      console.error('Error saving category:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat menyimpan kategori';
+      console.error('💥 Error saving category:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan tidak dikenal saat menyimpan kategori';
       setSubmitError(errorMessage);
+      
       toast({
         variant: 'destructive',
-        title: 'Error',
+        title: 'Gagal Menyimpan Kategori',
         description: errorMessage,
       });
     } finally {
