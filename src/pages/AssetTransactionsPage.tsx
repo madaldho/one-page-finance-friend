@@ -4,7 +4,6 @@ import { ArrowLeft, CircleDollarSign, TrendingUp, TrendingDown, Search } from "l
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { AssetTransaction } from "@/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,111 +66,147 @@ export default function AssetTransactionsPage() {
   });
   
   return (
-    <div className="container mx-auto p-4 pb-32 max-w-md">
-      <div className="flex items-center mb-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate("/assets")}
-          className="mr-2"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-xl font-bold">Riwayat Transaksi Aset</h1>
-          <p className="text-sm text-gray-500">Penjualan dan pembelian aset</p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+      {/* Background decoration */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
       </div>
-      
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
-        <Input
-          placeholder="Cari transaksi..."
-          className="pl-9"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-      
-      {loading ? (
-        <div className="text-center my-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-gray-500">Memuat data transaksi...</p>
+
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-4xl lg:max-w-5xl relative z-10 pt-6 md:pt-4 pb-32">
+        {/* Header dengan glassmorphism effect */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/assets")}
+              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl transition-all duration-200 hover:shadow-md border border-white/30"
+            >
+              <ArrowLeft className="h-5 w-5 text-gray-700" />
+            </Button>
+            <div className="flex-1">
+              <h1 className="text-lg font-bold text-gray-800">Riwayat Transaksi Aset</h1>
+              <p className="text-xs text-gray-500">Penjualan dan pembelian aset</p>
+            </div>
+          </div>
         </div>
-      ) : filteredTransactions.length > 0 ? (
-        <div className="space-y-3">
-          {filteredTransactions.map((transaction) => (
-            <Card key={transaction.id} className="border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-sm font-medium">
-                      {transaction.transactions?.title || 
-                       (transaction.type === "sale" ? "Penjualan Aset" : "Pembelian Aset")}
+        
+        {/* Search dengan design modern */}
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
+            <Input
+              placeholder="Cari transaksi..."
+              className="pl-12 h-12 bg-white/80 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="flex flex-col items-center justify-center text-gray-500 py-12 backdrop-blur-sm bg-white/80 rounded-2xl shadow-sm border border-white/20">
+            <div className="animate-spin w-10 h-10 border-3 border-purple-600 border-t-transparent rounded-full mb-4"></div>
+            <p className="text-base font-medium">Memuat data transaksi...</p>
+          </div>
+        ) : filteredTransactions.length > 0 ? (
+          <div className="space-y-4">
+            {filteredTransactions.map((transaction) => (
+              <div key={transaction.id} className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden hover:shadow-xl transition-all duration-300">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`p-2 rounded-xl ${transaction.type === "sale" ? "bg-green-100" : "bg-blue-100"}`}>
+                          <CircleDollarSign className={`h-5 w-5 ${transaction.type === "sale" ? "text-green-600" : "text-blue-600"}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-800">
+                            {transaction.transactions?.title || 
+                             (transaction.type === "sale" ? "Penjualan Aset" : "Pembelian Aset")}
+                          </h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>{formatDate(transaction.date)}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {formatDate(transaction.date)}
-                    </div>
-                  </div>
-                  <Badge 
-                    variant={transaction.type === "sale" ? "default" : "outline"}
-                    className={
-                      transaction.type === "sale" 
-                      ? "bg-green-500 hover:bg-green-600" 
-                      : "border-blue-200 text-blue-600"
-                    }
-                  >
-                    {transaction.type === "sale" ? "Penjualan" : "Pembelian"}
-                  </Badge>
-                </div>
-                
-                <div className="mt-3 space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Jumlah Transaksi</span>
-                    <span className="font-medium">{formatCurrency(transaction.amount)}</span>
+                    <Badge 
+                      variant={transaction.type === "sale" ? "default" : "outline"}
+                      className={`${
+                        transaction.type === "sale" 
+                        ? "bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-none" 
+                        : "border-blue-200 text-blue-600 bg-blue-50"
+                      } px-3 py-1 font-medium`}
+                    >
+                      {transaction.type === "sale" ? (
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          Penjualan
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <TrendingDown className="h-3.5 w-3.5" />
+                          Pembelian
+                        </div>
+                      )}
+                    </Badge>
                   </div>
                   
-                  {transaction.admin_fee > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Biaya Admin</span>
-                      <span className="text-red-500">-{formatCurrency(transaction.admin_fee)}</span>
+                  <div className="bg-gray-50/80 rounded-xl p-4 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 font-medium">Jumlah Transaksi</span>
+                      <span className="font-semibold text-gray-900">{formatCurrency(transaction.amount)}</span>
+                    </div>
+                    
+                    {transaction.admin_fee > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600 font-medium">Biaya Admin</span>
+                        <span className="text-red-600 font-semibold">-{formatCurrency(transaction.admin_fee)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                      <span className="font-semibold text-gray-800">Total</span>
+                      <span className={`font-bold text-lg ${transaction.type === "sale" ? "text-green-600" : "text-blue-600"}`}>
+                        {formatCurrency(transaction.net_amount)}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {transaction.notes && (
+                    <div className="mt-4 p-3 bg-purple-50 border border-purple-100 rounded-xl">
+                      <div className="flex items-start gap-2">
+                        <div className="w-2 h-2 bg-purple-400 rounded-full mt-2 flex-shrink-0"></div>
+                        <p className="text-sm text-purple-700 font-medium">{transaction.notes}</p>
+                      </div>
                     </div>
                   )}
-                  
-                  <div className="flex justify-between text-sm pt-1 border-t border-gray-100">
-                    <span className="font-medium">Total</span>
-                    <span className="font-bold text-base">
-                      {formatCurrency(transaction.net_amount)}
-                    </span>
-                  </div>
                 </div>
-                
-                {transaction.notes && (
-                  <div className="mt-3 text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                    {transaction.notes}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-          <CircleDollarSign className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-          <h3 className="text-lg font-medium mb-1">Belum ada transaksi</h3>
-          <p className="text-gray-500 text-sm mb-4">
-            Transaksi penjualan dan pembelian aset akan muncul di sini
-          </p>
-          <Button 
-            onClick={() => navigate("/assets")}
-            variant="outline"
-            size="sm"
-          >
-            Lihat Aset
-          </Button>
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 text-center py-16">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CircleDollarSign className="h-10 w-10 text-purple-600" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3 text-gray-800">Belum ada transaksi</h3>
+            <p className="text-gray-500 text-sm mb-8 max-w-md mx-auto leading-relaxed">
+              Transaksi penjualan dan pembelian aset akan muncul di sini. Mulai kelola aset Anda untuk melihat riwayat transaksi.
+            </p>
+            <Button 
+              onClick={() => navigate("/assets")}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+            >
+              <CircleDollarSign className="h-5 w-5 mr-2" />
+              Lihat Aset
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

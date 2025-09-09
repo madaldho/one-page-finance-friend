@@ -617,236 +617,354 @@ const SavingsManagement = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-xl pt-6 md:pt-4">
-        {/* Header dengan glassmorphism effect */}
-        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-          <div className="flex items-center gap-3">
-            <Link 
-              to="/settings"
-              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
-              aria-label="Kembali"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">Tabungan/Celengan</h1>
-              <p className="text-xs text-gray-500">Atur target tabungan dan alokasi otomatis</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-yellow-300 to-amber-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-orange-300 to-red-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        </div>
+
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-4xl lg:max-w-5xl relative z-10 pt-6 md:pt-4 pb-32">
+          {/* Header dengan glassmorphism effect */}
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+            <div className="flex items-center gap-3">
+              <Link 
+                to="/settings"
+                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </Link>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Tabungan & Celengan</h1>
+                <p className="text-xs text-gray-500">Kelola target tabungan dan wujudkan impian finansial Anda</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Layout Grid untuk Desktop dan Mobile */}
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Left Column - Feature Toggle & Summary */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Feature Toggle Section */}
+              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-5 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="font-semibold text-lg">Fitur Tabungan</h2>
+                      <p className="text-white/80 text-sm">
+                        {featureEnabled ? "Aktif - Tabungan sedang berjalan" : "Nonaktif - Fitur tidak digunakan"}
+                      </p>
+                    </div>
+                    <div className="bg-white/20 p-2 rounded-xl">
+                      <Switch 
+                        checked={featureEnabled} 
+                        onCheckedChange={handleToggleFeature}
+                        className="data-[state=checked]:bg-white data-[state=unchecked]:bg-white/30"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-amber-100 p-2 rounded-lg mt-0.5">
+                      <Info className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        Atur target tabungan dan alokasikan persentase dari pemasukan Anda secara otomatis untuk mencapai target finansial.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary Statistics */}
+              {savings.length > 0 && (
+                <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20">
+                  <div className="p-6">
+                    <h3 className="font-semibold text-lg text-gray-800 mb-4">Ringkasan Tabungan</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100">
+                        <p className="text-xs text-green-600 mb-1">Total Target</p>
+                        <p className="font-bold text-lg text-green-800">
+                          Rp {savings.reduce((sum, s) => sum + s.target_amount, 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-100">
+                        <p className="text-xs text-blue-600 mb-1">Total Terkumpul</p>
+                        <p className="font-bold text-lg text-blue-800">
+                          Rp {savings.reduce((sum, s) => sum + s.current_amount, 0).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-xl border border-amber-100">
+                        <p className="text-xs text-amber-600 mb-1">Rata-rata Progress</p>
+                        <p className="font-bold text-lg text-amber-800">
+                          {Math.round(savings.reduce((sum, s) => sum + calculateProgress(s), 0) / savings.length)}%
+                        </p>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-100">
+                        <p className="text-xs text-purple-600 mb-1">Target Aktif</p>
+                        <p className="font-bold text-lg text-purple-800">{savings.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Savings Targets */}
+            <div className="lg:col-span-7">
+              {/* Savings Targets Section */}
+              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-5 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="font-semibold text-lg">Target Tabungan Anda</h2>
+                      <p className="text-white/80 text-sm">Pantau progres menuju tujuan finansial</p>
+                    </div>
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/20"
+                      asChild
+                    >
+                      <Link to="/savings/add">
+                        <Plus className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">Tambah Target</span>
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin w-10 h-10 border-3 border-amber-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                      <p className="text-base font-medium text-gray-700">Memuat data tabungan...</p>
+                    </div>
+                  ) : savings.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <PiggyBank className="h-10 w-10 text-amber-600" />
+                      </div>
+                      <h3 className="font-semibold text-xl mb-3 text-gray-800">Belum ada target tabungan</h3>
+                      <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto leading-relaxed">
+                        Mulai perjalanan finansial Anda dengan menetapkan target tabungan pertama
+                      </p>
+                      <Button 
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                        asChild
+                      >
+                        <Link to="/savings/add">
+                          <Plus className="h-5 w-5 mr-2" />
+                          Buat Target Pertama
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {savings.map((saving) => {
+                        const progress = calculateProgress(saving);
+                        const isExpanded = expandedSavingId === saving.id;
+                        
+                        return (
+                          <div 
+                            key={saving.id} 
+                            className="bg-gradient-to-r from-white to-gray-50 rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-all duration-200"
+                          >
+                            <div 
+                              className="p-5 cursor-pointer"
+                              onClick={() => handleSavingClick(saving)}
+                            >
+                              <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                    saving.savings_category === "fisik" 
+                                      ? "bg-gradient-to-br from-green-100 to-emerald-100" 
+                                      : "bg-gradient-to-br from-blue-100 to-cyan-100"
+                                  }`}>
+                                    <PiggyBank className={`h-6 w-6 ${
+                                      saving.savings_category === "fisik" ? "text-green-600" : "text-blue-600"
+                                    }`} />
+                                  </div>
+                                  <div>
+                                    <h3 className="font-semibold text-lg text-gray-800">{saving.name}</h3>
+                                    <p className="text-sm text-gray-500">
+                                      {saving.savings_category === "fisik" ? "Tabungan Fisik" : "Tabungan Digital"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                    progress >= 100 ? "bg-green-100 text-green-700" :
+                                    progress >= 50 ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                                  }`}>
+                                    {Math.round(progress)}%
+                                  </div>
+                                  <button 
+                                    className={`text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 ${isExpanded ? 'bg-gray-100 text-gray-600' : ''}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSavingClick(saving);
+                                    }}
+                                    aria-label={isExpanded ? "Tutup detail tabungan" : "Lihat detail tabungan"}
+                                  >
+                                    {isExpanded ? 
+                                      <ChevronUp className="h-5 w-5" /> : 
+                                      <ChevronDown className="h-5 w-5" />
+                                    }
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-3">
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-600 font-medium">Terkumpul: {formatCurrency(saving.current_amount)}</span>
+                                  <span className="font-semibold text-gray-800">Target: {formatCurrency(saving.target_amount)}</span>
+                                </div>
+                                
+                                <Progress
+                                  value={progress}
+                                  className="h-3 bg-gray-200"
+                                  indicatorClassName={
+                                    progress >= 100 ? "bg-gradient-to-r from-green-500 to-emerald-500" :
+                                    progress >= 50 ? "bg-gradient-to-r from-amber-500 to-orange-500" : "bg-gradient-to-r from-blue-500 to-cyan-500"
+                                  }
+                                />
+                                
+                                <div className="flex items-center justify-between text-xs text-gray-500">
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3.5 w-3.5" />
+                                    <span>Target: {formatDate(saving.target_date)}</span>
+                                  </div>
+                                  <span className="font-medium">
+                                    Sisa: {formatCurrency(saving.target_amount - saving.current_amount)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {isExpanded && (
+                              <div className="bg-gradient-to-br from-gray-50 to-white px-5 py-4 border-t border-gray-100">
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-10 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-all"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/savings/withdraw/${saving.id}`);
+                                    }}
+                                  >
+                                    <LogOut className="h-4 w-4 mr-2" /> Tarik Dana
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    className="h-10 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white shadow-lg"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/savings/deposit/${saving.id}`);
+                                    }}
+                                  >
+                                    <Plus className="h-4 w-4 mr-2" /> Setor Dana
+                                  </Button>
+                                </div>
+                                
+                                <div className="grid grid-cols-3 gap-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-9 text-xs border-gray-200 hover:bg-gray-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewHistory(saving);
+                                    }}
+                                  >
+                                    <History className="h-3.5 w-3.5 mr-1.5" /> Riwayat
+                                  </Button>
+                                  
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-9 text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/savings/edit/${saving.id}`);
+                                    }}
+                                  >
+                                    <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
+                                  </Button>
+                                  
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="h-9 text-xs border-red-200 text-red-600 hover:bg-red-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedSaving(saving);
+                                      setDeleteDialogOpen(true);
+                                    }}
+                                  >
+                                    <Trash className="h-3.5 w-3.5 mr-1.5" /> Hapus
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* How It Works Section */}
+          <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 mt-6">
+            <div className="p-6">
+              <h2 className="font-semibold text-lg mb-4 text-gray-800">Cara Kerja Tabungan</h2>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shrink-0">
+                    <span className="text-amber-600 font-semibold text-sm">1</span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      <strong>Buat Target:</strong> Tentukan nama, jumlah target, dan tanggal yang ingin dicapai
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shrink-0">
+                    <span className="text-amber-600 font-semibold text-sm">2</span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      <strong>Setor Rutin:</strong> Lakukan setoran secara berkala dari dompet yang Anda pilih
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center shrink-0">
+                    <span className="text-amber-600 font-semibold text-sm">3</span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-700 leading-relaxed">
+                      <strong>Pantau Progress:</strong> Lihat kemajuan tabungan dan sisa waktu untuk mencapai target
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Feature Toggle Section */}
-        <section className="mb-6 bg-white rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-semibold">Fitur Tabungan</h2>
-              <p className="text-sm text-gray-500">Aktifkan untuk mengatur target tabungan dan menyimpan otomatis dari pemasukan</p>
-            </div>
-            <Switch checked={featureEnabled} onCheckedChange={handleToggleFeature} />
-          </div>
-          
-          <div className="mt-3 pl-6 border-l-2 border-yellow-200 py-1">
-            <p className="text-sm text-gray-600">
-              Atur target tabungan dan alokasikan persentase dari pemasukan Anda secara otomatis untuk mencapai target.
-            </p>
-          </div>
-        </section>
-
-        {/* Savings Targets Section */}
-        <section className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-semibold">Target Tabungan Anda</h2>
-              <p className="text-xs text-gray-500">Pantau progres Anda menuju target keuangan</p>
-            </div>
-            <Button 
-              variant="default" 
-              size="sm"
-              className="bg-amber-500 hover:bg-amber-600"
-              asChild
-            >
-              <Link to="/savings/add">
-                <Plus className="h-4 w-4 mr-1" />
-                Tambah Target
-              </Link>
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-8">
-              <p>Memuat data tabungan...</p>
-            </div>
-          ) : savings.length === 0 ? (
-            <div className="text-center py-8 bg-white rounded-lg">
-              <PiggyBank className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-              <p>Belum ada target tabungan</p>
-              <p className="text-sm text-gray-500">
-                Mulai menabung dengan menambahkan target baru
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {savings.map((saving) => {
-                const progress = calculateProgress(saving);
-                const isExpanded = expandedSavingId === saving.id;
-                
-                return (
-                  <div 
-                    key={saving.id} 
-                    className="bg-white rounded-lg shadow-sm overflow-hidden"
-                  >
-                    <div 
-                      className="p-4 cursor-pointer"
-                    onClick={() => handleSavingClick(saving)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <h3 className="font-semibold">{saving.name}</h3>
-                        <p className="text-xs">
-                          {saving.savings_category === "fisik" ? "Fisik" : "Digital"}
-                        </p>
-                      </div>
-                        <div className="flex items-center">
-                          <button 
-                            className={`text-gray-500 p-1.5 hover:bg-gray-100 rounded-full transition-colors ${isExpanded ? 'bg-gray-100' : ''}`}
-                            onClick={(e) => handleSavingClick(saving)}
-                            aria-label={isExpanded ? "Tutup detail tabungan" : "Lihat detail tabungan"}
-                            title={isExpanded ? "Tutup detail tabungan" : "Lihat detail tabungan"}
-                          >
-                            {isExpanded ? 
-                              <ChevronUp className="h-4 w-4" /> : 
-                              <ChevronDown className="h-4 w-4" />
-                            }
-                      </button>
-                        </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center mb-1 text-sm">
-                      <span className="text-gray-600">{formatCurrency(saving.current_amount)}</span>
-                      <span className="font-medium">{formatCurrency(saving.target_amount)}</span>
-                    </div>
-                    
-                    <Progress
-                      value={progress}
-                      className="h-2 mb-2"
-                      indicatorClassName={
-                        progress >= 100 ? "bg-green-500" :
-                        progress >= 50 ? "bg-amber-500" : "bg-blue-500"
-                      }
-                    />
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <div className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        <span>Target: {formatDate(saving.target_date)}</span>
-                      </div>
-                      <span>{Math.round(progress)}% tercapai</span>
-                      </div>
-                    </div>
-                    
-                    {isExpanded && (
-                      <div className="bg-gray-50 px-4 py-3 border-t border-gray-100 transition-all duration-300 ease-in-out">
-                        <div className="flex space-x-2 mb-3">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                              navigate(`/savings/withdraw/${saving.id}`);
-                        }}
-                      >
-                            <LogOut className="h-4 w-4 mr-2" /> Tarik
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        className="flex-1 bg-amber-500 hover:bg-amber-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/savings/deposit/${saving.id}`);
-                            }}
-                          >
-                            <Plus className="h-4 w-4 mr-2" /> Setor
-                          </Button>
-                        </div>
-                        
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewHistory(saving);
-                            }}
-                          >
-                            <History className="h-4 w-4 mr-2" /> Riwayat
-                          </Button>
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/savings/edit/${saving.id}`);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 mr-2" /> Edit
-                          </Button>
-                          
-                          <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            className="flex-1"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedSaving(saving);
-                              setDeleteDialogOpen(true);
-                        }}
-                      >
-                            <Trash className="h-4 w-4 mr-2" /> Hapus
-                      </Button>
-                    </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* How It Works Section */}
-        <section className="bg-white rounded-lg p-4 mb-6">
-          <h2 className="font-semibold mb-4">Cara Kerja</h2>
-          <div className="space-y-4">
-            <div className="flex">
-              <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mr-3 shrink-0">
-                <span className="text-amber-800 text-sm font-medium">1</span>
-              </div>
-              <p className="text-sm">Buat target tabungan dengan jumlah target</p>
-            </div>
-            <div className="flex">
-              <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mr-3 shrink-0">
-                <span className="text-amber-800 text-sm font-medium">2</span>
-              </div>
-              <p className="text-sm">Setor dan Tarik dana ke Tabungan Anda</p>
-            </div>
-            <div className="flex">
-              <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mr-3 shrink-0">
-                <span className="text-amber-800 text-sm font-medium">3</span>
-              </div>
-              <p className="text-sm">Klik Untuk mengedit, melihat histori, bahkan menghapus target tabungan Anda</p>
-            </div>
-            <div className="flex">
-              <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center mr-3 shrink-0">
-                <span className="text-amber-800 text-sm font-medium">4</span>
-              </div>
-              <p className="text-sm">Pantau progres Anda di layar utama dan di halaman pengaturan ini</p>
-            </div>
-          </div>
-        </section>
+        {/* Dialogs */}
+        {/* Deposit Dialog */}
 
         {/* Deposit Dialog */}
         <Dialog open={depositOpen} onOpenChange={setDepositOpen}>

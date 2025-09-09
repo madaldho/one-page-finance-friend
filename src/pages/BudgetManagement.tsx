@@ -777,18 +777,24 @@ const BudgetManagement = () => {
         </div>
 
         {/* Budget Sources */}
-        <div className="bg-white rounded-lg p-4 mb-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium">Sumber Dana Budget</h2>
-            <Link
-              to="/budget-sources/add"
-              className="flex items-center text-sm text-green-500 border border-green-500 rounded-lg px-2 py-1"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Tambah Sumber
-            </Link>
+        <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden mb-6">
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-semibold text-lg">Sumber Dana Budget</h2>
+                <p className="text-white/80 text-sm">Kelola sumber pendanaan anggaran Anda</p>
+              </div>
+              <Link
+                to="/budget-sources/add"
+                className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-200 border border-white/20"
+              >
+                <Plus className="h-4 w-4" /> 
+                <span className="hidden sm:inline">Tambah Sumber</span>
+              </Link>
+            </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="p-6">
             {sources.map((source) => (
               <div key={source.id}>
               <div

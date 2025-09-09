@@ -373,275 +373,334 @@ const AddBudget = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-xl">
-        {/* Header dengan glassmorphism effect */}
-        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-          <div className="flex items-center gap-3">
-            <Link 
-              to="/budgets"
-              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
-              aria-label="Kembali"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">Tambah Anggaran</h1>
-              <p className="text-xs text-gray-500">Buat anggaran untuk kategori tertentu</p>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg p-4 space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="category">Kategori Pengeluaran</Label>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kategori" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(category => (
-                  <SelectItem key={category.id} value={category.id}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: category.color }}></div>
-                      <span>{category.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 md:pt-4 pb-32">
+          {/* Header dengan glassmorphism effect */}
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+            <div className="flex items-center gap-3">
+              <Link 
+                to="/budgets"
+                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </Link>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Tambah Anggaran</h1>
+                <p className="text-xs text-gray-500">Buat anggaran untuk kategori tertentu</p>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Jenis Anggaran</Label>
-            <RadioGroup value={budgetType} onValueChange={handleBudgetTypeChange} disabled={loading}>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="fixed" id="fixed" />
-                <Label htmlFor="fixed">Tetap</Label>
+          {/* Form dengan design yang modern */}
+          <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+            {/* Header form */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-3 rounded-xl">
+                  <CalendarIcon className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">Buat Anggaran Baru</h2>
+                  <p className="text-white/80 text-sm">Atur batasan pengeluaran untuk kategori tertentu</p>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="percentage" id="percentage" />
-                <Label htmlFor="percentage">Persentase dari Sumber Dana</Label>
-              </div>
-            </RadioGroup>
-          </div>
+            </div>
 
-          {budgetType === "percentage" && (
-            <>
+            {/* Form content */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* Kategori Pengeluaran */}
               <div className="space-y-3">
-                <Label htmlFor="source" className="text-base">Sumber Dana</Label>
-                <Select 
-                  value={selectedSource} 
-                  onValueChange={setSelectedSource} 
-                  disabled={loading || sources.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih sumber dana" />
+                <Label htmlFor="category" className="text-sm font-medium text-gray-700">Kategori Pengeluaran</Label>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={loading}>
+                  <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200">
+                    <SelectValue placeholder="Pilih kategori pengeluaran..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {sources.map(source => {
-                      return (
-                        <SelectItem key={source.id} value={source.id}>
-                          {source.name}
-                        </SelectItem>
-                      );
-                    })}
+                    {categories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }}></div>
+                          <span>{category.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {sources.length === 0 && (
-                  <p className="text-xs text-red-500">
-                    Tambahkan sumber dana terlebih dahulu di halaman Budget
-                  </p>
-                )}
-                
-                {selectedSource && (
-                  <div className="mt-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                    <h4 className="font-medium text-sm mb-2">Informasi Sumber Dana</h4>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Total Dana:</span>
-                      <span className="font-medium">Rp {sources.find(s => s.id === selectedSource)?.amount.toLocaleString() || 0}</span>
+              </div>
+
+              {/* Jenis Anggaran */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium text-gray-700">Jenis Anggaran</Label>
+                <RadioGroup value={budgetType} onValueChange={handleBudgetTypeChange} disabled={loading} className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-3 p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-colors cursor-pointer">
+                    <RadioGroupItem value="fixed" id="fixed" />
+                    <Label htmlFor="fixed" className="cursor-pointer">Nominal Tetap</Label>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-colors cursor-pointer">
+                    <RadioGroupItem value="percentage" id="percentage" />
+                    <Label htmlFor="percentage" className="cursor-pointer">Persentase Dana</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {budgetType === "percentage" && (
+                <>
+                  {/* Sumber Dana */}
+                  <div className="space-y-3">
+                    <Label htmlFor="source" className="text-sm font-medium text-gray-700">Sumber Dana</Label>
+                    <Select 
+                      value={selectedSource} 
+                      onValueChange={setSelectedSource} 
+                      disabled={loading || sources.length === 0}
+                    >
+                      <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200">
+                        <SelectValue placeholder="Pilih sumber dana..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sources.map(source => (
+                          <SelectItem key={source.id} value={source.id}>
+                            {source.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {sources.length === 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                        <p className="text-sm text-red-600">
+                          Tambahkan sumber dana terlebih dahulu di halaman Budget
+                        </p>
+                      </div>
+                    )}
+                    
+                    {selectedSource && (
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+                        <h4 className="font-semibold text-sm mb-3 text-blue-800">Informasi Sumber Dana</h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-700">Total Dana:</span>
+                            <span className="font-semibold text-blue-900">Rp {sources.find(s => s.id === selectedSource)?.amount.toLocaleString() || 0}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-blue-700">Status Penggunaan:</span>
+                            <span className="font-semibold text-blue-900">{getUsedPercentage(selectedSource).toFixed(0)}% digunakan</span>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="h-3 bg-blue-100 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-300"
+                                style={{ width: `${getUsedPercentage(selectedSource)}%` }}
+                              ></div>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs">
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"></div>
+                                <span className="text-blue-600">Terpakai</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <div className="w-2 h-2 bg-blue-100 rounded-full"></div>
+                                <span className="text-blue-600">Tersedia ({getAvailablePercentage(selectedSource).toFixed(0)}%)</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Alokasi Anggaran */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-medium text-gray-700">Alokasi Anggaran</Label>
+                      {selectedSource && (
+                        <span className="text-xs font-medium text-blue-600 bg-blue-100 px-3 py-1 rounded-full">
+                          Maksimal: {getAvailablePercentage(selectedSource).toFixed(0)}%
+                        </span>
+                      )}
                     </div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Status Penggunaan:</span>
-                      <span className="font-medium">{getUsedPercentage(selectedSource).toFixed(0)}% digunakan</span>
-                    </div>
-                    <div className="mb-2">
-                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-blue-500"
-                          style={{ width: `${getUsedPercentage(selectedSource)}%` }}
-                        ></div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="percentage" className="text-sm text-gray-600">Persentase (%)</Label>
+                        <Input
+                          id="percentage"
+                          type="text"
+                          placeholder="0-100"
+                          value={percentage}
+                          onChange={(e) => handlePercentageChange(e.target.value)}
+                          disabled={loading || !selectedSource}
+                          className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="amount" className="text-sm text-gray-600">Jumlah (Rp)</Label>
+                        <CurrencyInput
+                          id="amount"
+                          placeholder="100000"
+                          value={amount}
+                          onChange={handleAmountChange}
+                          disabled={loading || !selectedSource}
+                          className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200"
+                        />
                       </div>
                     </div>
-                    <div className="text-sm flex gap-1 items-center">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-gray-500 text-xs">Terpakai</span>
-                      <div className="w-2 h-2 bg-gray-200 rounded-full ml-2"></div>
-                      <span className="text-gray-500 text-xs">Tersedia ({getAvailablePercentage(selectedSource).toFixed(0)}%)</span>
+                    
+                    {selectedSource && (
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                        <p className="text-sm text-gray-600">
+                          Maksimal dana tersedia: <span className="font-semibold text-gray-800">Rp {((sources.find(s => s.id === selectedSource)?.amount || 0) * getAvailablePercentage(selectedSource) / 100).toLocaleString()}</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {budgetType !== "percentage" && (
+                <div className="space-y-3">
+                  <Label htmlFor="amount" className="text-sm font-medium text-gray-700">Jumlah Anggaran (Rp)</Label>
+                  <CurrencyInput
+                    id="amount"
+                    placeholder="Masukkan jumlah anggaran..."
+                    value={amount}
+                    onChange={handleAmountChange}
+                    disabled={loading}
+                    className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200"
+                  />
+                </div>
+              )}
+
+              {/* Periode */}
+              <div className="space-y-3">
+                <Label htmlFor="period" className="text-sm font-medium text-gray-700">Periode Anggaran</Label>
+                <Select
+                  onValueChange={handlePeriodChange}
+                  defaultValue={periodUI}
+                >
+                  <SelectTrigger className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200">
+                    <SelectValue placeholder="Pilih periode anggaran..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {periodOptions.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tanggal untuk periode otomatis */}
+              {periodUI !== 'custom_range' && startDate && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-gray-700">Rentang Waktu</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDate" className="text-sm text-gray-600">Tanggal Mulai</Label>
+                      <Input
+                        type="date"
+                        id="startDate"
+                        value={startDate ? startDate.toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          const date = e.target.value ? new Date(e.target.value) : undefined;
+                          setStartDate(date);
+                          if (date) {
+                            setEndDate(calculateEndDate(date, period));
+                          }
+                        }}
+                        className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDate" className="text-sm text-gray-600">Tanggal Berakhir (Otomatis)</Label>
+                      <Input
+                        type="date"
+                        id="endDate"
+                        value={endDate ? endDate.toISOString().split('T')[0] : ''}
+                        className="h-12 border-2 border-gray-200 rounded-xl bg-gray-100 transition-all duration-200"
+                        disabled
+                      />
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div className="space-y-2 pt-2 border-t border-gray-100 mt-4">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="percentage" className="text-base">Alokasi Anggaran</Label>
-                  {selectedSource && (
-                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-                      Maksimal: {getAvailablePercentage(selectedSource).toFixed(0)}%
-                    </span>
+              {/* Tanggal untuk periode custom */}
+              {periodUI === 'custom_range' && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium text-gray-700">Rentang Waktu Kustom</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="startDateCustom" className="text-sm text-gray-600">Tanggal Mulai</Label>
+                      <Input
+                        type="date"
+                        id="startDateCustom"
+                        value={startDate ? startDate.toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          const date = e.target.value ? new Date(e.target.value) : undefined;
+                          setStartDate(date);
+                        }}
+                        className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="endDateCustom" className="text-sm text-gray-600">Tanggal Berakhir</Label>
+                      <Input
+                        type="date"
+                        id="endDateCustom"
+                        value={endDate ? endDate.toISOString().split('T')[0] : ''}
+                        onChange={(e) => {
+                          const date = e.target.value ? new Date(e.target.value) : undefined;
+                          setEndDate(date);
+                        }}
+                        className="h-12 border-2 border-gray-200 focus:border-blue-400 rounded-xl bg-white/50 backdrop-blur-sm transition-all duration-200"
+                        min={startDate ? startDate.toISOString().split('T')[0] : ''}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="h-12 font-medium border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                  onClick={() => navigate("/budgets")}
+                  disabled={loading}
+                >
+                  Batal
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="h-12 font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-200" 
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      Simpan Anggaran
+                    </>
                   )}
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="percentage" className="text-sm mb-1 block">Persentase (%)</Label>
-                    <Input
-                      id="percentage"
-                      type="text"
-                      placeholder="0-100"
-                      value={percentage}
-                      onChange={(e) => handlePercentageChange(e.target.value)}
-                      disabled={loading || !selectedSource}
-                      className="mt-0"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="amount" className="text-sm mb-1 block">Jumlah (Rp)</Label>
-                    <CurrencyInput
-                      id="amount"
-                      placeholder="100000"
-                      value={amount}
-                      onChange={handleAmountChange}
-                      disabled={loading || !selectedSource}
-                      className="mt-0"
-                    />
-                  </div>
-                </div>
-                
-                {selectedSource && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Maksimal dana tersedia: Rp {((sources.find(s => s.id === selectedSource)?.amount || 0) * getAvailablePercentage(selectedSource) / 100).toLocaleString()}
-                  </p>
-                )}
+                </Button>
               </div>
-            </>
-          )}
-
-          {budgetType !== "percentage" && (
-            <div className="space-y-2">
-              <Label htmlFor="amount">Jumlah Anggaran (Rp)</Label>
-              <CurrencyInput
-                id="amount"
-                placeholder="500000"
-                value={amount}
-                onChange={handleAmountChange}
-                disabled={loading}
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="period">Periode</Label>
-            <Select
-              onValueChange={handlePeriodChange}
-              defaultValue={periodUI}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Pilih Periode" />
-              </SelectTrigger>
-              <SelectContent>
-                {periodOptions.map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            </form>
           </div>
-
-          {periodUI !== 'custom_range' && startDate && (
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Tanggal Mulai</Label>
-                  <Input
-                    type="date"
-                    id="startDate"
-                    value={startDate ? startDate.toISOString().split('T')[0] : ''}
-                    onChange={(e) => {
-                      const date = e.target.value ? new Date(e.target.value) : undefined;
-                      setStartDate(date);
-                      if (date) {
-                        setEndDate(calculateEndDate(date, period));
-                      }
-                    }}
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">Tanggal Berakhir (Otomatis)</Label>
-                  <Input
-                    type="date"
-                    id="endDate"
-                    value={endDate ? endDate.toISOString().split('T')[0] : ''}
-                    className="w-full bg-gray-100"
-                    disabled
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {periodUI === 'custom_range' && (
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="startDateCustom">Tanggal Mulai</Label>
-                  <Input
-                    type="date"
-                    id="startDateCustom"
-                    value={startDate ? startDate.toISOString().split('T')[0] : ''}
-                    onChange={(e) => {
-                      const date = e.target.value ? new Date(e.target.value) : undefined;
-                      setStartDate(date);
-                    }}
-                    className="w-full"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDateCustom">Tanggal Berakhir</Label>
-                  <Input
-                    type="date"
-                    id="endDateCustom"
-                    value={endDate ? endDate.toISOString().split('T')[0] : ''}
-                    onChange={(e) => {
-                      const date = e.target.value ? new Date(e.target.value) : undefined;
-                      setEndDate(date);
-                    }}
-                    className="w-full"
-                    min={startDate ? startDate.toISOString().split('T')[0] : ''}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4 pt-4">
-            <Button 
-              type="button" 
-              className="w-full" 
-              variant="outline" 
-              onClick={() => navigate("/budgets")}
-              disabled={loading}
-            >
-              Batal
-            </Button>
-          <Button type="submit" className="w-full  bg-blue-500 hover:bg-blue-600" disabled={loading}>
-            {loading ? "Menyimpan..." : "Simpan Anggaran"}
-          </Button>
-          </div>
-        </form>
+        </div>
       </div>
     </Layout>
   );
