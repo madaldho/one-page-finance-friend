@@ -22,27 +22,60 @@ const Header = () => {
   const [userProfile, setUserProfile] = useState<UserSubscriptionProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Fungsi untuk fetch profile yang bisa digunakan kembali
+  const fetchUserProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserProfile(data as UserSubscriptionProfile);
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!user) return;
+    fetchUserProfile();
 
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+    // Listen untuk perubahan data profile secara real-time
+    const profileSubscription = supabase
+      .channel('profile-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user?.id}`
+        },
+        (payload) => {
+          console.log('Profile updated:', payload);
+          // Update state dengan data terbaru
+          setUserProfile(payload.new as UserSubscriptionProfile);
+        }
+      )
+      .subscribe();
 
-        if (error) throw error;
-        setUserProfile(data);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-      } finally {
-        setLoading(false);
-      }
+    // Listen untuk focus window event untuk refresh data ketika user kembali ke tab
+    const handleFocus = () => {
+      fetchUserProfile();
     };
 
-    fetchUserProfile();
+    window.addEventListener('focus', handleFocus);
+
+    // Cleanup subscription dan event listener saat component unmount
+    return () => {
+      profileSubscription.unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [user]);
 
   const handleSignOut = async () => {
@@ -65,7 +98,17 @@ const Header = () => {
 
   if (!user) return null;
 
-  const fullName = userProfile?.full_name || user.email?.split('@')[0] || "User";
+  // Ambil nama dari profile yang ter-update, dengan fallback yang lebih baik
+  // Prioritas: name dari profile DB > user metadata > email
+  const fullName = (userProfile?.name && typeof userProfile.name === 'string' 
+                     ? userProfile.name.trim() 
+                     : null) || 
+                   (user.user_metadata?.full_name && typeof user.user_metadata.full_name === 'string'
+                     ? user.user_metadata.full_name.trim()
+                     : null) ||
+                   user.email?.split('@')[0] || 
+                   "User";
+                   
   const subscriptionInfo = userProfile ? getSubscriptionLabel(userProfile) : { text: 'Free', className: '', icon: '' };
 
   return (
