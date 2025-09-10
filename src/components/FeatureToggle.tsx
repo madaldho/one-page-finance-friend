@@ -13,6 +13,7 @@ interface FeatureToggleProps {
   disabled?: boolean;
   loading?: boolean;
   extraElement?: React.ReactNode;
+  directNavigation?: boolean; // Tambahan prop untuk mode navigasi langsung
 }
 
 const FeatureToggle = ({ 
@@ -24,9 +25,10 @@ const FeatureToggle = ({
   managementLink,
   disabled = false,
   loading = false,
-  extraElement
+  extraElement,
+  directNavigation = false // Default false untuk kompatibilitas
 }: FeatureToggleProps) => {
-  const canNavigate = checked && managementLink;
+  const canNavigate = managementLink && (directNavigation || checked);
   const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   
@@ -59,61 +61,55 @@ const FeatureToggle = ({
     }
   }, []);
   
-  // Handler untuk touch start event
-  const handleTouchStart = useCallback(() => {
-    setTouchStartTime(Date.now());
-  }, []);
-  
-  // Handler untuk touch end event
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    // Jika navigate aktif (ada link dan feature aktif), JANGAN ganggu event default
-    if (canNavigate) return;
-
-    // Hanya preventDefault saat kita benar-benar akan menangani toggle sendiri
-    e.preventDefault();
-
-    if (touchStartTime === null) return;
-
-    const touchDuration = Date.now() - touchStartTime;
-    setTouchStartTime(null);
-
-    // Jika sentuhan terlalu lama (> 300ms), asumsi user scroll
-    if (touchDuration > 300) return;
-
+  // Handler untuk click/touch dengan iOS optimization
+  const handleContainerInteraction = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     // Biarkan StatusBadge menangani jika target adalah tombol toggle
     const target = e.target as HTMLElement;
     if (target.closest('.status-badge')) return;
 
-    if (!disabled && !loading) {
-      onToggle();
+    // Jika direct navigation mode dan ada managementLink, langsung navigate
+    if (directNavigation && managementLink && !disabled && !loading) {
+      // Tidak perlu toggle, langsung navigate
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = managementLink;
+      return;
     }
-  }, [canNavigate, disabled, loading, onToggle, touchStartTime]);
+
+    // Mode lama - toggle dulu baru bisa navigate
+    if (!directNavigation) {
+      // Jika ada link dan fitur aktif, biarkan navigasi Link component
+      if (canNavigate) return;
+      
+      // Prevent default untuk menghindari double-tap zoom di iOS
+      e.preventDefault();
+
+      if (!disabled && !loading) {
+        // Direct call untuk iOS responsiveness
+        onToggle();
+      }
+    }
+  }, [directNavigation, managementLink, canNavigate, disabled, loading, onToggle]);
   
-  // Callback untuk menangani toggle dengan handling khusus untuk touch events
+  // Callback untuk menangani toggle dengan handling khusus untuk iOS
   const handleToggle = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    
     if (!disabled && !loading) {
-      // Tambahkan delay untuk mobile agar lebih responsif
-      setTimeout(() => {
-        onToggle();
-      }, isStandalone ? 5 : 10); // Lebih cepat di mode PWA
+      // Immediate feedback untuk iOS
+      onToggle();
     }
-  }, [disabled, loading, onToggle, isStandalone]);
+  }, [disabled, loading, onToggle]);
   
   const StatusBadge = () => {
-    // Ganti aria-pressed dengan props statis
-    const ariaProps = {
-      "aria-pressed": checked ? "true" : "false"
-    };
-    
     return (
       <div 
         onClick={handleToggle}
         onTouchEnd={handleToggle}
         role="button"
         tabIndex={0}
-        {...ariaProps}
+        aria-pressed={checked}
         className={`status-badge text-xs font-medium px-3 py-1.5 rounded-full cursor-pointer transition-colors select-none touch-manipulation ${
         loading ? "opacity-50 cursor-not-allowed" : ""
       } ${
@@ -147,8 +143,8 @@ const FeatureToggle = ({
     <>
       <div 
         className="flex items-center gap-3 flex-1 cursor-pointer" 
-        onClick={handleLabelClick}
-        onTouchEnd={handleLabelClick}
+        onClick={directNavigation ? undefined : handleLabelClick}
+        onTouchEnd={directNavigation ? undefined : handleLabelClick}
         role="button"
         tabIndex={0}
       >
@@ -167,7 +163,7 @@ const FeatureToggle = ({
       </div>
       <div className="flex items-center gap-4">
         <StatusBadge />
-        {managementLink && checked && (
+        {managementLink && (directNavigation || checked) && (
           <div className="text-gray-500">
             <ChevronRight className="w-5 h-5" />
           </div>
@@ -179,10 +175,11 @@ const FeatureToggle = ({
   return (
     <div 
       className={`border-b border-gray-100 ${canNavigate ? 'hover:bg-gray-50' : ''}`}
-      // Pasang handler touch hanya saat TIDAK navigate, agar tap di iOS tidak diblok
-      {...(!canNavigate ? { onTouchStart: handleTouchStart, onTouchEnd: handleTouchEnd } : {})}
+      // Simplified handler untuk iOS compatibility
+      onClick={handleContainerInteraction}
+      onTouchEnd={handleContainerInteraction}
     >
-      {canNavigate ? (
+      {canNavigate && !directNavigation ? (
         <Link to={managementLink!} className="block">
           <div className="flex items-center justify-between p-4 cursor-pointer">
             <Content />

@@ -162,36 +162,56 @@ const FeaturesSection = ({
   };
 
   const handleToggleClick = (setting: 'show_budgeting' | 'show_savings' | 'show_loans') => {
+    // Prevent multiple rapid clicks (debounce untuk iOS)
+    if (toggleLoading[setting]) {
+      return;
+    }
+
     // Dapatkan nilai pengaturan saat ini (dari props atau local sebagai fallback)
     const currentValue = effectiveSettings[setting];
     
-    // Jika user free dan ingin mengaktifkan fitur, tampilkan pesan upgrade
-    if (!isProUser && !currentValue) {
+    // Jika user free, tampilkan pesan upgrade (tidak peduli nilai setting)
+    if (!isProUser) {
+      // Hapus preventDefault untuk iOS compatibility
       const message = `Halo, saya ingin upgrade ke paket Pro untuk menggunakan fitur ${
         setting === 'show_budgeting' ? 'Anggaran' : 
         setting === 'show_savings' ? 'Tabungan' : 'Hutang & Piutang'
       } di aplikasi Keuangan Pribadi.`;
       const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+      
+      // Gunakan setTimeout untuk iOS Safari compatibility
+      setTimeout(() => {
+        window.open(whatsappUrl, '_blank');
+      }, 100);
       return;
     }
 
+    // Untuk Pro user, lakukan toggle normal
     try {
-      // Perbarui pengaturan lokal
+      // Update localStorage immediately untuk responsiveness
       const newSettings = {
         ...effectiveSettings,
         [setting]: !currentValue
       };
       
-      // Simpan ke localStorage untuk backup
-      localStorage.setItem(LOCAL_STORAGE_FEATURES_KEY, JSON.stringify(newSettings));
-      setLocalSettings(newSettings);
+      // Non-blocking localStorage update
+      requestAnimationFrame(() => {
+        try {
+          localStorage.setItem(LOCAL_STORAGE_FEATURES_KEY, JSON.stringify(newSettings));
+          setLocalSettings(newSettings);
+        } catch (storageError) {
+          console.warn('localStorage error:', storageError);
+        }
+      });
       
-      // Panggil fungsi toggle dari parent component
+      // Panggil fungsi toggle dari parent component langsung
       onToggleFeature(setting);
     } catch (error) {
       console.error(`Error toggling feature ${setting}:`, error);
-      alert("Terjadi kesalahan saat mengubah pengaturan. Silakan coba lagi.");
+      // Gunakan toast jika ada, fallback ke alert
+      if (typeof window !== 'undefined') {
+        alert("Terjadi kesalahan saat mengubah pengaturan. Silakan coba lagi.");
+      }
     }
   };
 
@@ -279,7 +299,8 @@ const FeaturesSection = ({
               description="Atur dan pantau anggaran keuangan kamu"
               checked={effectiveSettings.show_budgeting}
               onToggle={() => handleToggleClick('show_budgeting')}
-              managementLink={isProUser || effectiveSettings.show_budgeting ? "/budgets" : undefined}
+              managementLink="/budgets"
+              directNavigation={true}
               loading={toggleLoading.show_budgeting}
               disabled={!isProUser && !effectiveSettings.show_budgeting}
               extraElement={!isProUser && renderProBadge()}
@@ -293,7 +314,8 @@ const FeaturesSection = ({
               description="Atur target dan pantau tabungan kamu"
               checked={effectiveSettings.show_savings}
               onToggle={() => handleToggleClick('show_savings')}
-              managementLink={isProUser || effectiveSettings.show_savings ? "/savings" : undefined}
+              managementLink="/savings"
+              directNavigation={true}
               loading={toggleLoading.show_savings}
               disabled={!isProUser && !effectiveSettings.show_savings}
               extraElement={!isProUser && renderProBadge()}
@@ -307,7 +329,8 @@ const FeaturesSection = ({
           description="Kelola data hutang dan piutang"
           checked={effectiveSettings.show_loans}
           onToggle={() => handleToggleClick('show_loans')}
-          managementLink={isProUser || effectiveSettings.show_loans ? "/loans" : undefined}
+          managementLink="/loans"
+          directNavigation={true}
           loading={toggleLoading.show_loans}
           disabled={!isProUser && !effectiveSettings.show_loans}
           extraElement={!isProUser && renderProBadge()}

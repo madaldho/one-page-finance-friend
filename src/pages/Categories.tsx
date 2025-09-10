@@ -444,16 +444,7 @@ const Categories = () => {
         )}
         </main>
 
-        {/* Floating Action Button for Mobile */}
-        <div className="fixed bottom-20 right-4 md:hidden">
-          <Button 
-            size="icon" 
-            className="h-12 w-12 rounded-full shadow-lg"
-            onClick={handleAddCategory}
-          >
-            <Plus className="h-5 w-5" />
-          </Button>
-        </div>
+      
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

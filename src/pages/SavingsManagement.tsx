@@ -661,7 +661,11 @@ const SavingsManagement = () => {
                       <Switch 
                         checked={featureEnabled} 
                         onCheckedChange={handleToggleFeature}
-                        className="data-[state=checked]:bg-white data-[state=unchecked]:bg-white/30"
+                        className={`transition-all duration-300 ${
+                          featureEnabled 
+                            ? "data-[state=checked]:bg-green-500 data-[state=checked]:border-green-600" 
+                            : "data-[state=unchecked]:bg-white/30 data-[state=unchecked]:border-white/40"
+                        }`}
                       />
                     </div>
                   </div>
