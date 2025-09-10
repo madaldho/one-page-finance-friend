@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Calendar } from "lucide-react";
+import { ArrowLeft, Calendar, PiggyBank, Wallet as WalletIcon, DollarSign, TrendingDown, Info, AlertTriangle } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Saving, Wallet } from "@/types";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Progress } from "@/components/ui/progress";
 
 const SavingsWithdraw = () => {
   const { toast } = useToast();
@@ -209,140 +210,254 @@ const SavingsWithdraw = () => {
     }
   };
   
+  const calculateProgress = (current: number, target: number) => {
+    return (current / target) * 100;
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Tidak ada target";
+    try {
+      return new Date(dateString).toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   return (
     <Layout>
-      <div className="container mx-auto p-4 pb-32 max-w-xl">
-        <div className="flex items-center mb-6">
-          <Link to="/savings" className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-xl font-bold">Tarik dari Tabungan</h1>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-red-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-300 to-red-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
-        
-        {loading ? (
-          <div className="text-center py-8">
-            <p>Memuat data...</p>
-          </div>
-        ) : !saving ? (
-          <div className="text-center py-8">
-            <p>Tabungan tidak ditemukan</p>
-            <Button asChild className="mt-4">
-              <Link to="/savings">Kembali</Link>
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="bg-white rounded-lg p-4 mb-6">
-              <h2 className="font-medium text-lg mb-2">{saving.name}</h2>
-              <div className="flex justify-between mb-1">
-                <span className="text-sm text-gray-500">Saldo saat ini:</span>
-                <span className="font-medium">{formatCurrency(saving.current_amount)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-500">Target:</span>
-                <span className="font-medium">{formatCurrency(saving.target_amount)}</span>
-              </div>
-              <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${saving.current_amount / saving.target_amount >= 1 ? 'bg-green-500' : 'bg-amber-500'}`}
-                  style={{ width: `${Math.min(saving.current_amount / saving.target_amount * 100, 100)}%` }}
-                ></div>
+
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 pb-32">
+          {/* Header */}
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+            <div className="flex items-center gap-3">
+              <Link 
+                to="/savings"
+                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </Link>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Tarik Dana</h1>
+                <p className="text-xs text-gray-500">Ambil dana dari tabungan Anda</p>
               </div>
             </div>
-            
-            <div className="bg-white rounded-lg p-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Tanggal Penarikan*</Label>
-                  <div className="flex items-center border rounded-md">
-                    <Input
-                      id="date"
-                      name="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={handleChange}
-                      disabled={submitting}
-                      required
-                      className="border-0"
+          </div>
+
+          {loading ? (
+            <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 p-8">
+              <div className="text-center">
+                <div className="animate-spin w-10 h-10 border-3 border-red-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p className="text-base font-medium text-gray-700">Memuat data tabungan...</p>
+              </div>
+            </div>
+          ) : !saving ? (
+            <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 p-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <PiggyBank className="h-8 w-8 text-red-600" />
+                </div>
+                <h3 className="font-semibold text-xl mb-3 text-gray-800">Tabungan Tidak Ditemukan</h3>
+                <p className="text-sm text-gray-500 mb-6">Tabungan yang Anda cari tidak dapat ditemukan</p>
+                <Button asChild className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700">
+                  <Link to="/savings">Kembali ke Tabungan</Link>
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Saving Info Card */}
+              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden mb-6">
+                <div className="bg-gradient-to-r from-red-500 to-pink-600 p-5 text-white">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                      <PiggyBank className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-lg">{saving.name}</h2>
+                      <p className="text-white/80 text-sm capitalize">
+                        {saving.savings_category === "fisik" ? "Tabungan Fisik" : "Tabungan Digital"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-white/80">Tersedia: {formatCurrency(saving.current_amount)}</span>
+                      <span className="font-semibold">Target: {formatCurrency(saving.target_amount)}</span>
+                    </div>
+                    
+                    <Progress
+                      value={calculateProgress(saving.current_amount, saving.target_amount)}
+                      className="h-2 bg-white/20"
+                      indicatorClassName="bg-white"
                     />
-                    <div className="px-3 text-gray-400">
-                      <Calendar className="h-4 w-4" />
+                    
+                    <div className="flex items-center justify-between text-xs text-white/70">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>Target: {formatDate(saving.target_date)}</span>
+                      </div>
+                      <span className="font-medium">
+                        {Math.round(calculateProgress(saving.current_amount, saving.target_amount))}% tercapai
+                      </span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="wallet_id">Dompet Tujuan*</Label>
-                  <Select 
-                    value={formData.wallet_id} 
-                    onValueChange={(value) => handleSelectChange("wallet_id", value)}
-                    disabled={submitting}
-                  >
-                    <SelectTrigger id="wallet_id">
-                      <SelectValue placeholder="Pilih dompet tujuan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {wallets.map(wallet => (
-                        <SelectItem key={wallet.id} value={wallet.id}>
-                          {wallet.name} - {formatCurrency(wallet.balance)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-500">
-                    Dana yang ditarik akan ditambahkan ke dompet tujuan
-                  </p>
+                {/* Warning Section */}
+                <div className="p-5 bg-gradient-to-br from-red-50 to-pink-50">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-red-100 p-2 rounded-lg mt-0.5">
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        <strong>Perhatian:</strong> Dana akan dikurangi dari tabungan <strong>{saving.name}</strong> dan ditambahkan ke dompet yang Anda pilih.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Jumlah Penarikan*</Label>
-                  <CurrencyInput
-                    id="amount"
-                    placeholder="100000"
-                    value={Number(formData.amount)}
-                    onChange={(value) => setFormData({...formData, amount: value.toString()})}
-                    disabled={submitting}
-                  />
-                  <p className="text-xs text-gray-500">
-                    Maksimal penarikan: {formatCurrency(saving.current_amount)}
-                  </p>
+              </div>
+
+              {/* Form Card */}
+              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-500 to-red-600 p-5 text-white">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                      <TrendingDown className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Form Penarikan</h3>
+                      <p className="text-white/80 text-sm">Masukkan detail penarikan Anda</p>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Catatan (Opsional)</Label>
-                  <Textarea
-                    id="notes"
-                    name="notes"
-                    placeholder="Tambahkan catatan tentang penarikan ini"
-                    value={formData.notes}
-                    onChange={handleChange}
-                    disabled={submitting}
-                    rows={3}
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full" 
-                    onClick={() => navigate("/savings")}
-                    disabled={submitting}
-                  >
-                    Batal
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={submitting}
-                  >
-                    {submitting ? "Memproses..." : "Tarik Dana"}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </>
-        )}
+
+                <form className="p-6 space-y-6" onSubmit={handleSubmit}>
+                  {/* Date Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="date" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      Tanggal Penarikan*
+                    </Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleChange}
+                      required
+                      className="h-12 border-gray-200 focus:border-red-500 focus:ring-red-500"
+                    />
+                  </div>
+
+                  {/* Wallet Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="wallet" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <WalletIcon className="h-4 w-4 text-gray-500" />
+                      Dompet Tujuan*
+                    </Label>
+                    <Select value={formData.wallet_id} onValueChange={(value) => handleSelectChange("wallet_id", value)} required>
+                      <SelectTrigger className="h-12 border-gray-200 focus:border-red-500">
+                        <SelectValue placeholder="Pilih dompet tujuan dana" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {wallets.map((wallet) => (
+                          <SelectItem key={wallet.id} value={wallet.id}>
+                            <div className="flex items-center justify-between w-full">
+                              <span>{wallet.name}</span>
+                              <span className="text-sm text-gray-500 ml-2">
+                                {formatCurrency(wallet.balance)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Amount Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="amount" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-gray-500" />
+                      Jumlah Penarikan*
+                    </Label>
+                    <CurrencyInput
+                      id="amount"
+                      showPrefix={true}
+                      placeholder="Masukkan jumlah penarikan"
+                      value={Number(formData.amount)}
+                      onChange={(value) => handleSelectChange("amount", value.toString())}
+                      disabled={submitting}
+                      className="h-12 border-gray-200 focus:border-red-500 focus:ring-red-500"
+                    />
+                    <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                      💰 Maksimal penarikan: <strong>{formatCurrency(saving.current_amount)}</strong>
+                    </p>
+                  </div>
+
+                  {/* Notes Input */}
+                  <div className="space-y-2">
+                    <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+                      Catatan (Opsional)
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      name="notes"
+                      value={formData.notes}
+                      onChange={handleChange}
+                      placeholder="Tambahkan catatan untuk penarikan ini..."
+                      rows={3}
+                      className="border-gray-200 focus:border-red-500 focus:ring-red-500 resize-none"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-3 pt-4">
+                    <Button 
+                      type="submit" 
+                      disabled={submitting} 
+                      className="h-12 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      {submitting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Memproses Penarikan...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <TrendingDown className="h-4 w-4" />
+                          Tarik Dana
+                        </div>
+                      )}
+                    </Button>
+                    
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => navigate("/savings")}
+                      disabled={submitting}
+                      className="h-12 border-gray-200 hover:bg-gray-50"
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </Layout>
   );
