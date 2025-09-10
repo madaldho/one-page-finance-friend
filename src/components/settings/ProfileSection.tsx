@@ -110,9 +110,19 @@ const ProfileSection = ({ user }: ProfileSectionProps) => {
                       )}
                     </div>
                   ) : (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                      Akun {subscriptionLabel.text}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                        Akun {subscriptionLabel.text}
+                      </span>
+                      
+                      <Button
+                        onClick={() => window.open('https://wa.me/6285794215084?text=Halo%2C%20saya%20ingin%20upgrade%20ke%20Pro', '_blank')}
+                        size="sm"
+                        className="text-xs h-6 px-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-full"
+                      >
+                        Upgrade Pro
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

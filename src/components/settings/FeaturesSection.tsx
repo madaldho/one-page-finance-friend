@@ -177,7 +177,7 @@ const FeaturesSection = ({
         setting === 'show_budgeting' ? 'Anggaran' : 
         setting === 'show_savings' ? 'Tabungan' : 'Hutang & Piutang'
       } di aplikasi Keuangan Pribadi.`;
-      const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/6285794215084?text=${encodeURIComponent(message)}`;
       
       // Debounced WhatsApp opening untuk iOS Safari compatibility
       setTimeout(() => {
