@@ -366,9 +366,9 @@ const Transactions = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl">
+      <div className="container mx-auto py-2 px-2 md:px-6 max-w-5xl pb-32">
         {/* Header dengan glassmorphism effect */}
-        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-8 shadow-sm border border-white/20 sticky top-4 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {walletParam && (
@@ -1020,7 +1020,7 @@ const Transactions = () => {
 
         {/* Enhanced Filter Badges */}
         {(activeTab !== 'all' || selectedWalletIds.length > 0 || selectedCategoryIds.length > 0 || searchTerm || dateRangeFilter?.from || dateRangeFilter?.to) && (
-          <div className="mb-6">
+          <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-gray-600">Filter Aktif:</p>
               <Button 
@@ -1139,7 +1139,7 @@ const Transactions = () => {
         )}
 
         {/* Enhanced Summary Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-8 mt-8">
           {/* Pengeluaran Card */}
           <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-xl transition-all duration-200">
             <CardContent className="p-4">
