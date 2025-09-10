@@ -7,10 +7,10 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CurrencyInput } from '@/components/ui/currency-input';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, TrendingDown, DollarSign, User, Calendar, WalletIcon } from 'lucide-react';
 import Layout from '@/components/Layout';
 import { formatCurrency } from '@/lib/utils';
 
@@ -41,7 +41,7 @@ const AddDebtPage = () => {
           console.error("Error fetching wallets:", error);
           toast.error("Gagal memuat daftar wallet");
         } else if (data) {
-          setWallets(data as Wallet[]);
+          setWallets(data as unknown as Wallet[]);
         }
       }
     };
@@ -171,165 +171,210 @@ const AddDebtPage = () => {
     }
   };
 
-  // Generate gradient or color style sesuai data dompet
-  const getWalletStyle = (wallet: Wallet) => {
-    // Menggunakan type assertion untuk mengatasi masalah TypeScript
-    const walletWithGradient = wallet as { gradient?: string; color?: string };
-    
-    if (walletWithGradient.gradient && typeof walletWithGradient.gradient === 'string') {
-      // Coba ekstrak warna pertama dari gradient jika ada
-      const match = walletWithGradient.gradient.match(/rgba?\([\d\s,.]+\)|#[a-f\d]{3,8}/i);
-      if (match) {
-        // Gunakan warna pertama yang ditemukan dalam gradient
-        return { backgroundColor: match[0] };
-      }
-      // Jika tidak bisa ekstrak warna, tetap gunakan gradient
-      return { background: walletWithGradient.gradient };
-    }
-    
-    // Fallback ke warna solid
-    return { backgroundColor: wallet.color || '#94a3b8' };
-  };
-
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-md">
-        {/* Header dengan glassmorphism effect */}
-        <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-          <div className="flex items-center gap-3">
-            <Link 
-              to="/loans"
-              className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
-              aria-label="Kembali"
-            >
-              <ArrowLeft className="h-5 w-5 text-gray-700" />
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold text-gray-800">Tambah Hutang</h1>
-              <p className="text-xs text-gray-500">Catat hutang yang harus dibayar</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-red-100 to-orange-100 rounded-full mix-blend-multiply filter blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-slate-200 to-gray-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
+        </div>
+
+        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 pb-32">
+          {/* Header */}
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
+            <div className="flex items-center gap-3">
+              <Link 
+                to="/loans"
+                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30"
+                aria-label="Kembali"
+              >
+                <ArrowLeft className="h-5 w-5 text-gray-700" />
+              </Link>
+              <div>
+                <h1 className="text-lg font-bold text-gray-800">Tambah Hutang</h1>
+                <p className="text-xs text-gray-500">Catat hutang yang harus dibayar</p>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <Card className="shadow-sm border-0">
-          <CardContent className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-              <Label htmlFor="description">Deskripsi</Label>
-              <Input
-                type="text"
-                id="description"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                  placeholder="Pinjaman untuk apa"
-                required
-              />
+
+          {/* Form Card */}
+          <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-md border border-gray-200/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-red-500 to-red-600 p-5 text-white">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
+                  <TrendingDown className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Form Hutang</h3>
+                  <p className="text-white/70 text-sm">Data hutang yang harus dibayar</p>
+                </div>
+              </div>
             </div>
-              
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              {/* Description */}
               <div className="space-y-2">
-              <Label htmlFor="amount">Jumlah</Label>
+                <Label htmlFor="description" className="text-sm font-medium text-gray-700">
+                  Deskripsi Hutang*
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                  placeholder="Contoh: Pinjaman untuk modal usaha"
+                  rows={3}
+                  className="border-gray-200 focus:border-red-500 focus:ring-red-500 resize-none"
+                />
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-2">
+                <Label htmlFor="amount" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-gray-500" />
+                  Jumlah Hutang*
+                </Label>
                 <CurrencyInput
-                id="amount"
-                value={formData.amount}
-                  onChange={handleAmountChange}
+                  id="amount"
                   showPrefix={true}
-                  placeholder="0"
-                required
-              />
-            </div>
-              
+                  placeholder="Masukkan jumlah hutang"
+                  value={formData.amount}
+                  onChange={handleAmountChange}
+                  className="h-12 border-gray-200 focus:border-red-500 focus:ring-red-500"
+                />
+              </div>
+
+              {/* Lender */}
               <div className="space-y-2">
-              <Label htmlFor="lender">Pemberi Hutang</Label>
-              <Input
-                type="text"
-                id="lender"
-                name="lender"
-                value={formData.lender}
-                onChange={handleChange}
-                  placeholder="Nama pemberi pinjaman"
-                required
-              />
-            </div>
-              
+                <Label htmlFor="lender" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-500" />
+                  Pemberi Hutang*
+                </Label>
+                <Input
+                  id="lender"
+                  name="lender"
+                  value={formData.lender}
+                  onChange={handleChange}
+                  required
+                  placeholder="Nama orang/institusi yang memberi pinjaman"
+                  className="h-12 border-gray-200 focus:border-red-500 focus:ring-red-500"
+                />
+              </div>
+
+              {/* Due Date */}
               <div className="space-y-2">
-              <Label htmlFor="due_date">Tanggal Jatuh Tempo</Label>
-              <Input
-                type="date"
-                id="due_date"
-                name="due_date"
-                value={formData.due_date}
-                onChange={handleChange}
-              />
-                <p className="text-xs text-gray-500">Opsional</p>
-            </div>
-              
+                <Label htmlFor="due_date" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  Jatuh Tempo (Opsional)
+                </Label>
+                <Input
+                  id="due_date"
+                  name="due_date"
+                  type="date"
+                  value={formData.due_date}
+                  onChange={handleChange}
+                  className="h-12 border-gray-200 focus:border-red-500 focus:ring-red-500"
+                />
+              </div>
+
+              {/* Wallet Selection */}
               <div className="space-y-2">
-              <Label htmlFor="wallet_id">Pilih Dompet</Label>
-              <Select
-                value={formData.wallet_id}
-                onValueChange={(value) => handleSelectChange('wallet_id', value)}
-              >
-                  <SelectTrigger id="wallet_id" className="w-full">
-                    <SelectValue placeholder="Pilih dompet">
+                <Label htmlFor="wallet_id" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <WalletIcon className="h-4 w-4 text-gray-500" />
+                  Dompet Tujuan*
+                </Label>
+                <Select
+                  value={formData.wallet_id}
+                  onValueChange={(value) => handleSelectChange('wallet_id', value)}
+                >
+                  <SelectTrigger className="h-12 border-gray-200 focus:border-red-500">
+                    <SelectValue placeholder="Pilih dompet tujuan dana">
                       {selectedWallet && (
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-3 w-full">
                           <div 
-                            className="w-4 h-4 rounded-full mr-2" 
-                            style={getWalletStyle(selectedWallet)}
+                            className="w-6 h-6 rounded-full border-2 border-white shadow-md"
+                            style={{ backgroundColor: selectedWallet.color || '#6B7280' }}
                           />
-                          <span>{selectedWallet.name}</span>
-                          <span className="ml-2 text-gray-500">
-                            ({formatCurrency(selectedWallet.balance)})
-                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{selectedWallet.name}</span>
+                              <span className="text-sm font-semibold text-green-600">
+                                {formatCurrency(selectedWallet.balance)}
+                              </span>
+                            </div>
+                            {selectedWallet.type && (
+                              <span className="text-xs text-gray-500 capitalize">{selectedWallet.type}</span>
+                            )}
+                          </div>
                         </div>
                       )}
                     </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {wallets.map(wallet => (
-                    <SelectItem key={wallet.id} value={wallet.id}>
-                        <div className="flex items-center">
+                  </SelectTrigger>
+                  <SelectContent>
+                    {wallets.map((wallet) => (
+                      <SelectItem key={wallet.id} value={wallet.id} className="p-3">
+                        <div className="flex items-center gap-3 w-full">
                           <div 
-                            className="w-4 h-4 rounded-full mr-2" 
-                            style={getWalletStyle(wallet)}
+                            className="w-6 h-6 rounded-full border-2 border-white shadow-md"
+                            style={{ backgroundColor: wallet.color || '#6B7280' }}
                           />
-                          <span>{wallet.name}</span>
-                          <span className="ml-2 text-gray-500">
-                            ({formatCurrency(wallet.balance)})
-                          </span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-gray-900">{wallet.name}</span>
+                              <span className="text-sm font-semibold text-green-600">
+                                {formatCurrency(wallet.balance)}
+                              </span>
+                            </div>
+                            {wallet.type && (
+                              <span className="text-xs text-gray-500 capitalize">{wallet.type}</span>
+                            )}
+                          </div>
                         </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-gray-500">
-                Hutang akan menambah saldo dompet yang dipilih
-              </p>
-            </div>
-              
-              <div className="pt-4 grid grid-cols-2 gap-3">
+                  Dana hutang akan menambah saldo dompet yang dipilih
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 pt-4">
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Menyimpan Hutang...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4" />
+                      Tambah Hutang
+                    </div>
+                  )}
+                </Button>
+                
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => navigate('/loans')}
                   disabled={isLoading}
-                  className="w-full"
+                  className="h-12 border-gray-200 hover:bg-gray-50"
                 >
-                  Batal
+                  Kembali ke Hutang & Piutang
                 </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                >
-                  {isLoading ? "Memproses..." : "Simpan Hutang"}
-            </Button>
               </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 };
