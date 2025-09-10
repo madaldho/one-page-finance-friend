@@ -96,14 +96,7 @@ const WalletDetailPage = () => {
                   <p className="text-xs text-gray-500">Kelola semua dompet Anda</p>
                 </div>
               </div>
-              <Button 
-                onClick={handleAddWallet}
-                size="sm"
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl shadow-md"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Tambah</span>
-              </Button>
+           
             </div>
           </div>
 
@@ -211,7 +204,7 @@ const WalletDetailPage = () => {
                     <div 
                       key={wallet.id} 
                       className="relative group cursor-pointer"
-                      onClick={() => navigate(`/wallets/${wallet.id}`)}
+                      onClick={() => navigate(`/wallet/${wallet.id}`)}
                     >
                       {/* Kartu dompet dengan design glassmorphism seperti WalletCard */}
                       <div 
