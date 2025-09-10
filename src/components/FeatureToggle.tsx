@@ -63,6 +63,9 @@ const FeatureToggle = ({
   
   // Handler untuk click/touch dengan iOS optimization
   const handleContainerInteraction = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent multiple calls by checking if already processing
+    if (loading) return;
+    
     // Biarkan StatusBadge menangani jika target adalah tombol toggle
     const target = e.target as HTMLElement;
     if (target.closest('.status-badge')) return;
@@ -85,8 +88,12 @@ const FeatureToggle = ({
       e.preventDefault();
 
       if (!disabled && !loading) {
-        // Direct call untuk iOS responsiveness
-        onToggle();
+        // Debounce untuk menghindari multiple calls
+        setTimeout(() => {
+          if (!loading) {
+            onToggle();
+          }
+        }, 50);
       }
     }
   }, [directNavigation, managementLink, canNavigate, disabled, loading, onToggle]);
@@ -96,9 +103,16 @@ const FeatureToggle = ({
     e.stopPropagation();
     e.preventDefault();
     
+    // Prevent multiple calls by checking if already processing
+    if (loading) return;
+    
     if (!disabled && !loading) {
-      // Immediate feedback untuk iOS
-      onToggle();
+      // Debounced immediate feedback untuk iOS
+      setTimeout(() => {
+        if (!loading) {
+          onToggle();
+        }
+      }, 50);
     }
   }, [disabled, loading, onToggle]);
   
@@ -106,7 +120,6 @@ const FeatureToggle = ({
     return (
       <div 
         onClick={handleToggle}
-        onTouchEnd={handleToggle}
         role="button"
         tabIndex={0}
         aria-pressed={checked}
@@ -114,8 +127,8 @@ const FeatureToggle = ({
         loading ? "opacity-50 cursor-not-allowed" : ""
       } ${
         checked 
-            ? "bg-green-100 text-green-600 hover:bg-green-200 active:bg-green-300" 
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200 active:bg-gray-300"
+            ? "bg-green-100 text-green-600 hover:bg-green-200" 
+            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
       }`}
     >
       {loading ? (
@@ -134,8 +147,17 @@ const FeatureToggle = ({
   const handleLabelClick = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (canNavigate) return; // Biarkan navigasi jika sedang aktif dan ada managementLink
     e.stopPropagation();
+    
+    // Prevent multiple calls by checking if already processing
+    if (loading) return;
+    
     if (!disabled && !loading) {
-      onToggle();
+      // Debounced toggle
+      setTimeout(() => {
+        if (!loading) {
+          onToggle();
+        }
+      }, 50);
     }
   }, [canNavigate, disabled, loading, onToggle]);
   
@@ -144,7 +166,6 @@ const FeatureToggle = ({
       <div 
         className="flex items-center gap-3 flex-1 cursor-pointer" 
         onClick={directNavigation ? undefined : handleLabelClick}
-        onTouchEnd={directNavigation ? undefined : handleLabelClick}
         role="button"
         tabIndex={0}
       >
@@ -175,9 +196,8 @@ const FeatureToggle = ({
   return (
     <div 
       className={`border-b border-gray-100 ${canNavigate ? 'hover:bg-gray-50' : ''}`}
-      // Simplified handler untuk iOS compatibility
+      // Simplified handler untuk iOS compatibility - hanya gunakan onClick
       onClick={handleContainerInteraction}
-      onTouchEnd={handleContainerInteraction}
     >
       {canNavigate && !directNavigation ? (
         <Link to={managementLink!} className="block">

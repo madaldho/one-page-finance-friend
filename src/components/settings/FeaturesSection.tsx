@@ -162,8 +162,9 @@ const FeaturesSection = ({
   };
 
   const handleToggleClick = (setting: 'show_budgeting' | 'show_savings' | 'show_loans') => {
-    // Prevent multiple rapid clicks (debounce untuk iOS)
+    // Prevent multiple rapid clicks dengan debouncing yang lebih kuat
     if (toggleLoading[setting]) {
+      console.log(`Toggle ${setting} already in progress, ignoring`);
       return;
     }
 
@@ -172,40 +173,45 @@ const FeaturesSection = ({
     
     // Jika user free, tampilkan pesan upgrade (tidak peduli nilai setting)
     if (!isProUser) {
-      // Hapus preventDefault untuk iOS compatibility
       const message = `Halo, saya ingin upgrade ke paket Pro untuk menggunakan fitur ${
         setting === 'show_budgeting' ? 'Anggaran' : 
         setting === 'show_savings' ? 'Tabungan' : 'Hutang & Piutang'
       } di aplikasi Keuangan Pribadi.`;
       const whatsappUrl = `https://wa.me/6281387013123?text=${encodeURIComponent(message)}`;
       
-      // Gunakan setTimeout untuk iOS Safari compatibility
+      // Debounced WhatsApp opening untuk iOS Safari compatibility
       setTimeout(() => {
         window.open(whatsappUrl, '_blank');
-      }, 100);
+      }, 200);
       return;
     }
 
-    // Untuk Pro user, lakukan toggle normal
+    // Untuk Pro user, lakukan toggle normal dengan debouncing
     try {
+      console.log(`Toggling ${setting}: ${currentValue} -> ${!currentValue}`);
+      
       // Update localStorage immediately untuk responsiveness
       const newSettings = {
         ...effectiveSettings,
         [setting]: !currentValue
       };
       
-      // Non-blocking localStorage update
-      requestAnimationFrame(() => {
-        try {
-          localStorage.setItem(LOCAL_STORAGE_FEATURES_KEY, JSON.stringify(newSettings));
-          setLocalSettings(newSettings);
-        } catch (storageError) {
-          console.warn('localStorage error:', storageError);
-        }
-      });
+      // Synchronous localStorage update untuk state sync yang lebih baik
+      try {
+        localStorage.setItem(LOCAL_STORAGE_FEATURES_KEY, JSON.stringify(newSettings));
+        setLocalSettings(newSettings);
+        console.log(`Local storage updated for ${setting}:`, !currentValue);
+      } catch (storageError) {
+        console.warn('localStorage error:', storageError);
+      }
       
-      // Panggil fungsi toggle dari parent component langsung
-      onToggleFeature(setting);
+      // Debounced parent toggle call untuk mencegah multiple calls
+      setTimeout(() => {
+        if (!toggleLoading[setting]) {
+          onToggleFeature(setting);
+        }
+      }, 150);
+      
     } catch (error) {
       console.error(`Error toggling feature ${setting}:`, error);
       // Gunakan toast jika ada, fallback ke alert
@@ -300,7 +306,7 @@ const FeaturesSection = ({
               checked={effectiveSettings.show_budgeting}
               onToggle={() => handleToggleClick('show_budgeting')}
               managementLink="/budgets"
-              directNavigation={true}
+              directNavigation={false}
               loading={toggleLoading.show_budgeting}
               disabled={!isProUser && !effectiveSettings.show_budgeting}
               extraElement={!isProUser && renderProBadge()}
@@ -315,7 +321,7 @@ const FeaturesSection = ({
               checked={effectiveSettings.show_savings}
               onToggle={() => handleToggleClick('show_savings')}
               managementLink="/savings"
-              directNavigation={true}
+              directNavigation={false}
               loading={toggleLoading.show_savings}
               disabled={!isProUser && !effectiveSettings.show_savings}
               extraElement={!isProUser && renderProBadge()}
@@ -324,50 +330,50 @@ const FeaturesSection = ({
           
           <div className={isProUser ? '' : 'opacity-70'}>
             <FeatureToggle
-          icon={<CreditCard className="w-4 h-4 text-red-600" />}
-          title="Hutang & Piutang"
-          description="Kelola data hutang dan piutang"
-          checked={effectiveSettings.show_loans}
-          onToggle={() => handleToggleClick('show_loans')}
-          managementLink="/loans"
-          directNavigation={true}
-          loading={toggleLoading.show_loans}
-          disabled={!isProUser && !effectiveSettings.show_loans}
-          extraElement={!isProUser && renderProBadge()}
-        />
-      </div>
+              icon={<CreditCard className="w-4 h-4 text-red-600" />}
+              title="Hutang & Piutang"
+              description="Kelola data hutang dan piutang"
+              checked={effectiveSettings.show_loans}
+              onToggle={() => handleToggleClick('show_loans')}
+              managementLink="/loans"
+              directNavigation={false}
+              loading={toggleLoading.show_loans}
+              disabled={!isProUser && !effectiveSettings.show_loans}
+              extraElement={!isProUser && renderProBadge()}
+            />
+          </div>
+        </div>
 
-      {/* Hanya tampilkan notifikasi upgrade jika bukan Pro user */}
-      {!isProUser && (
-        <div className="p-4 bg-orange-50 border-t border-orange-100">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm text-orange-800 mb-2">
-                Fitur-fitur ini tersedia hanya untuk pengguna Pro. Upgrade sekarang untuk menggunakan semua fitur tanpa batasan!
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  className="bg-orange-500 hover:bg-orange-600 text-white"
-                  onClick={() => navigate('/upgrade')}
-                >
-                  Upgrade ke Pro
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-orange-200 text-orange-800 hover:bg-orange-100"
-                  onClick={() => navigate('/profile')}
-                >
-                  Pengaturan Akun
-                </Button>
+        {/* Hanya tampilkan notifikasi upgrade jika bukan Pro user */}
+        {!isProUser && (
+          <div className="p-4 bg-orange-50 border-t border-orange-100">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-orange-800 mb-2">
+                  Fitur-fitur ini tersedia hanya untuk pengguna Pro. Upgrade sekarang untuk menggunakan semua fitur tanpa batasan!
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                    onClick={() => navigate('/upgrade')}
+                  >
+                    Upgrade ke Pro
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-orange-200 text-orange-800 hover:bg-orange-100"
+                    onClick={() => navigate('/profile')}
+                  >
+                    Pengaturan Akun
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-        </div>
+        )}
       </div>
     </section>
   );

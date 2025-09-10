@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Saving, Wallet } from "@/types";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Progress } from "@/components/ui/progress";
+import { formatCurrency } from "@/lib/utils";
 
 const SavingsWithdraw = () => {
   const { toast } = useToast();
@@ -86,10 +87,6 @@ const SavingsWithdraw = () => {
       ...prev,
       [name]: value
     }));
-  };
-  
-  const formatCurrency = (amount: number) => {
-    return `Rp ${amount.toLocaleString()}`;
   };
   
   const handleSubmit = async (e: FormEvent) => {
@@ -231,9 +228,9 @@ const SavingsWithdraw = () => {
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
         {/* Background decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-red-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-orange-300 to-red-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-slate-200 to-gray-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-red-100 to-pink-100 rounded-full mix-blend-multiply filter blur-3xl"></div>
         </div>
 
         <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 pb-32">
@@ -277,15 +274,15 @@ const SavingsWithdraw = () => {
           ) : (
             <>
               {/* Saving Info Card */}
-              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden mb-6">
-                <div className="bg-gradient-to-r from-red-500 to-pink-600 p-5 text-white">
+              <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-md border border-gray-200/50 overflow-hidden mb-6">
+                <div className="bg-gradient-to-r from-slate-600 to-gray-700 p-5 text-white">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center">
                       <PiggyBank className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h2 className="font-semibold text-lg">{saving.name}</h2>
-                      <p className="text-white/80 text-sm capitalize">
+                      <p className="text-white/70 text-sm capitalize">
                         {saving.savings_category === "fisik" ? "Tabungan Fisik" : "Tabungan Digital"}
                       </p>
                     </div>
@@ -293,17 +290,17 @@ const SavingsWithdraw = () => {
                   
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/80">Tersedia: {formatCurrency(saving.current_amount)}</span>
-                      <span className="font-semibold">Target: {formatCurrency(saving.target_amount)}</span>
+                      <span className="text-white/70">Tersedia: {formatCurrency(saving.current_amount)}</span>
+                      <span className="font-medium">Target: {formatCurrency(saving.target_amount)}</span>
                     </div>
                     
                     <Progress
                       value={calculateProgress(saving.current_amount, saving.target_amount)}
-                      className="h-2 bg-white/20"
-                      indicatorClassName="bg-white"
+                      className="h-2 bg-white/15"
+                      indicatorClassName="bg-white/90"
                     />
                     
-                    <div className="flex items-center justify-between text-xs text-white/70">
+                    <div className="flex items-center justify-between text-xs text-white/60">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>Target: {formatDate(saving.target_date)}</span>
@@ -315,15 +312,15 @@ const SavingsWithdraw = () => {
                   </div>
                 </div>
                 
-                {/* Warning Section */}
-                <div className="p-5 bg-gradient-to-br from-red-50 to-pink-50">
+                {/* Info Section */}
+                <div className="p-5 bg-gradient-to-br from-slate-50 to-gray-50">
                   <div className="flex items-start gap-3">
                     <div className="bg-red-100 p-2 rounded-lg mt-0.5">
                       <AlertTriangle className="h-4 w-4 text-red-600" />
                     </div>
                     <div>
                       <p className="text-sm text-gray-700 leading-relaxed">
-                        <strong>Perhatian:</strong> Dana akan dikurangi dari tabungan <strong>{saving.name}</strong> dan ditambahkan ke dompet yang Anda pilih.
+                        Dana akan dikurangi dari tabungan <strong>{saving.name}</strong> dan ditambahkan ke dompet yang Anda pilih.
                       </p>
                     </div>
                   </div>
@@ -331,15 +328,15 @@ const SavingsWithdraw = () => {
               </div>
 
               {/* Form Card */}
-              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
-                <div className="bg-gradient-to-r from-orange-500 to-red-600 p-5 text-white">
+              <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-md border border-gray-200/50 overflow-hidden">
+                <div className="bg-gradient-to-r from-red-500 to-red-600 p-5 text-white">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
                       <TrendingDown className="h-5 w-5 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg">Form Penarikan</h3>
-                      <p className="text-white/80 text-sm">Masukkan detail penarikan Anda</p>
+                      <p className="text-white/70 text-sm">Masukkan detail penarikan Anda</p>
                     </div>
                   </div>
                 </div>
@@ -358,8 +355,11 @@ const SavingsWithdraw = () => {
                       value={formData.date}
                       onChange={handleChange}
                       required
-                      className="h-12 border-gray-200 focus:border-red-500 focus:ring-red-500"
+                      className="h-12 border-gray-200 focus:border-orange-500 focus:ring-orange-500"
                     />
+                    <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
+                      📅 Tanggal transaksi penarikan dari tabungan
+                    </p>
                   </div>
 
                   {/* Wallet Selection */}
@@ -374,12 +374,23 @@ const SavingsWithdraw = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {wallets.map((wallet) => (
-                          <SelectItem key={wallet.id} value={wallet.id}>
-                            <div className="flex items-center justify-between w-full">
-                              <span>{wallet.name}</span>
-                              <span className="text-sm text-gray-500 ml-2">
-                                {formatCurrency(wallet.balance)}
-                              </span>
+                          <SelectItem key={wallet.id} value={wallet.id} className="p-3">
+                            <div className="flex items-center gap-3 w-full">
+                              <div 
+                                className="w-6 h-6 rounded-full border-2 border-white shadow-md"
+                                style={{ backgroundColor: wallet.color || '#6B7280' }}
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-medium text-gray-900">{wallet.name}</span>
+                                  <span className="text-sm font-semibold text-green-600">
+                                    {formatCurrency(wallet.balance)}
+                                  </span>
+                                </div>
+                                {wallet.type && (
+                                  <span className="text-xs text-gray-500 capitalize">{wallet.type}</span>
+                                )}
+                              </div>
                             </div>
                           </SelectItem>
                         ))}
@@ -428,7 +439,7 @@ const SavingsWithdraw = () => {
                     <Button 
                       type="submit" 
                       disabled={submitting} 
-                      className="h-12 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="h-12 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium shadow-lg hover:shadow-xl transition-all duration-200"
                     >
                       {submitting ? (
                         <div className="flex items-center gap-2">
@@ -450,7 +461,7 @@ const SavingsWithdraw = () => {
                       disabled={submitting}
                       className="h-12 border-gray-200 hover:bg-gray-50"
                     >
-                      Batal
+                      Kembali ke Tabungan
                     </Button>
                   </div>
                 </form>

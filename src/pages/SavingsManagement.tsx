@@ -619,10 +619,10 @@ const SavingsManagement = () => {
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
         {/* Background decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-yellow-300 to-amber-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-orange-300 to-red-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-slate-200 to-gray-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full mix-blend-multiply filter blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-gray-100 to-slate-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
         </div>
 
         <div className="container mx-auto py-2 px-2 md:px-6 max-w-4xl lg:max-w-5xl relative z-10 pt-6 md:pt-4 pb-32">
@@ -648,8 +648,8 @@ const SavingsManagement = () => {
             {/* Left Column - Feature Toggle & Summary */}
             <div className="lg:col-span-5 space-y-6">
               {/* Feature Toggle Section */}
-              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
-                <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-5 text-white">
+              <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-600 to-gray-700 p-5 text-white">
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="font-semibold text-lg">Fitur Tabungan</h2>
@@ -671,10 +671,10 @@ const SavingsManagement = () => {
                   </div>
                 </div>
                 
-                <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50">
+                <div className="p-5 bg-gradient-to-br from-slate-50 to-gray-50">
                   <div className="flex items-start gap-3">
-                    <div className="bg-amber-100 p-2 rounded-lg mt-0.5">
-                      <Info className="h-4 w-4 text-amber-600" />
+                    <div className="bg-blue-100 p-2 rounded-lg mt-0.5">
+                      <Info className="h-4 w-4 text-blue-600" />
                     </div>
                     <div>
                       <p className="text-sm text-gray-700 leading-relaxed">
@@ -687,31 +687,31 @@ const SavingsManagement = () => {
 
               {/* Summary Statistics */}
               {savings.length > 0 && (
-                <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20">
+                <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-lg border border-gray-200/50">
                   <div className="p-6">
                     <h3 className="font-semibold text-lg text-gray-800 mb-4">Ringkasan Tabungan</h3>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100">
-                        <p className="text-xs text-green-600 mb-1">Total Target</p>
-                        <p className="font-bold text-lg text-green-800">
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200">
+                        <p className="text-xs text-blue-600 mb-1">Total Target</p>
+                        <p className="font-bold text-lg text-blue-800">
                           Rp {savings.reduce((sum, s) => sum + s.target_amount, 0).toLocaleString()}
                         </p>
                       </div>
-                      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-100">
-                        <p className="text-xs text-blue-600 mb-1">Total Terkumpul</p>
-                        <p className="font-bold text-lg text-blue-800">
+                      <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-xl border border-green-200">
+                        <p className="text-xs text-green-600 mb-1">Total Terkumpul</p>
+                        <p className="font-bold text-lg text-green-800">
                           Rp {savings.reduce((sum, s) => sum + s.current_amount, 0).toLocaleString()}
                         </p>
                       </div>
-                      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-xl border border-amber-100">
-                        <p className="text-xs text-amber-600 mb-1">Rata-rata Progress</p>
-                        <p className="font-bold text-lg text-amber-800">
+                      <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-xl border border-indigo-200">
+                        <p className="text-xs text-indigo-600 mb-1">Rata-rata Progress</p>
+                        <p className="font-bold text-lg text-indigo-800">
                           {Math.round(savings.reduce((sum, s) => sum + calculateProgress(s), 0) / savings.length)}%
                         </p>
                       </div>
-                      <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-100">
-                        <p className="text-xs text-purple-600 mb-1">Target Aktif</p>
-                        <p className="font-bold text-lg text-purple-800">{savings.length}</p>
+                      <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200">
+                        <p className="text-xs text-slate-600 mb-1">Target Aktif</p>
+                        <p className="font-bold text-lg text-slate-800">{savings.length}</p>
                       </div>
                     </div>
                   </div>
@@ -722,8 +722,8 @@ const SavingsManagement = () => {
             {/* Right Column - Savings Targets */}
             <div className="lg:col-span-7">
               {/* Savings Targets Section */}
-              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
-                <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-5 text-white">
+              <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-600 to-gray-700 p-5 text-white">
                   <div className="flex items-center justify-between">
                     <div>
                       <h2 className="font-semibold text-lg">Target Tabungan Anda</h2>
@@ -751,15 +751,15 @@ const SavingsManagement = () => {
                     </div>
                   ) : savings.length === 0 ? (
                     <div className="text-center py-12">
-                      <div className="w-20 h-20 bg-gradient-to-br from-amber-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <PiggyBank className="h-10 w-10 text-amber-600" />
+                      <div className="w-20 h-20 bg-gradient-to-br from-slate-100 to-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <PiggyBank className="h-10 w-10 text-slate-600" />
                       </div>
                       <h3 className="font-semibold text-xl mb-3 text-gray-800">Belum ada target tabungan</h3>
                       <p className="text-sm text-gray-500 mb-6 max-w-xs mx-auto leading-relaxed">
                         Mulai perjalanan finansial Anda dengan menetapkan target tabungan pertama
                       </p>
                       <Button 
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                        className="bg-gradient-to-r from-slate-600 to-gray-700 hover:from-slate-700 hover:to-gray-800 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
                         asChild
                       >
                         <Link to="/savings/add">

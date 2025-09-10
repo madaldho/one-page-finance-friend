@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Saving, Wallet } from "@/types";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Progress } from "@/components/ui/progress";
+import { formatCurrency } from "@/lib/utils";
 
 const SavingsDeposit = () => {
   const { toast } = useToast();
@@ -88,10 +89,6 @@ const SavingsDeposit = () => {
       ...prev,
       [name]: value
     }));
-  };
-  
-  const formatCurrency = (amount: number) => {
-    return `Rp ${amount.toLocaleString()}`;
   };
   
   const handleSubmit = async (e: FormEvent) => {
@@ -240,9 +237,9 @@ const SavingsDeposit = () => {
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
         {/* Background decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-green-300 to-emerald-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-cyan-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-slate-200 to-gray-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full mix-blend-multiply filter blur-3xl"></div>
         </div>
 
         <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 pb-32">
@@ -278,7 +275,7 @@ const SavingsDeposit = () => {
                 </div>
                 <h3 className="font-semibold text-xl mb-3 text-gray-800">Tabungan Tidak Ditemukan</h3>
                 <p className="text-sm text-gray-500 mb-6">Tabungan yang Anda cari tidak dapat ditemukan</p>
-                <Button asChild className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
+                <Button asChild className="bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700">
                   <Link to="/savings">Kembali ke Tabungan</Link>
                 </Button>
               </div>
@@ -286,15 +283,15 @@ const SavingsDeposit = () => {
           ) : (
             <>
               {/* Saving Info Card */}
-              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden mb-6">
-                <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-5 text-white">
+              <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-md border border-gray-200/50 overflow-hidden mb-6">
+                <div className="bg-gradient-to-r from-slate-600 to-gray-700 p-5 text-white">
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-white/15 rounded-xl flex items-center justify-center">
                       <PiggyBank className="h-6 w-6 text-white" />
                     </div>
                     <div>
                       <h2 className="font-semibold text-lg">{saving.name}</h2>
-                      <p className="text-white/80 text-sm capitalize">
+                      <p className="text-white/70 text-sm capitalize">
                         {saving.savings_category === "fisik" ? "Tabungan Fisik" : "Tabungan Digital"}
                       </p>
                     </div>
@@ -302,17 +299,17 @@ const SavingsDeposit = () => {
                   
                   <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-white/80">Terkumpul: {formatCurrency(saving.current_amount)}</span>
-                      <span className="font-semibold">Target: {formatCurrency(saving.target_amount)}</span>
+                      <span className="text-white/70">Terkumpul: {formatCurrency(saving.current_amount)}</span>
+                      <span className="font-medium">Target: {formatCurrency(saving.target_amount)}</span>
                     </div>
                     
                     <Progress
                       value={calculateProgress(saving.current_amount, saving.target_amount)}
-                      className="h-2 bg-white/20"
-                      indicatorClassName="bg-white"
+                      className="h-2 bg-white/15"
+                      indicatorClassName="bg-white/90"
                     />
                     
-                    <div className="flex items-center justify-between text-xs text-white/70">
+                    <div className="flex items-center justify-between text-xs text-white/60">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
                         <span>Target: {formatDate(saving.target_date)}</span>
@@ -325,7 +322,7 @@ const SavingsDeposit = () => {
                 </div>
                 
                 {/* Info Section */}
-                <div className="p-5 bg-gradient-to-br from-green-50 to-emerald-50">
+                <div className="p-5 bg-gradient-to-br from-slate-50 to-gray-50">
                   <div className="flex items-start gap-3">
                     <div className="bg-green-100 p-2 rounded-lg mt-0.5">
                       <Info className="h-4 w-4 text-green-600" />
@@ -340,15 +337,15 @@ const SavingsDeposit = () => {
               </div>
 
               {/* Form Card */}
-              <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-500 to-cyan-600 p-5 text-white">
+              <div className="backdrop-blur-sm bg-white/95 rounded-2xl shadow-md border border-gray-200/50 overflow-hidden">
+                <div className="bg-gradient-to-r from-green-500 to-green-600 p-5 text-white">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                      <DollarSign className="h-5 w-5 text-white" />
+                    <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-white" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg">Form Setoran</h3>
-                      <p className="text-white/80 text-sm">Masukkan detail setoran Anda</p>
+                      <p className="text-white/70 text-sm">Masukkan detail setoran Anda</p>
                     </div>
                   </div>
                 </div>
@@ -385,19 +382,30 @@ const SavingsDeposit = () => {
                         {wallets
                           .filter(wallet => saving?.savings_category === "fisik" ? wallet.type === "cash" : true)
                           .map((wallet) => (
-                            <SelectItem key={wallet.id} value={wallet.id}>
-                              <div className="flex items-center justify-between w-full">
-                                <span>{wallet.name}</span>
-                                <span className="text-sm text-gray-500 ml-2">
-                                  {formatCurrency(wallet.balance)}
-                                </span>
+                            <SelectItem key={wallet.id} value={wallet.id} className="p-3">
+                              <div className="flex items-center gap-3 w-full">
+                                <div 
+                                  className="w-6 h-6 rounded-full border-2 border-white shadow-md"
+                                  style={{ backgroundColor: wallet.color || '#6B7280' }}
+                                />
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium text-gray-900">{wallet.name}</span>
+                                    <span className="text-sm font-semibold text-green-600">
+                                      {formatCurrency(wallet.balance)}
+                                    </span>
+                                  </div>
+                                  {wallet.type && (
+                                    <span className="text-xs text-gray-500 capitalize">{wallet.type}</span>
+                                  )}
+                                </div>
                               </div>
                             </SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
                     {saving?.savings_category === "fisik" && (
-                      <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
+                      <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
                         💡 Untuk tabungan fisik, hanya dapat menggunakan dompet cash
                       </p>
                     )}
@@ -463,7 +471,7 @@ const SavingsDeposit = () => {
                       disabled={submitting}
                       className="h-12 border-gray-200 hover:bg-gray-50"
                     >
-                      Batal
+                      Kembali ke Tabungan
                     </Button>
                   </div>
                 </form>
