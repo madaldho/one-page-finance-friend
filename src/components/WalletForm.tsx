@@ -67,6 +67,42 @@ const GRADIENTS = [
   { id: 'teal-purple', start: '#14b8a6', end: '#8b5cf6', label: 'Teal-Ungu' },
 ];
 
+// Smart suggestions untuk bank dan e-wallet Indonesia
+const SMART_SUGGESTIONS = {
+  'E-wallet': [
+    { name: 'Dana', logo: '/Logo2/E-wallet/dana.jfif', color: '#118EEA', type: 'bank' },
+    { name: 'GoPay', logo: '/Logo2/E-wallet/gopay.png', color: '#00AA13', type: 'bank' },
+    { name: 'i.saku', logo: '/Logo2/E-wallet/Isaku.png', color: '#FF6B35', type: 'bank' },
+    { name: 'LinkAja', logo: '/Logo2/E-wallet/Link aja.png', color: '#E30613', type: 'bank' },
+    { name: 'OVO', logo: '/Logo2/E-wallet/ovo.png', color: '#4C3494', type: 'bank' },
+    { name: 'ShopeePay', logo: '/Logo2/E-wallet/ShopeePay.png', color: '#EE4D2D', type: 'bank' },
+  ],
+  'Rekening': [
+    { name: 'Bank BCA', logo: '/Logo2/Rekening/BCA.png', color: '#003399', type: 'bank' },
+    { name: 'Bank Mandiri', logo: '/Logo2/Rekening/mandiri.jpg', color: '#003d79', type: 'bank' },
+    { name: 'Bank BRI', logo: '/Logo2/Rekening/BRI.png', color: '#003d79', type: 'bank' },
+    { name: 'Bank BNI', logo: '/Logo2/Rekening/BNI.jpg', color: '#ed8b00', type: 'bank' },
+    { name: 'Bank BTN', logo: '/Logo2/Rekening/BTN.png', color: '#0066cc', type: 'bank' },
+    { name: 'Bank BSI', logo: '/Logo2/Rekening/BSI.jpeg', color: '#00a651', type: 'bank' },
+    { name: 'Bank CIMB Niaga', logo: '/Logo2/Rekening/CIMB_NIAGA.png', color: '#dc143c', type: 'bank' },
+    { name: 'Bank Danamon', logo: '/Logo2/Rekening/DANAMON.png', color: '#005aa0', type: 'bank' },
+    { name: 'Bank Jago', logo: '/Logo2/Rekening/Jago.jpg', color: '#FF6B35', type: 'bank' },
+    { name: 'Jenius BTPN', logo: '/Logo2/Rekening/Jenius.png', color: '#00d4aa', type: 'bank' },
+    { name: 'Bank Maybank', logo: '/Logo2/Rekening/maybank.png', color: '#ffcc00', type: 'bank' },
+    { name: 'Bank Muamalat', logo: '/Logo2/Rekening/Muamalat.png', color: '#00a651', type: 'bank' },
+    { name: 'Bank OCBC NISP', logo: '/Logo2/Rekening/OCBC.png', color: '#dc143c', type: 'bank' },
+    { name: 'Bank Panin', logo: '/Logo2/Rekening/PANIN BANK.png', color: '#005aa0', type: 'bank' },
+    { name: 'Bank Permata', logo: '/Logo2/Rekening/permata bank.png', color: '#7b68ee', type: 'bank' },
+    { name: 'SeaBank', logo: '/Logo2/Rekening/SeaBank.jfif', color: '#0099ff', type: 'bank' },
+    { name: 'Bank DKI', logo: '/Logo2/Rekening/bank DKI.png', color: '#ff6600', type: 'bank' },
+    { name: 'Bank Jatim', logo: '/Logo2/Rekening/bank Jatim.png', color: '#006633', type: 'bank' },
+    { name: 'Bank Saqu', logo: '/Logo2/Rekening/bank saqu.png', color: '#ff3366', type: 'bank' },
+    { name: 'Allobank', logo: '/Logo2/Rekening/Allobank.png', color: '#6c5ce7', type: 'bank' },
+    { name: 'Krom Bank', logo: '/Logo2/Rekening/krom bank.png', color: '#2d3436', type: 'bank' },
+    { name: 'Superbank', logo: '/Logo2/Rekening/Superbank.png', color: '#0984e3', type: 'bank' },
+  ]
+};
+
 const formSchema = z.object({
   name: z.string().min(1, "Nama dompet harus diisi"),
   type: z.enum(["cash", "bank", "investment", "savings"]),
@@ -97,6 +133,207 @@ const WalletForm = memo(() => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
 
+  // Smart suggestions state
+  const [creationMode, setCreationMode] = useState<'smart' | 'manual' | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<'E-wallet' | 'Rekening' | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Pre-upload popular bank logos on component mount (only once)
+  const preUploadPopularLogos = async () => {
+    try {
+      // Only pre-upload if user is authenticated and this is first time
+      if (!user) return;
+      
+      const hasPreUploaded = localStorage.getItem('logos-pre-uploaded');
+      if (hasPreUploaded) return;
+      
+      console.log('Pre-uploading popular bank logos...');
+      
+      // List of most popular banks to pre-upload
+      const popularBanks = [
+        { name: 'Dana', logo: '/Logo2/E-wallet/dana.jfif' },
+        { name: 'GoPay', logo: '/Logo2/E-wallet/gopay.png' },
+        { name: 'OVO', logo: '/Logo2/E-wallet/ovo.png' },
+        { name: 'Bank BCA', logo: '/Logo2/Rekening/BCA.png' },
+        { name: 'Bank Mandiri', logo: '/Logo2/Rekening/mandiri.jpg' },
+        { name: 'Bank BRI', logo: '/Logo2/Rekening/BRI.png' },
+        { name: 'Bank BNI', logo: '/Logo2/Rekening/BNI.jpg' },
+      ];
+      
+      // Pre-upload in background (don't wait for completion)
+      popularBanks.forEach(async (bank) => {
+        try {
+          const sanitizedName = bank.name.toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '');
+          const fileExt = bank.logo.split('.').pop() || 'jpg';
+          const sharedFilename = `shared-logos/${sanitizedName}.${fileExt}`;
+          
+          // Check if already exists
+          const { data: existingFile } = await supabase.storage
+            .from('wallet-logos')
+            .list('shared-logos', {
+              search: `${sanitizedName}.${fileExt}`
+            });
+          
+          if (existingFile && existingFile.length > 0) {
+            return; // Already exists, skip
+          }
+          
+          // Fetch and upload
+          const response = await fetch(bank.logo);
+          if (response.ok) {
+            const blob = await response.blob();
+            await supabase.storage
+              .from('wallet-logos')
+              .upload(sharedFilename, blob, {
+                contentType: blob.type || 'image/jpeg',
+                upsert: true
+              });
+            console.log(`Pre-uploaded: ${bank.name}`);
+          }
+        } catch (error) {
+          console.log(`Failed to pre-upload ${bank.name}:`, error);
+        }
+      });
+      
+      // Mark as pre-uploaded
+      localStorage.setItem('logos-pre-uploaded', 'true');
+    } catch (error) {
+      console.log('Pre-upload failed:', error);
+    }
+  };
+
+  // Filter smart suggestions based on search query and category
+  const filteredSuggestions = React.useMemo(() => {
+    if (!selectedCategory) return [];
+    
+    let filtered = SMART_SUGGESTIONS[selectedCategory] || [];
+    
+    if (searchQuery) {
+      filtered = filtered.filter(item => 
+        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [selectedCategory, searchQuery]);
+
+  // Handle smart suggestion selection
+  const handleSuggestionSelect = async (suggestion: typeof SMART_SUGGESTIONS['E-wallet'][0]) => {
+    try {
+      // Set form values first
+      form.setValue('name', suggestion.name);
+      form.setValue('balance', 0);
+      form.setValue('color', suggestion.color);
+      form.setValue('type', 'bank');
+      setSelectedColorOption(suggestion.color);
+      setLogoPreview(suggestion.logo);
+      
+      // Upload logo to Supabase storage
+      await uploadLogoFromUrl(suggestion.logo, suggestion.name);
+      
+      setCreationMode('manual'); // Switch to manual mode for editing
+    } catch (error) {
+      console.error('Error selecting suggestion:', error);
+      toast({
+        title: "Error",
+        description: "Gagal memuat logo, silakan coba lagi",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Upload logo from URL to Supabase storage with deduplication
+  const uploadLogoFromUrl = async (logoUrl: string, bankName: string) => {
+    try {
+      if (!user) {
+        throw new Error('User not authenticated');
+      }
+
+      setLogoUploading(true);
+      
+      // Create a consistent filename based on bank name (not user-specific)
+      const sanitizedBankName = bankName.toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, ''); // Remove special characters
+      const fileExt = logoUrl.split('.').pop() || 'jpg';
+      const sharedFilename = `shared-logos/${sanitizedBankName}.${fileExt}`;
+      
+      // Check if shared logo already exists
+      const { data: existingFile } = await supabase.storage
+        .from('wallet-logos')
+        .list('shared-logos', {
+          search: `${sanitizedBankName}.${fileExt}`
+        });
+      
+      let publicUrl: string;
+      
+      if (existingFile && existingFile.length > 0) {
+        // Logo already exists, use the existing one
+        const { data } = supabase.storage
+          .from('wallet-logos')
+          .getPublicUrl(sharedFilename);
+        
+        publicUrl = data.publicUrl;
+        
+        console.log(`Using existing shared logo for ${bankName}: ${publicUrl}`);
+      } else {
+        // Logo doesn't exist, upload new shared logo
+        console.log(`Uploading new shared logo for ${bankName}`);
+        
+        // Fetch the image from local assets
+        const response = await fetch(logoUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch logo');
+        }
+        
+        const blob = await response.blob();
+        
+        // Upload to shared-logos folder
+        const { error: uploadError } = await supabase.storage
+          .from('wallet-logos')
+          .upload(sharedFilename, blob, {
+            contentType: blob.type || 'image/jpeg',
+            upsert: true // Allow overwrite if exists
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
+
+        // Get public URL for the new shared logo
+        const { data } = supabase.storage
+          .from('wallet-logos')
+          .getPublicUrl(sharedFilename);
+        
+        publicUrl = data.publicUrl;
+      }
+
+      // Update form with the shared logo URL
+      form.setValue('logoUrl', publicUrl);
+      setLogoPreview(publicUrl);
+      
+      toast({
+        title: "Logo Berhasil Dimuat",
+        description: `Logo ${bankName} berhasil disimpan`,
+      });
+    } catch (error: unknown) {
+      console.error('Error uploading logo from URL:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Gagal mengunggah logo';
+      toast({
+        title: "Gagal Memuat Logo",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      // Keep the local preview even if upload fails
+      setLogoPreview(logoUrl);
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -126,7 +363,12 @@ const WalletForm = memo(() => {
     
     // Fetch user profile untuk cek status Pro
     fetchUserProfile();
-  }, [id]);
+    
+    // Pre-upload popular logos in background
+    if (user) {
+      preUploadPopularLogos();
+    }
+  }, [id, user]);
 
   const fetchUserProfile = async () => {
     try {
@@ -464,123 +706,255 @@ const WalletForm = memo(() => {
                     </Card>
                   </div>
 
-                  {/* Nama Dompet */}
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel className="text-sm font-medium text-gray-700">Nama Dompet</FormLabel>
-                        <FormControl>
-                          <Input 
-                            placeholder="Contoh: Dompet Harian" 
-                            {...field} 
-                            className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Tipe Dompet */}
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel className="text-sm font-medium text-gray-700">Tipe Dompet</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          defaultValue={field.value}
-                          value={field.value}
+                  {/* Smart Suggestions Mode */}
+                  {!id && creationMode === null && (
+                    <div className="space-y-4">
+                      <Label className="text-sm font-medium text-gray-700">Metode Pembuatan Dompet</Label>
+                      <div className="grid grid-cols-1 gap-4">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setCreationMode('smart')}
+                          className="h-20 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 rounded-xl transition-all duration-200"
                         >
-                          <FormControl>
-                            <SelectTrigger className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200">
-                              <SelectValue placeholder="Pilih tipe dompet" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent className="rounded-xl border-gray-200">
-                            <SelectItem value="cash" className="rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                                  <Banknote className="h-4 w-4 text-green-600" />
-                                </div>
-                                <span>Uang Tunai</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="bank" className="rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                                  <Landmark className="h-4 w-4 text-blue-600" />
-                                </div>
-                                <span>Rekening Bank</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="investment" className="rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                                  <CreditCard className="h-4 w-4 text-purple-600" />
-                                </div>
-                                <span>E-Wallet</span>
-                              </div>
-                            </SelectItem>
-                            <SelectItem value="savings" className="rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                  <PiggyBank className="h-4 w-4 text-orange-600" />
-                                </div>
-                                <span>Lainnya</span>
-                              </div>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Saldo Awal */}
-                  <FormField
-                    control={form.control}
-                    name="balance"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel className="text-sm font-medium text-gray-700">Saldo {id ? 'Saat Ini' : 'Awal'}</FormLabel>
-                        <FormControl>
-                          <CurrencyInput
-                            placeholder="0"
-                            value={field.value}
-                            onChange={(value) => field.onChange(value)}
-                            className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {/* Logo Upload */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-gray-700">Logo Dompet (Opsional)</Label>
-                    <div className="p-4 bg-gray-50/50 rounded-xl border border-gray-200">
-                      <FileUpload
-                        onFileSelect={uploadLogo}
-                        preview={logoPreview}
-                        onClearPreview={clearLogo}
-                        uploading={logoUploading}
-                        disabled={isSubmitting}
-                        placeholder="Unggah logo dompet"
-                        maxSize={2}
-                        className="w-full"
-                      />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Logo akan ditampilkan pada kartu dompet Anda. Format yang didukung: JPG, PNG, GIF (maks. 2MB)
-                      </p>
+                          <div className="flex items-center gap-4">
+                            <div className="text-2xl">🚀</div>
+                            <div className="text-left">
+                              <div className="font-medium text-gray-700 text-base">Saran Pintar</div>
+                              <div className="text-sm text-gray-500">Pilih dari bank/e-wallet populer</div>
+                            </div>
+                          </div>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setCreationMode('manual')}
+                          className="h-20 bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-gray-200 rounded-xl transition-all duration-200"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="text-2xl">✏️</div>
+                            <div className="text-left">
+                              <div className="font-medium text-gray-700 text-base">Manual</div>
+                              <div className="text-sm text-gray-500">Buat dengan nama kustom</div>
+                            </div>
+                          </div>
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Color Selection */}
+                  {/* Smart Suggestions Interface */}
+                  {!id && creationMode === 'smart' && (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-medium text-gray-700">Pilih Bank atau E-wallet</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCreationMode(null)}
+                          className="text-xs"
+                        >
+                          Kembali
+                        </Button>
+                      </div>
+                      
+                      {/* Category Selection */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Button
+                          type="button"
+                          variant={selectedCategory === 'E-wallet' ? 'default' : 'outline'}
+                          onClick={() => setSelectedCategory('E-wallet')}
+                          className="h-14 rounded-xl text-base"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💳</span>
+                            <span>E-wallet</span>
+                          </div>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={selectedCategory === 'Rekening' ? 'default' : 'outline'}
+                          onClick={() => setSelectedCategory('Rekening')}
+                          className="h-14 rounded-xl text-base"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🏦</span>
+                            <span>Rekening</span>
+                          </div>
+                        </Button>
+                      </div>
+
+                      {/* Search Input */}
+                      {selectedCategory && (
+                        <Input
+                          placeholder={`Cari ${selectedCategory.toLowerCase()}...`}
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20"
+                        />
+                      )}
+
+                      {/* Suggestions Grid */}
+                      {selectedCategory && (
+                        <div className="space-y-3">
+                          {logoUploading && (
+                            <div className="flex items-center justify-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600" />
+                              <span className="text-sm text-blue-700">Menyimpan logo...</span>
+                            </div>
+                          )}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
+                            {filteredSuggestions.map((suggestion, index) => (
+                              <Button
+                                key={index}
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleSuggestionSelect(suggestion)}
+                                disabled={logoUploading}
+                                className="h-20 p-4 rounded-xl border-gray-200 hover:border-blue-300 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                <div className="flex flex-col items-center gap-3">
+                                  <img
+                                    src={suggestion.logo}
+                                    alt={suggestion.name}
+                                    className="w-10 h-10 rounded-lg object-cover shadow-sm"
+                                  />
+                                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 text-center leading-tight">
+                                    {suggestion.name}
+                                  </span>
+                                </div>
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Manual Form Fields - Only show when in manual mode or editing */}
+                  {(id || creationMode === 'manual') && (
+                    <>
+                      {/* Nama Dompet */}
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem className="space-y-3">
+                            <FormLabel className="text-sm font-medium text-gray-700">Nama Dompet</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Contoh: Dompet Harian" 
+                                {...field} 
+                                className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Tipe Dompet */}
+                      <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                          <FormItem className="space-y-3">
+                            <FormLabel className="text-sm font-medium text-gray-700">Tipe Dompet</FormLabel>
+                            <Select 
+                              onValueChange={field.onChange} 
+                              defaultValue={field.value}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200">
+                                  <SelectValue placeholder="Pilih tipe dompet" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="rounded-xl border-gray-200">
+                                <SelectItem value="cash" className="rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                                      <Banknote className="h-4 w-4 text-green-600" />
+                                    </div>
+                                    <span>Uang Tunai</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="bank" className="rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                      <Landmark className="h-4 w-4 text-blue-600" />
+                                    </div>
+                                    <span>Rekening Bank</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="investment" className="rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                                      <CreditCard className="h-4 w-4 text-purple-600" />
+                                    </div>
+                                    <span>E-Wallet</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="savings" className="rounded-lg">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                                      <PiggyBank className="h-4 w-4 text-orange-600" />
+                                    </div>
+                                    <span>Lainnya</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Saldo Awal */}
+                      <FormField
+                        control={form.control}
+                        name="balance"
+                        render={({ field }) => (
+                          <FormItem className="space-y-3">
+                            <FormLabel className="text-sm font-medium text-gray-700">Saldo {id ? 'Saat Ini' : 'Awal'}</FormLabel>
+                            <FormControl>
+                              <CurrencyInput
+                                placeholder="0"
+                                value={field.value}
+                                onChange={(value) => field.onChange(value)}
+                                className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      {/* Logo Upload */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-gray-700">Logo Dompet (Opsional)</Label>
+                        <div className="p-4 bg-gray-50/50 rounded-xl border border-gray-200">
+                          <FileUpload
+                            onFileSelect={uploadLogo}
+                            preview={logoPreview}
+                            onClearPreview={clearLogo}
+                            uploading={logoUploading}
+                            disabled={isSubmitting}
+                            placeholder="Unggah logo dompet"
+                            maxSize={2}
+                            className="w-full"
+                          />
+                          <p className="text-xs text-gray-500 mt-2">
+                            Logo akan ditampilkan pada kartu dompet Anda. Format yang didukung: JPG, PNG, GIF (maks. 2MB)
+                          </p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Color Selection - Show in manual mode or when editing */}
+                  {(id || creationMode === 'manual') && (
                   <div className="space-y-3">
                     <FormLabel className="text-sm font-medium text-gray-700">Tema Warna</FormLabel>
                     
@@ -774,38 +1148,65 @@ const WalletForm = memo(() => {
                         </>
                       )}
                     </Tabs>
-                  </div>                  {/* Submit buttons */}
-                  <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => navigate(-1)}
-                      className="w-full sm:w-auto order-2 sm:order-1 h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
-                    >
-                      Batal
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting || logoUploading} 
-                      className="w-full sm:flex-1 order-1 sm:order-2 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
-                    >
-                      {isSubmitting ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Menyimpan...
-                        </span>
-                      ) : logoUploading ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Mengunggah logo...
-                        </span>
-                      ) : id ? (
-                        'Simpan Perubahan'
-                      ) : (
-                        'Tambah Dompet'
-                      )}
-                    </Button>
                   </div>
+                  )}
+                  
+                  {/* Submit buttons - Only show when in manual mode or editing */}
+                  {(id || creationMode === 'manual') && (
+                    <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          if (id) {
+                            // Jika editing, kembali ke halaman sebelumnya
+                            navigate(-1);
+                          } else {
+                            // Jika membuat baru, kembali ke home
+                            navigate('/');
+                          }
+                        }}
+                        className="w-full sm:w-auto order-2 sm:order-1 h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                      >
+                        Batal
+                      </Button>
+                      <Button 
+                        type="submit" 
+                        disabled={isSubmitting || logoUploading} 
+                        className="w-full sm:flex-1 order-1 sm:order-2 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                      >
+                        {isSubmitting ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Menyimpan...
+                          </span>
+                        ) : logoUploading ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Mengunggah logo...
+                          </span>
+                        ) : id ? (
+                          'Simpan Perubahan'
+                        ) : (
+                          'Tambah Dompet'
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Navigation buttons for mode selection */}
+                  {!id && creationMode === null && (
+                    <div className="flex justify-center pt-6 border-t border-gray-200">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => navigate('/')}
+                        className="w-full sm:w-auto h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                      >
+                        Kembali ke Beranda
+                      </Button>
+                    </div>
+                  )}
           </form>
         </Form>
             </div>

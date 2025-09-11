@@ -54,7 +54,9 @@ import {
   University,
   Sparkles,
   Zap,
-  Building2
+  Building2,
+  Plus,
+  ArrowRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
@@ -419,15 +421,85 @@ export function CategoryForm() {
               <p className="mt-4 text-muted-foreground">Memuat data kategori...</p>
             </div>
           ) : success ? (
-            <div className="flex flex-col items-center justify-center py-12 bg-card rounded-lg">
-              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="backdrop-blur-sm bg-white/80 rounded-2xl shadow-sm border border-white/20 overflow-hidden">
+              <div className="relative">
+                {/* Animated Background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-100"></div>
+                <div className="absolute top-0 left-0 w-32 h-32 bg-green-200/30 rounded-full -translate-x-16 -translate-y-16"></div>
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-emerald-200/30 rounded-full translate-x-12 translate-y-12"></div>
+                
+                <div className="relative z-10 flex flex-col items-center justify-center py-16 px-6 text-center">
+                  {/* Success Icon with Animation */}
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-lg animate-pulse">
+                      <CheckCircle className="h-10 w-10 text-white" strokeWidth={2} />
+                    </div>
+                    <div className="absolute -inset-2 rounded-full bg-green-400/20 animate-ping"></div>
+                  </div>
+
+                  {/* Success Content */}
+                  <div className="space-y-4 max-w-md">
+                    <h3 className="text-2xl font-bold text-gray-800">Berhasil!</h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      Kategori <span className="font-semibold text-gray-800">"{watchName}"</span> berhasil {isEditing ? 'diperbarui' : 'ditambahkan'}.
+                    </p>
+                    
+                    {/* Category Preview */}
+                    <div className="inline-flex items-center gap-3 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-3 border border-white/40 shadow-sm">
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm"
+                        style={{ backgroundColor: selectedColor === 'custom' ? customColor : selectedColor }}
+                      >
+                        {(() => {
+                          const IconComponent = getIconComponent(selectedIcon);
+                          return <IconComponent className="w-5 h-5" />;
+                        })()}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-gray-800">{watchName}</div>
+                        <div className="text-sm text-gray-500">
+                          {selectedType === 'income' ? 'Pemasukan' : 'Pengeluaran'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Redirect Info */}
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mt-6">
+                      <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span>Kembali ke halaman kategori...</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div className="flex flex-col sm:flex-row gap-3 mt-8 w-full max-w-sm">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSuccess(false);
+                        form.reset({
+                          name: '',
+                          type: selectedType, // Keep the same type
+                          color: '#6E59A5',
+                          icon: 'DollarSign',
+                        });
+                        setCreationMode(null);
+                      }}
+                      className="flex-1 h-11 rounded-xl border-green-200 bg-white/60 hover:bg-white/80 text-green-700 hover:text-green-800 transition-all duration-200"
+                      disabled={submitting}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Lagi
+                    </Button>
+                    <Button
+                      onClick={() => navigate('/categories')}
+                      className="flex-1 h-11 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white transition-all duration-200 shadow-lg hover:shadow-xl"
+                    >
+                      <ArrowRight className="w-4 h-4 mr-2" />
+                      Ke Kategori
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-medium mb-2">Berhasil!</h3>
-              <p className="text-muted-foreground text-center mb-4">
-                Kategori telah berhasil {isEditing ? 'diperbarui' : 'ditambahkan'}. 
-                Kembali ke halaman kategori...
-              </p>
             </div>
           ) : (
             <div className="space-y-6">
