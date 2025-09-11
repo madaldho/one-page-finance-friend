@@ -282,32 +282,32 @@ const LoanPaymentPage = () => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative overflow-x-hidden">
         {/* Background decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute inset-0 opacity-30 overflow-hidden">
+          <div className="absolute top-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
 
-        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 md:pt-4 pb-32">
+        <div className="container mx-auto py-2 px-3 sm:px-4 md:px-6 max-w-2xl relative z-10 pt-4 sm:pt-6 md:pt-4 pb-20 sm:pb-32">
           {/* Header dengan glassmorphism effect */}
-          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-            <div className="flex items-center gap-3">
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-sm border border-white/20 sticky top-2 sm:top-4 z-10">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(-1)}
-                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0 flex-shrink-0"
                 aria-label="Kembali"
               >
-                <ChevronLeft className="h-5 w-5 text-gray-700" />
+                <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700" />
               </Button>
-              <div>
-                <h1 className="text-lg font-bold text-gray-800">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-lg font-bold text-gray-800 truncate">
                   {loan.type === 'payable' ? 'Pembayaran Hutang' : 'Terima Pembayaran Piutang'}
                 </h1>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 truncate">
                   {loan.description ? `${loan.description}` : 'Proses pembayaran'}
                 </p>
               </div>
@@ -315,32 +315,32 @@ const LoanPaymentPage = () => {
           </div>
 
           {/* Detail Loan Card */}
-          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-6 mb-6 shadow-sm border border-white/20">
-            <h3 className="font-semibold text-gray-800 mb-4">Detail {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 sm:p-6 mb-4 sm:mb-6 shadow-sm border border-white/20">
+            <h3 className="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base">Detail {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</h3>
+            <div className="grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
                 <p className="text-xs text-blue-600 mb-1">Total {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
-                <p className="font-bold text-lg text-blue-800">{formatCurrency(loan.amount)}</p>
+                <p className="font-bold text-sm sm:text-lg text-blue-800 break-words">{formatCurrency(loan.amount)}</p>
               </div>
-              <div className="text-center p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl border border-orange-100">
+              <div className="text-center p-3 sm:p-4 bg-gradient-to-br from-orange-50 to-red-50 rounded-xl border border-orange-100">
                 <p className="text-xs text-orange-600 mb-1">Sisa {loan.type === 'payable' ? 'Hutang' : 'Piutang'}</p>
-                <p className="font-bold text-lg text-orange-800">{formatCurrency(loan.amount - (loan.paid_amount || 0))}</p>
+                <p className="font-bold text-sm sm:text-lg text-orange-800 break-words">{formatCurrency(loan.amount - (loan.paid_amount || 0))}</p>
               </div>
             </div>
           </div>
 
           {/* Form */}
           <div className="backdrop-blur-sm bg-white/80 rounded-2xl shadow-sm border border-white/20 overflow-hidden">
-            <div className="p-6">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="p-4 sm:p-6">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
                 {/* Tanggal Pembayaran */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <label className="text-sm font-medium text-gray-700">Tanggal Pembayaran</label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 h-4 w-4" />
                     <Input
                       type="date"
-                      className="h-12 pl-10 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200"
+                      className="h-11 sm:h-12 pl-10 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200 w-full"
                       {...register('payment_date', { required: 'Tanggal pembayaran harus diisi' })}
                       defaultValue={format(new Date(), 'yyyy-MM-dd')}
                     />
@@ -352,36 +352,36 @@ const LoanPaymentPage = () => {
                 </div>
 
                 {/* Jumlah Pembayaran */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <label className="text-sm font-medium text-gray-700">Jumlah Pembayaran</label>
                   <CurrencyInput
                     showPrefix={true}
                     value={watch('amount')}
                     onChange={(value) => setValue('amount', value)}
                     placeholder="0"
-                    className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200"
+                    className="h-11 sm:h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200 w-full"
                   />
                   {errors.amount && (
                     <p className="text-sm text-red-500">{errors.amount.message}</p>
                   )}
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 break-words">
                     Maksimal pembayaran: {formatCurrency(loan.amount - (loan.paid_amount || 0))}
                   </p>
                 </div>
 
                 {/* Pilih Sumber Dana */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <label className="text-sm font-medium text-gray-700">Pilih Sumber Dana</label>
                   <Select onValueChange={(value) => setValue('wallet_id', value)}>
-                    <SelectTrigger className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200">
+                    <SelectTrigger className="h-11 sm:h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200 w-full">
                       <SelectValue placeholder="Pilih wallet" />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl border-gray-200">
+                    <SelectContent className="rounded-xl border-gray-200 max-w-[calc(100vw-2rem)]">
                       {wallets.map(wallet => (
                         <SelectItem key={wallet.id} value={wallet.id} className="rounded-lg">
-                          <div className="flex items-center gap-3 py-1">
+                          <div className="flex items-center gap-2 sm:gap-3 py-1 max-w-full">
                             <div 
-                              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
+                              className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-white shadow-sm flex-shrink-0"
                               style={{ 
                                 background: wallet.gradient 
                                   ? `linear-gradient(135deg, ${wallet.color}, ${wallet.gradient})`
@@ -392,15 +392,15 @@ const LoanPaymentPage = () => {
                                 <img 
                                   src={wallet.logo_url} 
                                   alt={wallet.name}
-                                  className="w-6 h-6 rounded-lg object-cover"
+                                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg object-cover"
                                 />
                               ) : (
                                 getWalletIcon(wallet.type)
                               )}
                             </div>
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-800">{wallet.name}</div>
-                              <div className="text-sm text-gray-500">{formatCurrency(wallet.balance)}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-gray-800 text-sm sm:text-base truncate">{wallet.name}</div>
+                              <div className="text-xs sm:text-sm text-gray-500 truncate">{formatCurrency(wallet.balance)}</div>
                             </div>
                           </div>
                         </SelectItem>
@@ -413,40 +413,41 @@ const LoanPaymentPage = () => {
                 </div>
 
                 {/* Catatan */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   <label className="text-sm font-medium text-gray-700">Catatan (Opsional)</label>
                   <Input
                     {...register('description')}
                     placeholder="Tambahkan catatan pembayaran"
-                    className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200"
+                    className="h-11 sm:h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200 w-full"
                   />
                 </div>
 
                 {/* Checkbox */}
-                <div className="flex items-center space-x-3 p-4 bg-gray-50/50 rounded-xl border border-gray-200">
+                <div className="flex items-start space-x-3 p-3 sm:p-4 bg-gray-50/50 rounded-xl border border-gray-200">
                   <Checkbox
                     id="mark-paid"
                     onCheckedChange={(checked) => setValue('mark_as_paid', checked === true)}
+                    className="mt-0.5 flex-shrink-0"
                   />
-                  <label htmlFor="mark-paid" className="text-sm text-gray-700 cursor-pointer">
+                  <label htmlFor="mark-paid" className="text-sm text-gray-700 cursor-pointer leading-relaxed">
                     Tandai sebagai lunas meskipun pembayaran parsial
                   </label>
                 </div>
 
                 {/* Submit buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6 border-t border-gray-200">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => navigate(-1)}
-                    className="w-full sm:w-auto order-2 sm:order-1 h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                    className="w-full sm:w-auto order-2 sm:order-1 h-11 sm:h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
                   >
                     Batal
                   </Button>
                   <Button
                     type="submit"
                     disabled={loading}
-                    className={`w-full sm:flex-1 order-1 sm:order-2 h-12 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl ${
+                    className={`w-full sm:flex-1 order-1 sm:order-2 h-11 sm:h-12 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base ${
                       loan.type === 'payable' 
                         ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700' 
                         : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
@@ -455,7 +456,7 @@ const LoanPaymentPage = () => {
                     {loading ? (
                       <span className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        Memproses...
+                        <span className="truncate">Memproses...</span>
                       </span>
                     ) : loan.type === 'payable' ? (
                       'Bayar Hutang'

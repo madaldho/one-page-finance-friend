@@ -70,7 +70,7 @@ const GRADIENTS = [
 // Smart suggestions untuk bank dan e-wallet Indonesia
 const SMART_SUGGESTIONS = {
   'E-wallet': [
-    { name: 'Dana', logo: '/Logo2/E-wallet/dana.jfif', color: '#118EEA', type: 'bank' },
+    { name: 'Dana', logo: '/Logo2/E-wallet/dana.webp', color: '#118EEA', type: 'bank' },
     { name: 'GoPay', logo: '/Logo2/E-wallet/gopay.png', color: '#00AA13', type: 'bank' },
     { name: 'i.saku', logo: '/Logo2/E-wallet/Isaku.png', color: '#FF6B35', type: 'bank' },
     { name: 'LinkAja', logo: '/Logo2/E-wallet/Link aja.png', color: '#E30613', type: 'bank' },
@@ -93,7 +93,7 @@ const SMART_SUGGESTIONS = {
     { name: 'Bank OCBC NISP', logo: '/Logo2/Rekening/OCBC.png', color: '#dc143c', type: 'bank' },
     { name: 'Bank Panin', logo: '/Logo2/Rekening/PANIN BANK.png', color: '#005aa0', type: 'bank' },
     { name: 'Bank Permata', logo: '/Logo2/Rekening/permata bank.png', color: '#7b68ee', type: 'bank' },
-    { name: 'SeaBank', logo: '/Logo2/Rekening/SeaBank.jfif', color: '#0099ff', type: 'bank' },
+    { name: 'SeaBank', logo: '/Logo2/Rekening/SeaBank.webp', color: '#0099ff', type: 'bank' },
     { name: 'Bank DKI', logo: '/Logo2/Rekening/bank DKI.png', color: '#ff6600', type: 'bank' },
     { name: 'Bank Jatim', logo: '/Logo2/Rekening/bank Jatim.png', color: '#006633', type: 'bank' },
     { name: 'Bank Saqu', logo: '/Logo2/Rekening/bank saqu.png', color: '#ff3366', type: 'bank' },
@@ -151,7 +151,7 @@ const WalletForm = memo(() => {
       
       // List of most popular banks to pre-upload
       const popularBanks = [
-        { name: 'Dana', logo: '/Logo2/E-wallet/dana.jfif' },
+        { name: 'Dana', logo: '/Logo2/E-wallet/dana.webp' },
         { name: 'GoPay', logo: '/Logo2/E-wallet/gopay.png' },
         { name: 'OVO', logo: '/Logo2/E-wallet/ovo.png' },
         { name: 'Bank BCA', logo: '/Logo2/Rekening/BCA.png' },
@@ -632,44 +632,44 @@ const WalletForm = memo(() => {
 
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative overflow-x-hidden">
         {/* Background decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute inset-0 opacity-30 overflow-hidden">
+          <div className="absolute top-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
 
-        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 md:pt-4 pb-32">
+        <div className="container mx-auto py-2 px-3 sm:px-4 md:px-6 max-w-2xl relative z-10 pt-4 sm:pt-6 md:pt-4 pb-20 sm:pb-32">
           {/* Header dengan glassmorphism effect */}
-          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-            <div className="flex items-center gap-3">
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-sm border border-white/20 sticky top-2 sm:top-4 z-10">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(-1)}
-                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0 flex-shrink-0"
                 aria-label="Kembali"
               >
-                <ChevronLeft className="h-5 w-5 text-gray-700" />
+                <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700" />
               </Button>
-              <div>
-                <h1 className="text-lg font-bold text-gray-800">{id ? 'Edit Dompet' : 'Tambah Dompet'}</h1>
-                <p className="text-xs text-gray-500">{id ? 'Perbarui informasi dompet Anda' : 'Buat dompet baru untuk mengelola keuangan'}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-lg font-bold text-gray-800 truncate">{id ? 'Edit Dompet' : 'Tambah Dompet'}</h1>
+                <p className="text-xs text-gray-500 truncate">{id ? 'Perbarui informasi dompet Anda' : 'Buat dompet baru untuk mengelola keuangan'}</p>
               </div>
             </div>
           </div>
 
             <div className="backdrop-blur-sm bg-white/80 rounded-2xl shadow-sm border border-white/20 overflow-hidden">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
                   {/* Preview Card */}
-                  <div className="mb-6">
+                  <div className="mb-4 sm:mb-6">
                     <Label className="text-sm font-medium text-gray-700 mb-3 block">Preview Dompet</Label>
                     <Card
                       className={cn(
-                          "p-5 transition-all duration-300 border-0 shadow-lg",
+                          "p-4 sm:p-5 transition-all duration-300 border-0 shadow-lg",
                           watchUseGradient && "bg-gradient-to-r"
                       )}
                       style={{
@@ -679,26 +679,26 @@ const WalletForm = memo(() => {
                         color: 'white'
                       }}
                     >
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2 sm:gap-3">
                             {logoPreview ? (
-                              <div className="relative">
+                              <div className="relative flex-shrink-0">
                                 <img 
                                   src={logoPreview} 
                                   alt="Logo" 
-                                  className="h-8 w-8 rounded-xl object-cover shadow-sm border border-white/30"
+                                  className="h-6 w-6 sm:h-8 sm:w-8 rounded-xl object-cover shadow-sm border border-white/30"
                                 />
                               </div>
                             ) : (
-                              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                              <div className="p-1.5 sm:p-2 bg-white/20 rounded-xl backdrop-blur-sm flex-shrink-0">
                                 {getWalletIcon(watchType)}
                               </div>
                             )}
-                            <h3 className="font-semibold text-lg">{watchName || "Nama Dompet"}</h3>
+                            <h3 className="font-semibold text-base sm:text-lg truncate flex-1">{watchName || "Nama Dompet"}</h3>
                         </div>
                         <div>
-                          <p className="text-sm opacity-90 mb-1">Saldo</p>
-                          <p className="text-2xl font-bold">
+                          <p className="text-xs sm:text-sm opacity-90 mb-1">Saldo</p>
+                          <p className="text-lg sm:text-2xl font-bold break-words">
                               {formatCurrency(watchBalance)}
                           </p>
                         </div>
@@ -708,20 +708,20 @@ const WalletForm = memo(() => {
 
                   {/* Smart Suggestions Mode */}
                   {!id && creationMode === null && (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       <Label className="text-sm font-medium text-gray-700">Metode Pembuatan Dompet</Label>
-                      <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:gap-4">
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => setCreationMode('smart')}
-                          className="h-20 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 rounded-xl transition-all duration-200"
+                          className="h-16 sm:h-20 bg-gradient-to-br from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 border-blue-200 rounded-xl transition-all duration-200 text-left"
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="text-2xl">🚀</div>
-                            <div className="text-left">
-                              <div className="font-medium text-gray-700 text-base">Saran Pintar</div>
-                              <div className="text-sm text-gray-500">Pilih dari bank/e-wallet populer</div>
+                          <div className="flex items-center gap-3 sm:gap-4 w-full">
+                            <div className="text-xl sm:text-2xl flex-shrink-0">🚀</div>
+                            <div className="text-left min-w-0 flex-1">
+                              <div className="font-medium text-gray-700 text-sm sm:text-base">Saran Pintar</div>
+                              <div className="text-xs sm:text-sm text-gray-500 truncate">Pilih dari bank/e-wallet populer</div>
                             </div>
                           </div>
                         </Button>
@@ -729,13 +729,13 @@ const WalletForm = memo(() => {
                           type="button"
                           variant="outline"
                           onClick={() => setCreationMode('manual')}
-                          className="h-20 bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-gray-200 rounded-xl transition-all duration-200"
+                          className="h-16 sm:h-20 bg-gradient-to-br from-gray-50 to-slate-50 hover:from-gray-100 hover:to-slate-100 border-gray-200 rounded-xl transition-all duration-200 text-left"
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="text-2xl">✏️</div>
-                            <div className="text-left">
-                              <div className="font-medium text-gray-700 text-base">Manual</div>
-                              <div className="text-sm text-gray-500">Buat dengan nama kustom</div>
+                          <div className="flex items-center gap-3 sm:gap-4 w-full">
+                            <div className="text-xl sm:text-2xl flex-shrink-0">✏️</div>
+                            <div className="text-left min-w-0 flex-1">
+                              <div className="font-medium text-gray-700 text-sm sm:text-base">Manual</div>
+                              <div className="text-xs sm:text-sm text-gray-500 truncate">Buat dengan nama kustom</div>
                             </div>
                           </div>
                         </Button>
@@ -745,30 +745,30 @@ const WalletForm = memo(() => {
 
                   {/* Smart Suggestions Interface */}
                   {!id && creationMode === 'smart' && (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-medium text-gray-700">Pilih Bank atau E-wallet</Label>
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <Label className="text-sm font-medium text-gray-700 flex-1 min-w-0">Pilih Bank atau E-wallet</Label>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => setCreationMode(null)}
-                          className="text-xs"
+                          className="text-xs flex-shrink-0"
                         >
                           Kembali
                         </Button>
                       </div>
                       
                       {/* Category Selection */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                         <Button
                           type="button"
                           variant={selectedCategory === 'E-wallet' ? 'default' : 'outline'}
                           onClick={() => setSelectedCategory('E-wallet')}
-                          className="h-14 rounded-xl text-base"
+                          className="h-12 sm:h-14 rounded-xl text-sm sm:text-base"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">💳</span>
+                            <span className="text-base sm:text-lg">💳</span>
                             <span>E-wallet</span>
                           </div>
                         </Button>
@@ -776,10 +776,10 @@ const WalletForm = memo(() => {
                           type="button"
                           variant={selectedCategory === 'Rekening' ? 'default' : 'outline'}
                           onClick={() => setSelectedCategory('Rekening')}
-                          className="h-14 rounded-xl text-base"
+                          className="h-12 sm:h-14 rounded-xl text-sm sm:text-base"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">🏦</span>
+                            <span className="text-base sm:text-lg">🏦</span>
                             <span>Rekening</span>
                           </div>
                         </Button>
@@ -791,7 +791,7 @@ const WalletForm = memo(() => {
                           placeholder={`Cari ${selectedCategory.toLowerCase()}...`}
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20"
+                          className="h-11 sm:h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 w-full"
                         />
                       )}
 
@@ -799,12 +799,12 @@ const WalletForm = memo(() => {
                       {selectedCategory && (
                         <div className="space-y-3">
                           {logoUploading && (
-                            <div className="flex items-center justify-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600" />
-                              <span className="text-sm text-blue-700">Menyimpan logo...</span>
+                            <div className="flex items-center justify-center p-3 sm:p-4 bg-blue-50 rounded-xl border border-blue-200">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2 text-blue-600 flex-shrink-0" />
+                              <span className="text-xs sm:text-sm text-blue-700">Menyimpan logo...</span>
                             </div>
                           )}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
+                          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-h-80 overflow-y-auto">
                             {filteredSuggestions.map((suggestion, index) => (
                               <Button
                                 key={index}
@@ -812,15 +812,15 @@ const WalletForm = memo(() => {
                                 variant="outline"
                                 onClick={() => handleSuggestionSelect(suggestion)}
                                 disabled={logoUploading}
-                                className="h-20 p-4 rounded-xl border-gray-200 hover:border-blue-300 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="h-16 sm:h-20 p-2 sm:p-4 rounded-xl border-gray-200 hover:border-blue-300 transition-all duration-200 group disabled:opacity-50 disabled:cursor-not-allowed"
                               >
-                                <div className="flex flex-col items-center gap-3">
+                                <div className="flex flex-col items-center gap-1 sm:gap-3 w-full">
                                   <img
                                     src={suggestion.logo}
                                     alt={suggestion.name}
-                                    className="w-10 h-10 rounded-lg object-cover shadow-sm"
+                                    className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg object-cover shadow-sm flex-shrink-0"
                                   />
-                                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 text-center leading-tight">
+                                  <span className="text-xs sm:text-sm font-medium text-gray-700 group-hover:text-gray-900 text-center leading-tight truncate w-full">
                                     {suggestion.name}
                                   </span>
                                 </div>
@@ -840,13 +840,13 @@ const WalletForm = memo(() => {
                         control={form.control}
                         name="name"
                         render={({ field }) => (
-                          <FormItem className="space-y-3">
+                          <FormItem className="space-y-2 sm:space-y-3">
                             <FormLabel className="text-sm font-medium text-gray-700">Nama Dompet</FormLabel>
                             <FormControl>
                               <Input 
                                 placeholder="Contoh: Dompet Harian" 
                                 {...field} 
-                                className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200" 
+                                className="h-11 sm:h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200 w-full" 
                               />
                             </FormControl>
                             <FormMessage />
@@ -859,7 +859,7 @@ const WalletForm = memo(() => {
                         control={form.control}
                         name="type"
                         render={({ field }) => (
-                          <FormItem className="space-y-3">
+                          <FormItem className="space-y-2 sm:space-y-3">
                             <FormLabel className="text-sm font-medium text-gray-700">Tipe Dompet</FormLabel>
                             <Select 
                               onValueChange={field.onChange} 
@@ -867,41 +867,41 @@ const WalletForm = memo(() => {
                               value={field.value}
                             >
                               <FormControl>
-                                <SelectTrigger className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200">
+                                <SelectTrigger className="h-11 sm:h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200 w-full">
                                   <SelectValue placeholder="Pilih tipe dompet" />
                                 </SelectTrigger>
                               </FormControl>
-                              <SelectContent className="rounded-xl border-gray-200">
+                              <SelectContent className="rounded-xl border-gray-200 max-w-[calc(100vw-2rem)]">
                                 <SelectItem value="cash" className="rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                                      <Banknote className="h-4 w-4 text-green-600" />
+                                  <div className="flex items-center gap-2 sm:gap-3 max-w-full">
+                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                      <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
                                     </div>
-                                    <span>Uang Tunai</span>
+                                    <span className="text-sm sm:text-base truncate">Uang Tunai</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="bank" className="rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                                      <Landmark className="h-4 w-4 text-blue-600" />
+                                  <div className="flex items-center gap-2 sm:gap-3 max-w-full">
+                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                      <Landmark className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
                                     </div>
-                                    <span>Rekening Bank</span>
+                                    <span className="text-sm sm:text-base truncate">Rekening Bank</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="investment" className="rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                                      <CreditCard className="h-4 w-4 text-purple-600" />
+                                  <div className="flex items-center gap-2 sm:gap-3 max-w-full">
+                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                      <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600" />
                                     </div>
-                                    <span>E-Wallet</span>
+                                    <span className="text-sm sm:text-base truncate">E-Wallet</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="savings" className="rounded-lg">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                      <PiggyBank className="h-4 w-4 text-orange-600" />
+                                  <div className="flex items-center gap-2 sm:gap-3 max-w-full">
+                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                      <PiggyBank className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600" />
                                     </div>
-                                    <span>Lainnya</span>
+                                    <span className="text-sm sm:text-base truncate">Lainnya</span>
                                   </div>
                                 </SelectItem>
                               </SelectContent>
@@ -916,14 +916,14 @@ const WalletForm = memo(() => {
                         control={form.control}
                         name="balance"
                         render={({ field }) => (
-                          <FormItem className="space-y-3">
+                          <FormItem className="space-y-2 sm:space-y-3">
                             <FormLabel className="text-sm font-medium text-gray-700">Saldo {id ? 'Saat Ini' : 'Awal'}</FormLabel>
                             <FormControl>
                               <CurrencyInput
                                 placeholder="0"
                                 value={field.value}
                                 onChange={(value) => field.onChange(value)}
-                                className="h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200"
+                                className="h-11 sm:h-12 rounded-xl border-gray-200 focus:border-blue-400 focus:ring-blue-400/20 transition-all duration-200 w-full"
                               />
                             </FormControl>
                             <FormMessage />
@@ -932,9 +932,9 @@ const WalletForm = memo(() => {
                       />
 
                       {/* Logo Upload */}
-                      <div className="space-y-3">
+                      <div className="space-y-2 sm:space-y-3">
                         <Label className="text-sm font-medium text-gray-700">Logo Dompet (Opsional)</Label>
-                        <div className="p-4 bg-gray-50/50 rounded-xl border border-gray-200">
+                        <div className="p-3 sm:p-4 bg-gray-50/50 rounded-xl border border-gray-200">
                           <FileUpload
                             onFileSelect={uploadLogo}
                             preview={logoPreview}
@@ -945,7 +945,7 @@ const WalletForm = memo(() => {
                             maxSize={2}
                             className="w-full"
                           />
-                          <p className="text-xs text-gray-500 mt-2">
+                          <p className="text-xs text-gray-500 mt-2 break-words">
                             Logo akan ditampilkan pada kartu dompet Anda. Format yang didukung: JPG, PNG, GIF (maks. 2MB)
                           </p>
                         </div>
@@ -955,19 +955,20 @@ const WalletForm = memo(() => {
 
                   {/* Color Selection - Show in manual mode or when editing */}
                   {(id || creationMode === 'manual') && (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     <FormLabel className="text-sm font-medium text-gray-700">Tema Warna</FormLabel>
                     
                     <Tabs value={colorTab} onValueChange={handleColorTabChange}>
-                      <TabsList className="grid w-full grid-cols-2 h-9 rounded-lg p-0.5 mb-3 bg-gray-100">
-                        <TabsTrigger value="solid" className="rounded-md text-xs h-8">Solid</TabsTrigger>
+                      <TabsList className="grid w-full grid-cols-2 h-8 sm:h-9 rounded-lg p-0.5 mb-2 sm:mb-3 bg-gray-100">
+                        <TabsTrigger value="solid" className="rounded-md text-xs h-7 sm:h-8">Solid</TabsTrigger>
                         <TabsTrigger 
                           value="gradient" 
-                          className="rounded-md text-xs h-8" 
+                          className="rounded-md text-xs h-7 sm:h-8" 
                           disabled={!isPro}
                         >
                           {!isPro && <Lock className="h-3 w-3 mr-1" />}
-                          Gradient
+                          <span className="hidden sm:inline">Gradient</span>
+                          <span className="sm:hidden">Grad</span>
                           {!isPro && (
                             <span className="ml-1 text-[9px] bg-orange-100 text-orange-700 px-1 py-0.5 rounded">Pro</span>
                           )}
@@ -981,14 +982,14 @@ const WalletForm = memo(() => {
                           render={({ field }) => (
                             <FormItem>
                               <FormControl>
-                                <div className="space-y-3">
-                                  <div className="flex flex-wrap gap-2">
+                                <div className="space-y-2 sm:space-y-3">
+                                  <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-start">
                                     {WALLET_COLORS.map((color) => (
                                       <button
                                         key={color}
                                         type="button"
                                         className={cn(
-                                          "w-8 h-8 rounded-lg border transition-all duration-200 hover:scale-110", 
+                                          "w-7 h-7 sm:w-8 sm:h-8 rounded-lg border transition-all duration-200 hover:scale-110 flex-shrink-0", 
                                           field.value === color 
                                             ? "border-2 border-gray-900 shadow-md scale-110" 
                                             : "border border-gray-300 hover:border-gray-500"
@@ -1003,7 +1004,7 @@ const WalletForm = memo(() => {
                                     <button
                                       type="button"
                                       className={cn(
-                                        "w-8 h-8 rounded-lg border overflow-hidden relative transition-all duration-200 hover:scale-110", 
+                                        "w-7 h-7 sm:w-8 sm:h-8 rounded-lg border overflow-hidden relative transition-all duration-200 hover:scale-110 flex-shrink-0", 
                                         field.value === 'custom' 
                                           ? "border-2 border-gray-900 shadow-md scale-110" 
                                           : "border border-gray-300 hover:border-gray-500"
@@ -1031,7 +1032,7 @@ const WalletForm = memo(() => {
                                         onChange={(e) => {
                                           setCustomColor(e.target.value);
                                         }}
-                                        className="w-8 h-8 p-0.5 rounded border-0 cursor-pointer"
+                                        className="w-7 h-7 sm:w-8 sm:h-8 p-0.5 rounded border-0 cursor-pointer flex-shrink-0"
                                       />
                                       <Input
                                         type="text"
@@ -1039,7 +1040,7 @@ const WalletForm = memo(() => {
                                         onChange={(e) => {
                                           setCustomColor(e.target.value);
                                         }}
-                                        className="flex-1 h-8 text-xs border-0 bg-transparent"
+                                        className="flex-1 h-7 sm:h-8 text-xs border-0 bg-transparent min-w-0"
                                         placeholder="#000000"
                                       />
                                     </div>
@@ -1153,7 +1154,7 @@ const WalletForm = memo(() => {
                   
                   {/* Submit buttons - Only show when in manual mode or editing */}
                   {(id || creationMode === 'manual') && (
-                    <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
+                    <div className="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6 border-t border-gray-200">
                       <Button
                         type="button"
                         variant="outline"
@@ -1166,24 +1167,24 @@ const WalletForm = memo(() => {
                             navigate('/');
                           }
                         }}
-                        className="w-full sm:w-auto order-2 sm:order-1 h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                        className="w-full sm:w-auto order-2 sm:order-1 h-11 sm:h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
                       >
                         Batal
                       </Button>
                       <Button 
                         type="submit" 
                         disabled={isSubmitting || logoUploading} 
-                        className="w-full sm:flex-1 order-1 sm:order-2 h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                        className="w-full sm:flex-1 order-1 sm:order-2 h-11 sm:h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl text-sm sm:text-base"
                       >
                         {isSubmitting ? (
                           <span className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Menyimpan...
+                            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                            <span className="truncate">Menyimpan...</span>
                           </span>
                         ) : logoUploading ? (
                           <span className="flex items-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Mengunggah logo...
+                            <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                            <span className="truncate">Mengunggah logo...</span>
                           </span>
                         ) : id ? (
                           'Simpan Perubahan'
@@ -1196,12 +1197,12 @@ const WalletForm = memo(() => {
 
                   {/* Navigation buttons for mode selection */}
                   {!id && creationMode === null && (
-                    <div className="flex justify-center pt-6 border-t border-gray-200">
+                    <div className="flex justify-center pt-4 sm:pt-6 border-t border-gray-200">
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => navigate('/')}
-                        className="w-full sm:w-auto h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
+                        className="w-full sm:w-auto h-11 sm:h-12 rounded-xl border-gray-200 hover:bg-gray-50 transition-all duration-200"
                       >
                         Kembali ke Beranda
                       </Button>

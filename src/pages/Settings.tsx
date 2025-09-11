@@ -326,30 +326,30 @@ const Settings = () => {
   
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 relative overflow-x-hidden">
         {/* Background decoration */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+        <div className="absolute inset-0 opacity-30 overflow-hidden">
+          <div className="absolute top-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-blue-300 to-indigo-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute top-0 right-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-purple-300 to-pink-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-72 h-72 sm:w-96 sm:h-96 bg-gradient-to-br from-indigo-300 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl"></div>
         </div>
         
-        <div className="container mx-auto py-2 px-2 md:px-6 max-w-2xl relative z-10 pt-6 md:pt-4">
+        <div className="container mx-auto py-2 px-3 sm:px-4 md:px-6 max-w-2xl relative z-10 pt-4 sm:pt-6 md:pt-4 pb-20 sm:pb-32">
           {/* Header dengan glassmorphism effect */}
-          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
-            <div className="flex items-center gap-3">
+          <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-sm border border-white/20 sticky top-2 sm:top-4 z-10">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(-1)}
-                className="w-10 h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-white/70 hover:bg-white rounded-xl flex items-center justify-center transition-all duration-200 hover:shadow-md border border-white/30 p-0 flex-shrink-0"
                 aria-label="Kembali"
               >
-                <ArrowLeft className="h-5 w-5 text-gray-700" />
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700" />
               </Button>
-              <div>
-                <h1 className="text-lg font-bold text-gray-800">Pengaturan</h1>
-                <p className="text-xs text-gray-500">Kelola preferensi dan konfigurasi aplikasi</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base sm:text-lg font-bold text-gray-800 truncate">Pengaturan</h1>
+                <p className="text-xs text-gray-500 truncate">Kelola preferensi dan konfigurasi aplikasi</p>
               </div>
             </div>
           </div>
