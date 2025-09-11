@@ -70,12 +70,12 @@ const GRADIENTS = [
 // Smart suggestions untuk bank dan e-wallet Indonesia
 const SMART_SUGGESTIONS = {
   'E-wallet': [
-    { name: 'Dana', logo: '/Logo2/E-wallet/dana.webp', color: '#118EEA', type: 'bank' },
-    { name: 'GoPay', logo: '/Logo2/E-wallet/gopay.png', color: '#00AA13', type: 'bank' },
-    { name: 'i.saku', logo: '/Logo2/E-wallet/Isaku.png', color: '#FF6B35', type: 'bank' },
-    { name: 'LinkAja', logo: '/Logo2/E-wallet/Link aja.png', color: '#E30613', type: 'bank' },
-    { name: 'OVO', logo: '/Logo2/E-wallet/ovo.png', color: '#4C3494', type: 'bank' },
-    { name: 'ShopeePay', logo: '/Logo2/E-wallet/ShopeePay.png', color: '#EE4D2D', type: 'bank' },
+    { name: 'Dana', logo: '/Logo2/E-wallet/dana.webp', color: '#118EEA', type: 'investment' },
+    { name: 'GoPay', logo: '/Logo2/E-wallet/gopay.png', color: '#00AA13', type: 'investment' },
+    { name: 'i.saku', logo: '/Logo2/E-wallet/Isaku.png', color: '#FF6B35', type: 'investment' },
+    { name: 'LinkAja', logo: '/Logo2/E-wallet/Link aja.png', color: '#E30613', type: 'investment' },
+    { name: 'OVO', logo: '/Logo2/E-wallet/ovo.png', color: '#4C3494', type: 'investment' },
+    { name: 'ShopeePay', logo: '/Logo2/E-wallet/ShopeePay.png', color: '#EE4D2D', type: 'investment' },
   ],
   'Rekening': [
     { name: 'Bank BCA', logo: '/Logo2/Rekening/BCA.png', color: '#003399', type: 'bank' },
@@ -226,7 +226,8 @@ const WalletForm = memo(() => {
       form.setValue('name', suggestion.name);
       form.setValue('balance', 0);
       form.setValue('color', suggestion.color);
-      form.setValue('type', 'bank');
+      // Gunakan tipe dari suggestion (investment untuk E-wallet, bank untuk Rekening)
+      form.setValue('type', suggestion.type as "cash" | "bank" | "investment" | "savings");
       setSelectedColorOption(suggestion.color);
       setLogoPreview(suggestion.logo);
       
