@@ -108,6 +108,14 @@ const TransactionList = ({
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartTimeRef = useRef<number>(0);
+
+  // Handle sort function
+  const handleSort = (key: keyof ExtendedTransaction | 'category' | 'wallet_name') => {
+    setSortConfig({
+      key,
+      direction: sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc'
+    });
+  };
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<string[]>([]);
@@ -722,38 +730,36 @@ const TransactionList = ({
               Menampilkan {visibleTransactions.length} {sortedTransactions.length > visibleTransactions.length ? `dari ${sortedTransactions.length}` : ""} transaksi
             </div>
             
-            <div 
-              className="flex items-center gap-1.5 text-xs text-foreground/70 cursor-pointer" 
-              onClick={() => setShowSortMenu(!showSortMenu)}
-            >
-              <span>{sortLabels[sortConfig.key] || sortConfig.key}</span>
-              <ArrowUpDown className="h-3 w-3" />
-            </div>
-          </div>
-          
-          {showSortMenu && (
-            <div 
-              className="fixed inset-0 z-[100] flex items-end justify-center bg-black/20 animate-in fade-in-0 duration-150"
-              onClick={() => setShowSortMenu(false)}
-            >
-              <div 
-                className="w-full max-w-md bg-background rounded-t-xl shadow-lg animate-in slide-in-from-bottom duration-300"
-                onClick={(e) => e.stopPropagation()}
+            <Sheet open={showSortMenu} onOpenChange={setShowSortMenu}>
+              <SheetTrigger asChild>
+                <div className="flex items-center gap-1.5 text-xs text-foreground/70 cursor-pointer hover:text-foreground transition-colors">
+                  <span>{sortLabels[sortConfig.key] || sortConfig.key}</span>
+                  <ArrowUpDown className="h-3 w-3" />
+                </div>
+              </SheetTrigger>
+              
+              <SheetContent 
+                side="bottom" 
+                className="h-auto max-h-[80vh] rounded-t-2xl border-0 shadow-2xl bg-white p-0"
               >
-                <div className="flex justify-center pt-2 pb-1">
-                  <div className="w-10 h-1 bg-muted-foreground/20 rounded-full"></div>
+                <div className="flex justify-center pt-3 pb-2">
+                  <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
                 </div>
                 
-                <div className="p-3 space-y-2">
-                  <div className="text-sm font-medium px-2">Urutkan</div>
-                  
-                  <div className="grid grid-cols-1 gap-px bg-border rounded-lg overflow-hidden">
+                <SheetHeader className="px-6 pb-4">
+                  <SheetTitle className="text-left text-lg font-semibold text-gray-900">
+                    Urutkan Transaksi
+                  </SheetTitle>
+                </SheetHeader>
+                
+                <div className="px-6 pb-6 space-y-2">
+                  <div className="grid grid-cols-1 gap-1 bg-gray-50 rounded-xl overflow-hidden">
                     {Object.entries(sortLabels).map(([key, label]) => (
                       <button
                         key={key}
                         className={cn(
-                          "flex items-center justify-between py-3 px-4 bg-card",
-                          sortConfig.key === key && "bg-muted"
+                          "flex items-center justify-between py-4 px-4 bg-white text-left transition-all duration-200 hover:bg-gray-50",
+                          sortConfig.key === key && "bg-blue-50 border-l-4 border-l-blue-500"
                         )}
                         onClick={() => {
                           setSortConfig({
@@ -763,19 +769,29 @@ const TransactionList = ({
                           setShowSortMenu(false);
                         }}
                       >
-                        <span className="text-sm">{label}</span>
+                        <span className={cn(
+                          "text-sm font-medium",
+                          sortConfig.key === key ? "text-blue-700" : "text-gray-700"
+                        )}>
+                          {label}
+                        </span>
                         {sortConfig.key === key && (
-                          <span className="text-primary">
-                            {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-blue-600 font-medium">
+                              {sortConfig.direction === 'asc' ? 'A-Z' : 'Z-A'}
+                            </span>
+                            <span className="text-blue-500 text-lg">
+                              {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                            </span>
+                          </div>
                         )}
                       </button>
                     ))}
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       )}
       
