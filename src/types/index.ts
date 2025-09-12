@@ -10,7 +10,7 @@ export interface UserProfile {
   avatar_url?: string;
   email?: string;
   is_admin?: boolean;
-  subscription_type?: 'free' | 'pro_6m' | 'pro_12m';
+  subscription_type?: 'free' | 'pro_1m' | 'pro_6m' | 'pro_12m' | 'pro_lifetime' | 'trial';
   trial_start?: string;
   trial_end?: string;
   timezone?: string;

@@ -83,72 +83,98 @@ const UpgradeNotification = () => {
 
   return (
     <Dialog open={showDialog} onOpenChange={setShowDialog}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-center flex items-center justify-center gap-2">
-            <Award className="h-5 w-5 text-orange-500" />
-            <span>Upgrade ke Pro Sekarang!</span>
-          </DialogTitle>
-          <DialogDescription className="text-center pt-2">
-            Masa trial Pro Anda sudah berakhir. Upgrade sekarang untuk menikmati semua fitur tanpa batasan!
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-4 rounded-lg border border-orange-200 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-20 h-20">
-              <div className="absolute transform rotate-45 bg-orange-500 text-white text-xs font-bold py-1 right-[-35px] top-[12px] w-[120px] text-center">
-                HEMAT
+      <DialogContent className="max-w-sm border-0 p-0 bg-transparent overflow-hidden">
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 relative overflow-hidden border border-gray-200/50">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-400/20 to-indigo-400/20 rounded-full blur-2xl translate-x-8 -translate-y-8"></div>
+          
+          {/* Close button */}
+          <button 
+            onClick={() => setShowDialog(false)}
+            className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-gray-100/80 hover:bg-gray-200 transition-colors"
+          >
+            <X className="h-3 w-3 text-gray-500" />
+          </button>
+          
+          <div className="relative z-10 text-center">
+            {/* Icon */}
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Award className="h-6 w-6 text-white" />
+            </div>
+            
+            {/* Main message */}
+            <h3 className="text-lg font-bold mb-2 text-gray-800">
+               Trial Habis!
+            </h3>
+            
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              Waktunya upgrade ke <span className="font-bold text-blue-600">Pro</span> untuk 
+              kelola keuangan lebih <span className="font-bold text-indigo-600">rapi, hemat, & tenang!</span>
+            </p>
+            
+            {/* Quick benefits */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
+              <div className="text-xs space-y-1">
+                <div className="flex items-center justify-center gap-2">
+                  <span>📊 Analisis tanpa batas</span>
+                  <span>🏷️ Kategori tak terbatas</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <span>🏦 Tabungan/Celengan</span>
+                  <span>💰 Hutang-Piutang</span>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                  <span>📈 Anggaran/Budget</span>
+                  <span>📊 Manajemen Aset</span>
+                </div>
               </div>
             </div>
             
-            <h3 className="font-semibold flex items-center gap-2">
-              <Award className="h-4 w-4 text-orange-500" />
-              <span>Pro 12 Bulan</span>
-            </h3>
-            <div className="mt-1 mb-3">
-              <span className="text-2xl font-bold">Rp150.000</span>
-              <span className="text-sm text-gray-500 ml-1">/ tahun</span>
-              <p className="text-xs text-orange-600 font-medium">Hanya Rp12.500 per bulan</p>
+            {/* Promo highlight */}
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-3 mb-4 border border-red-100">
+              <p className="text-xs font-bold text-red-600 mb-1">
+                🔥 Promo Early Adopter
+              </p>
+              <p className="text-xs text-gray-600">
+                Lifetime hanya <span className="font-bold text-red-600">Rp150.000</span> (100 user pertama)
+              </p>
             </div>
+            
+            {/* Main CTA */}
             <Button 
-              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={() => handleUpgrade('pro_12m')}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 mb-3"
+              onClick={() => handleUpgrade('upgrade')}
             >
-              <span>Pilih Paket Ini</span>
-              <ArrowRight className="ml-2 h-4 w-4" />
+              🚀 Lihat Semua Paket Pro
             </Button>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg border">
-            <h3 className="font-semibold">Pro 6 Bulan</h3>
-            <div className="mt-1 mb-3">
-              <span className="text-2xl font-bold">Rp99.000</span>
-              <span className="text-sm text-gray-500 ml-1">/ 6 bulan</span>
-              <p className="text-xs text-gray-500">Rp16.500 per bulan</p>
+            
+            {/* Pricing options */}
+            <div className="text-xs text-gray-500 mb-4 space-y-1">
+              <div className="flex justify-between items-center">
+                <span>💳 Bulanan:</span>
+                <span className="font-bold text-blue-600">Rp20.000</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>📅 Tahunan:</span>
+                <span className="font-bold text-green-600">Rp85.000 <span className="text-xs text-green-500">(hemat 155k)</span></span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>⭐ Lifetime:</span>
+                <span className="font-bold text-red-600">Rp150.000 </span>
+              </div>
             </div>
+            
+            {/* Skip option */}
             <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => handleUpgrade('pro_6m')}
+              variant="ghost" 
+              size="sm"
+              className="text-gray-400 text-xs hover:text-gray-600 hover:bg-gray-50 transition-colors"
+              onClick={() => setShowDialog(false)}
             >
-              Pilih Paket Ini
+              Nanti aja deh 😅
             </Button>
           </div>
         </div>
-        
-        <DialogFooter className="flex-col gap-2">
-          <Button 
-            variant="ghost" 
-            className="w-full text-gray-500 text-sm hover:text-gray-700 hover:bg-gray-100"
-            onClick={() => setShowDialog(false)}
-          >
-            Tetap menggunakan versi gratis
-          </Button>
-          <p className="text-xs text-center text-gray-500 mt-2">
-            Versi gratis memiliki batasan: maksimum 10 kategori dan fitur tabungan, anggaran, hutang-piutang, serta aset tidak tersedia.
-          </p>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

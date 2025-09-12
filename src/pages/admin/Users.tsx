@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   Search, 
@@ -30,7 +30,10 @@ import {
   Loader2,
   Award,
   CalendarClock,
-  Filter
+  Filter,
+  Activity,
+  Users as UsersIcon,
+  Crown
 } from 'lucide-react';
 import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { id } from 'date-fns/locale';
@@ -108,55 +111,95 @@ const Users = () => {
     try {
       setProcessingUser(userId);
       
-      // Hitung tanggal akhir berdasarkan tipe subscription
-      const now = new Date();
-      const endDate = new Date();
+      console.log(`Updating user ${userId} to subscription: ${subscriptionType}`);
       
-      if (subscriptionType === 'pro_6m') {
+      // Hitung tanggal berdasarkan tipe subscription
+      const now = new Date();
+      let updateData: any = {
+        subscription_type: subscriptionType,
+        updated_at: now.toISOString()
+      };
+      
+      if (subscriptionType === 'pro_1m') {
+        const endDate = new Date();
+        endDate.setMonth(now.getMonth() + 1);
+        updateData.trial_start = now.toISOString();
+        updateData.trial_end = endDate.toISOString();
+      } else if (subscriptionType === 'pro_6m') {
+        const endDate = new Date();
         endDate.setMonth(now.getMonth() + 6);
+        updateData.trial_start = now.toISOString();
+        updateData.trial_end = endDate.toISOString();
       } else if (subscriptionType === 'pro_12m') {
+        const endDate = new Date();
         endDate.setMonth(now.getMonth() + 12);
+        updateData.trial_start = now.toISOString();
+        updateData.trial_end = endDate.toISOString();
+      } else if (subscriptionType === 'pro_lifetime') {
+        // Untuk lifetime, set trial_start tapi tidak ada trial_end (atau set null)
+        updateData.trial_start = now.toISOString();
+        updateData.trial_end = null;
       } else if (subscriptionType === 'free') {
-        // Untuk free user, set trial_end ke 7 hari dari sekarang
+        // Untuk free user, set trial 7 hari
+        const endDate = new Date();
         endDate.setDate(now.getDate() + 7);
+        updateData.trial_start = now.toISOString();
+        updateData.trial_end = endDate.toISOString();
       }
 
-      const { error } = await supabase
+      console.log('Update data:', updateData);
+
+      // Update database
+      const { data, error } = await supabase
         .from('profiles')
-        .update({ 
-          subscription_type: subscriptionType,
-          trial_start: now.toISOString(),
-          trial_end: endDate.toISOString()
-        })
-        .eq('id', userId);
+        .update(updateData)
+        .eq('id', userId)
+        .select('*');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
 
-      // Update local state
-      setUsers(users.map(user => {
+      console.log('Database update successful:', data);
+
+      // Update local state untuk reflect perubahan di UI
+      setUsers(prevUsers => prevUsers.map(user => {
         if (user.id === userId) {
           return {
             ...user,
             subscription_type: subscriptionType,
-            trial_start: now.toISOString(),
-            trial_end: endDate.toISOString()
+            trial_start: updateData.trial_start,
+            trial_end: updateData.trial_end,
+            updated_at: updateData.updated_at
           };
         }
         return user;
       }));
 
+      const subscriptionLabels: { [key: string]: string } = {
+        'pro_1m': 'Pro 1 Bulan',
+        'pro_6m': 'Pro 6 Bulan', 
+        'pro_12m': 'Pro 12 Bulan',
+        'pro_lifetime': 'Lifetime Pro',
+        'free': 'Free'
+      };
+
       toast({
-        title: "Berhasil mengupdate langganan",
-        description: `Status langganan pengguna berhasil diubah ke ${
-          subscriptionType === 'pro_6m' ? 'Pro 6 Bulan' : 
-          subscriptionType === 'pro_12m' ? 'Pro 12 Bulan' : 'Free'
-        }`,
+        title: "✅ Berhasil mengupdate langganan",
+        description: `Status langganan pengguna berhasil diubah ke ${subscriptionLabels[subscriptionType]}`,
       });
-    } catch (error) {
+
+      // Refresh data untuk memastikan sinkronisasi
+      setTimeout(() => {
+        fetchUsers();
+      }, 1000);
+
+    } catch (error: any) {
       console.error('Error updating user subscription:', error);
       toast({
-        title: "Gagal mengupdate langganan",
-        description: "Terjadi kesalahan saat mengubah status langganan",
+        title: "❌ Gagal mengupdate langganan",
+        description: error.message || "Terjadi kesalahan saat mengubah status langganan",
         variant: "destructive",
       });
     } finally {
@@ -196,15 +239,30 @@ const Users = () => {
   };
 
   const getUserStatusBadge = (user: UserProfile) => {
+    // Handle lifetime subscription first
+    if (user.subscription_type === 'pro_lifetime') {
+      return (
+        <Badge variant="success" className="flex items-center gap-1 bg-gradient-to-r from-purple-500 to-indigo-500 text-white border-0">
+          <Crown className="h-3 w-3" />
+          <span>Lifetime Pro</span>
+        </Badge>
+      );
+    }
+    
     const daysLeft = getDaysLeft(user.trial_end);
     
-    if (user.subscription_type === 'pro_6m' || user.subscription_type === 'pro_12m') {
+    if (user.subscription_type === 'pro_1m' || user.subscription_type === 'pro_6m' || user.subscription_type === 'pro_12m' || user.subscription_type === 'pro_lifetime') {
+      const labels: { [key: string]: string } = {
+        'pro_1m': 'Pro 1 Bulan',
+        'pro_6m': 'Pro 6 Bulan',
+        'pro_12m': 'Pro 12 Bulan',
+        'pro_lifetime': 'Pro Seumur Hidup'
+      };
+      
       return (
         <Badge variant="success" className="flex items-center gap-1">
           <Award className="h-3 w-3" />
-          <span>
-            {user.subscription_type === 'pro_6m' ? 'Pro 6 Bulan' : 'Pro 12 Bulan'}
-          </span>
+          <span>{labels[user.subscription_type]}</span>
         </Badge>
       );
     }
@@ -247,18 +305,21 @@ const Users = () => {
       const daysLeft = getDaysLeft(user.trial_end);
       
       if (expirationFilter === 'expired') {
-        matchesExpiration = daysLeft <= 0;
+        // Expired: days left <= 0 AND not lifetime
+        matchesExpiration = daysLeft <= 0 && user.subscription_type !== 'pro_lifetime';
       } else if (expirationFilter === 'expiring_soon') {
-        matchesExpiration = daysLeft > 0 && daysLeft <= 7;
+        // Expiring soon: 0 < days left <= 7 AND not lifetime
+        matchesExpiration = daysLeft > 0 && daysLeft <= 7 && user.subscription_type !== 'pro_lifetime';
       } else if (expirationFilter === 'active') {
-        matchesExpiration = daysLeft > 7;
+        // Active: days left > 7 OR lifetime
+        matchesExpiration = daysLeft > 7 || user.subscription_type === 'pro_lifetime';
       }
       
       return matchesSearch && matchesSubscription && matchesExpiration;
     })
     .sort((a, b) => {
-      let fieldA: string | number | undefined = a[sortField as keyof UserProfile];
-      let fieldB: string | number | undefined = b[sortField as keyof UserProfile];
+      let fieldA: string | number | boolean | undefined = a[sortField as keyof UserProfile];
+      let fieldB: string | number | boolean | undefined = b[sortField as keyof UserProfile];
       
       // Handle special case for days_left
       if (sortField === 'days_left') {
@@ -272,8 +333,13 @@ const Users = () => {
         fieldB = fieldB ? new Date(fieldB as string).getTime() : 0;
       }
       
+      // Convert to comparable values
       if (fieldA === undefined || fieldA === null) fieldA = 0;
       if (fieldB === undefined || fieldB === null) fieldB = 0;
+      
+      // Convert booleans to numbers for comparison
+      if (typeof fieldA === 'boolean') fieldA = fieldA ? 1 : 0;
+      if (typeof fieldB === 'boolean') fieldB = fieldB ? 1 : 0;
       
       if (fieldA < fieldB) return sortDirection === 'asc' ? -1 : 1;
       if (fieldA > fieldB) return sortDirection === 'asc' ? 1 : -1;
@@ -281,21 +347,48 @@ const Users = () => {
     });
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Kelola Pengguna</h1>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            Kelola Pengguna
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Kelola subscription dan status pengguna aplikasi
+          </p>
+        </div>
+        <div className="mt-4 md:mt-0 flex items-center gap-3">
+          <Badge variant="outline" className="text-sm px-3 py-1">
+            <UsersIcon className="h-4 w-4 mr-2" />
+            {filteredUsers.length} dari {users.length} pengguna
+          </Badge>
+          <Button variant="outline" onClick={fetchUsers} className="px-4 py-2">
+            <Activity className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+      </div>
 
-      <Card className="mb-8">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl">Filter Pengguna</CardTitle>
+      {/* Filters Card */}
+      <Card className="border-0 shadow-lg">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <Filter className="h-3 w-3 text-white" />
+            </div>
+            Filter & Pencarian
+          </CardTitle>
+          <CardDescription>Gunakan filter untuk mencari pengguna tertentu</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Search Input */}
             <div className="relative col-span-full">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Cari berdasarkan nama atau email..."
-                className="pl-9"
+                className="pl-9 h-11 border-0 bg-gray-50 focus:bg-white transition-colors"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -303,18 +396,20 @@ const Users = () => {
             
             {/* Subscription Type Filter */}
             <div>
-              <label className="text-sm font-medium block mb-2">Tipe Langganan</label>
+              <label className="text-sm font-medium block mb-2 text-gray-700">Tipe Langganan</label>
               <Select 
                 value={subscriptionFilter} 
                 onValueChange={setSubscriptionFilter}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 border-0 bg-gray-50 focus:bg-white">
                   <SelectValue placeholder="Semua Langganan" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua Langganan</SelectItem>
+                  <SelectItem value="pro_lifetime">Lifetime Pro</SelectItem>
                   <SelectItem value="pro_12m">Pro 12 Bulan</SelectItem>
                   <SelectItem value="pro_6m">Pro 6 Bulan</SelectItem>
+                  <SelectItem value="pro_1m">Pro 1 Bulan</SelectItem>
                   <SelectItem value="free">Free</SelectItem>
                 </SelectContent>
               </Select>
@@ -322,12 +417,12 @@ const Users = () => {
             
             {/* Expiration Filter */}
             <div>
-              <label className="text-sm font-medium block mb-2">Status Langganan</label>
+              <label className="text-sm font-medium block mb-2 text-gray-700">Status Langganan</label>
               <Select 
                 value={expirationFilter} 
                 onValueChange={setExpirationFilter}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 border-0 bg-gray-50 focus:bg-white">
                   <SelectValue placeholder="Semua Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -341,7 +436,7 @@ const Users = () => {
             
             {/* Sort Options */}
             <div>
-              <label className="text-sm font-medium block mb-2">Urutkan Berdasarkan</label>
+              <label className="text-sm font-medium block mb-2 text-gray-700">Urutkan Berdasarkan</label>
               <Select 
                 value={sortField} 
                 onValueChange={(value) => {
@@ -349,7 +444,7 @@ const Users = () => {
                   setSortDirection('asc');
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11 border-0 bg-gray-50 focus:bg-white">
                   <SelectValue placeholder="Urutan" />
                 </SelectTrigger>
                 <SelectContent>
@@ -360,39 +455,44 @@ const Users = () => {
                 </SelectContent>
               </Select>
             </div>
-            
-            {/* Refresh Button */}
-            <div className="self-end lg:col-start-4 lg:justify-self-end">
-              <Button variant="outline" onClick={fetchUsers} className="w-full lg:w-auto">
-                Refresh Data
-            </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <div className="rounded-md border">
+      {/* Users Table Card */}
+      <Card className="border-0 shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <UsersIcon className="h-3 w-3 text-white" />
+            </div>
+            Daftar Pengguna
+          </CardTitle>
+        </CardHeader>
+        
+        <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
+            <TableHeader className="bg-gray-50/50">
+              <TableRow className="border-b-0">
                 {userColumns.map((column) => (
-                  <TableHead key={column.id} className="font-medium">
-                    <div className="flex items-center gap-1">
+                  <TableHead key={column.id} className="font-semibold text-gray-700 h-12">
+                    <div className="flex items-center gap-2">
                       <span>{column.label}</span>
                       {column.sortable && (
                         <button
-                          className="p-1 hover:bg-gray-100 rounded"
+                          className="p-1 hover:bg-gray-200 rounded-md transition-colors"
                           onClick={() => handleSort(column.id === 'days_left' ? 'trial_end' : column.id)}
                         >
                           {sortField === column.id || (column.id === 'days_left' && sortField === 'trial_end') ? (
                             sortDirection === 'asc' ? (
-                              <ArrowUp className="h-3 w-3" />
+                              <ArrowUp className="h-3 w-3 text-indigo-600" />
                             ) : (
-                              <ArrowDown className="h-3 w-3" />
+                              <ArrowDown className="h-3 w-3 text-indigo-600" />
                             )
                           ) : (
-                            <div className="h-3 w-3" />
+                            <div className="h-3 w-3 opacity-30">
+                              <ArrowUp className="h-3 w-3" />
+                            </div>
                           )}
                         </button>
                       )}
@@ -404,66 +504,81 @@ const Users = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={userColumns.length} className="h-24 text-center">
-                    <div className="flex justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    </div>
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      Memuat data pengguna...
+                  <TableCell colSpan={userColumns.length} className="h-32 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                      <div className="text-sm text-gray-500">
+                        Memuat data pengguna...
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : filteredUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={userColumns.length} className="h-24 text-center">
-                    <AlertCircle className="h-6 w-6 mx-auto text-muted-foreground" />
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      {searchTerm || subscriptionFilter !== 'all' || expirationFilter !== 'all'
-                        ? `Tidak ada pengguna yang cocok dengan filter yang dipilih`
-                        : "Belum ada pengguna yang terdaftar"}
+                  <TableCell colSpan={userColumns.length} className="h-32 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center">
+                        <AlertCircle className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {searchTerm || subscriptionFilter !== 'all' || expirationFilter !== 'all'
+                          ? `Tidak ada pengguna yang cocok dengan filter yang dipilih`
+                          : "Belum ada pengguna yang terdaftar"}
+                      </div>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      {user.name || "Tanpa Nama"}
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <CalendarClock className="h-3.5 w-3.5 text-gray-400" />
-                        <span>{getFormattedDate(user.trial_start)}</span>
+                filteredUsers.map((user, index) => (
+                  <TableRow key={user.id} className={`hover:bg-gray-50/50 transition-colors ${
+                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'
+                  }`}>
+                    <TableCell className="font-medium py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-indigo-700">
+                            {(user.name || user.email || 'U').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="text-gray-900">{user.name || "Tanpa Nama"}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <CalendarClock className="h-3.5 w-3.5 text-gray-400" />
-                        <span>{getFormattedDate(user.trial_end)}</span>
+                    <TableCell className="py-4">
+                      <span className="text-gray-600">{user.email}</span>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-600">{getFormattedDate(user.trial_start)}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <span className={`font-medium ${
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock className="h-4 w-4 text-gray-400" />
+                        <span className="text-gray-600">{getFormattedDate(user.trial_end)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <span className={`font-semibold px-2 py-1 rounded-lg text-sm ${
                         getDaysLeft(user.trial_end) <= 0 
-                          ? 'text-red-500' 
+                          ? 'text-red-700 bg-red-50' 
                           : user.subscription_type?.includes('pro') 
-                            ? 'text-green-600' 
-                            : 'text-amber-500'
+                            ? 'text-green-700 bg-green-50' 
+                            : 'text-amber-700 bg-amber-50'
                       }`}>
-                          {getDaysLeft(user.trial_end)} hari
-                        </span>
+                        {user.subscription_type === 'pro_lifetime' ? '∞' : `${getDaysLeft(user.trial_end)} hari`}
+                      </span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       {getUserStatusBadge(user)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       <Select
                         value={user.subscription_type || 'free'}
                         onValueChange={(value) => updateUserSubscription(user.id, value)}
                         disabled={processingUser === user.id}
                       >
-                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectTrigger className="w-[160px] h-9 text-sm border-0 bg-gray-50 hover:bg-white transition-colors">
                           {processingUser === user.id ? (
                             <div className="flex items-center">
                               <Loader2 className="h-3 w-3 animate-spin mr-2" />
@@ -475,11 +590,17 @@ const Users = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="free">Free</SelectItem>
+                          <SelectItem value="pro_1m" className="text-green-600">
+                            Pro 1 Bulan (Rp49.000)
+                          </SelectItem>
                           <SelectItem value="pro_6m" className="text-green-600">
                             Pro 6 Bulan (Rp99.000)
                           </SelectItem>
                           <SelectItem value="pro_12m" className="text-green-600">
                             Pro 12 Bulan (Rp150.000)
+                          </SelectItem>
+                          <SelectItem value="pro_lifetime" className="text-purple-600 font-semibold">
+                            Lifetime Pro (Rp999.000)
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -489,9 +610,6 @@ const Users = () => {
               )}
             </TableBody>
           </Table>
-        </div>
-        <div className="p-4 text-sm text-gray-500 border-t">
-          Total: {filteredUsers.length} dari {users.length} pengguna
         </div>
       </Card>
     </div>

@@ -3,7 +3,7 @@ import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ChevronRight, Blocks, House, Smartphone, Settings as SettingsIcon, ArrowLeft, LogOut, Clock, Globe } from "lucide-react";
+import { Loader2, ChevronRight, Blocks, House, Smartphone, Settings as SettingsIcon, ArrowLeft, LogOut, Clock, Globe, X } from "lucide-react";
 import ProfileSection from "@/components/settings/ProfileSection";
 import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
@@ -54,6 +54,8 @@ const Settings = () => {
   const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
   const [timezone, setTimezone] = useState<string>('Asia/Jakarta');
   const [timezoneLoading, setTimezoneLoading] = useState(false);
+  const [isTimezoneDialogOpen, setIsTimezoneDialogOpen] = useState(false);
+  const [selectedTimezone, setSelectedTimezone] = useState<string>('');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -232,6 +234,21 @@ const Settings = () => {
         description: "Terjadi kesalahan saat mengubah timezone",
         variant: "destructive"
       });
+    } finally {
+      setTimezoneLoading(false);
+    }
+  };
+
+  const handleTimezoneUpdate = async () => {
+    if (!selectedTimezone) return;
+    
+    try {
+      setTimezoneLoading(true);
+      await handleTimezoneChange(selectedTimezone);
+      setIsTimezoneDialogOpen(false);
+      setSelectedTimezone('');
+    } catch (error) {
+      console.error('Error updating timezone:', error);
     } finally {
       setTimezoneLoading(false);
     }
@@ -489,16 +506,16 @@ const Settings = () => {
               <div className="hover:bg-gray-50/50 transition-all duration-200">
                 <div 
                   className="flex items-center justify-between p-5 cursor-pointer group"
-                  onClick={() => navigate('/trusted-devices')}
+                  onClick={() => setIsTimezoneDialogOpen(true)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-green-100 to-emerald-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
-                      <Smartphone className="w-4 h-4 text-green-600" />
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-blue-100 to-indigo-100 flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+                      <Globe className="w-4 h-4 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900 text-sm">Perangkat Terpercaya</h3>
+                      <h3 className="font-medium text-gray-900 text-sm">Zona Waktu</h3>
                       <p className="text-sm text-gray-500 mt-0.5">
-                        Kelola perangkat yang diingat untuk login otomatis
+                        {timezone || 'Pilih zona waktu untuk analisis yang akurat'}
                       </p>
                     </div>
                   </div>
@@ -511,55 +528,91 @@ const Settings = () => {
           </div>
         </section>
 
-        {/* Timezone Section */}
-        <section className="mb-8">
-          <div className="backdrop-blur-sm bg-white/80 rounded-xl shadow-sm border border-white/20 overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100/50">
-              <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-                <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                  <Globe className="w-3 h-3 text-white" />
+        
+        <ActionSection handleExportData={handleExportData} loading={loading} />
+        
+        {/* Timezone Dialog */}
+        {isTimezoneDialogOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                      <Globe className="w-3 h-3 text-white" />
+                    </div>
+                    Pilih Zona Waktu
+                  </h3>
+                  <button 
+                    onClick={() => setIsTimezoneDialogOpen(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                Zona Waktu
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">Atur zona waktu untuk analisis dan laporan yang akurat</p>
-            </div>
-            
-            <div className="p-5">
-              <div className="flex flex-col gap-3">
-                <label className="text-sm font-medium text-gray-700">
-                  Pilih Zona Waktu
-                </label>
-                <Select 
-                  value={timezone} 
-                  onValueChange={handleTimezoneChange}
-                  disabled={timezoneLoading}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih zona waktu" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timezoneOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {timezoneLoading && (
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Menyimpan perubahan...
+                <p className="text-sm text-gray-500 mt-1">Pilih zona waktu untuk analisis dan laporan yang akurat</p>
+              </div>
+              
+              <div className="p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">
+                      Zona Waktu Saat Ini
+                    </label>
+                    <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+                      {timezone || 'Belum dipilih'}
+                    </div>
                   </div>
-                )}
-                <p className="text-xs text-gray-500">
-                  Zona waktu akan digunakan untuk menampilkan dan menyimpan waktu transaksi dengan benar.
-                </p>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">
+                      Pilih Zona Waktu Baru
+                    </label>
+                    <Select 
+                      value={selectedTimezone || timezone} 
+                      onValueChange={setSelectedTimezone}
+                      disabled={timezoneLoading}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Pilih zona waktu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {timezoneOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => setIsTimezoneDialogOpen(false)}
+                      className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={handleTimezoneUpdate}
+                      disabled={timezoneLoading || !selectedTimezone}
+                      className="flex-1 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {timezoneLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Menyimpan...
+                        </>
+                      ) : (
+                        'Simpan'
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </section>
-        
-        <ActionSection handleExportData={handleExportData} loading={loading} />
+        )}
         
         <Footer />
         </div>

@@ -136,7 +136,7 @@ const FeaturesSection = ({
       console.log('- Has Pro access:', proAccess);
       
       // Jika pengguna bukan Pro tetapi harusnya Pro, coba force update
-      if (!proAccess && (profileData?.subscription_type === 'pro_6m' || profileData?.subscription_type === 'pro_12m')) {
+      if (!proAccess && (profileData?.subscription_type === 'pro_1m' || profileData?.subscription_type === 'pro_6m' || profileData?.subscription_type === 'pro_12m' || profileData?.subscription_type === 'pro_lifetime')) {
         console.warn("WARNING: User has Pro subscription type but hasProAccess returned false!");
         
         // Coba force set status Pro

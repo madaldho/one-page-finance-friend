@@ -12,7 +12,7 @@ interface UserProfile {
   avatar_url?: string;
   email?: string;
   is_admin?: boolean;
-  subscription_type?: 'free' | 'pro_6m' | 'pro_12m';
+  subscription_type?: 'free' | 'pro_1m' | 'pro_6m' | 'pro_12m' | 'pro_lifetime' | 'trial';
   created_at?: string;
   updated_at?: string;
 }

@@ -260,68 +260,104 @@ const Analysis = () => {
 
   // Fallback content untuk pengguna free yang telah mencapai batas
   const analysisFallback = (
-    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-2xl border border-purple-200 shadow-lg text-center max-w-2xl md:mx-auto mx-2 my-auto ">
-      <div className="relative ">
-        <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md animate-pulse">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-          </svg>
-        </div>
+    <div className="min-h-[80vh] flex items-center justify-center p-4">
+      <div className="bg-white/90 backdrop-blur-xl border border-gray-200/50 rounded-3xl shadow-2xl p-8 md:p-12 text-center max-w-2xl w-full relative overflow-hidden">
+        {/* Background decorations */}
+        <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl -translate-x-16 -translate-y-16"></div>
+        <div className="absolute bottom-0 right-0 w-32 h-32 bg-gradient-to-tl from-indigo-400/20 to-pink-400/20 rounded-full blur-3xl translate-x-16 translate-y-16"></div>
         
-        <div className="absolute top-0 right-0 -mr-2 -mt-2 bg-purple-600 text-white text-xs font-medium px-2.5 py-1 rounded-full">3/3</div>
-      </div>
-      
-      <h2 className="text-2xl font-bold mb-3 text-gray-800">Batas Analisis Tercapai</h2>
-      
-      <p className="text-gray-600 mb-8 max-w-md mx-auto">
-        Anda telah mencapai batas melihat halaman Analisis (3x) untuk hari ini.
-        Upgrade ke Pro untuk akses tak terbatas ke semua fitur analisis keuangan!
-      </p>
-      
-      <div className="grid gap-4 sm:grid-cols-2 max-w-md mx-auto mb-6">
-        <div className="flex flex-col gap-1 bg-white p-4 rounded-xl shadow-sm border border-purple-100">
-          <span className="text-purple-600 font-semibold">Dengan Pro</span>
-          <ul className="text-left text-sm text-gray-600">
-            <li className="flex items-center gap-1.5 mb-1">
-              <div className="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center">
-                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+        <div className="relative z-10">
+          {/* Icon with badge */}
+          <div className="relative mb-8">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto shadow-xl">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+              3/3
+            </div>
+          </div>
+          
+          {/* Main content */}
+          <div className="mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              Batas Analisis Tercapai! 🚀
+            </h2>
+            
+            <p className="text-gray-600 text-lg leading-relaxed max-w-md mx-auto">
+              Anda sudah menggunakan <span className="font-semibold text-indigo-600">3 analisis gratis</span> hari ini. 
+              <span className="font-semibold"> Upgrade ke Pro</span> untuk analisis tanpa batas!
+            </p>
+          </div>
+          
+          {/* Feature comparison */}
+          <div className="bg-gradient-to-r from-gray-50 to-indigo-50 rounded-2xl p-6 mb-8">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="text-left">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="font-bold text-indigo-600">Dengan Pro</span>
+                </div>
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                    <span className="text-gray-700">✨ Analisis <strong>lengkap</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div>
+                    <span className="text-gray-700">📊 Laporan detail lengkap</span>
+                  </li>
+               
+                </ul>
               </div>
-              <span>Akses tak terbatas</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <div className="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center">
-                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+              
+              <div className="text-left">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
+                    <svg className="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <span className="font-bold text-gray-500">Versi Gratis</span>
+                </div>
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                    <span className="text-gray-500">🔒 Hanya 3x per hari</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                    <span className="text-gray-500">📋 Fitur dasar saja</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                    <span className="text-gray-500">⏳ Reset besok pagi</span>
+                  </li>
+                </ul>
               </div>
-              <span>Laporan lengkap</span>
-            </li>
-          </ul>
+            </div>
+          </div>
+          
+          {/* CTA Section */}
+          <div className="space-y-4">
+            <button 
+              onClick={() => navigate('/upgrade')}
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
+            >
+              🚀 Upgrade ke Pro Sekarang
+            </button>
+            
+            <p className="text-xs text-gray-500">
+              Mulai dari <span className="font-semibold text-indigo-600">Rp20.000/bulan</span> • Batalkan kapan saja
+            </p>
+          </div>
         </div>
-        
-        <div className="flex flex-col gap-1 bg-gray-50 p-4 rounded-xl shadow-sm border border-gray-200">
-          <span className="text-gray-500 font-semibold">Versi Gratis</span>
-          <ul className="text-left text-sm text-gray-500">
-            <li className="flex items-center gap-1.5 mb-1">
-              <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              </div>
-              <span>Hanya 3x per hari</span>
-            </li>
-            <li className="flex items-center gap-1.5">
-              <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center">
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-              </div>
-              <span>Fitur terbatas</span>
-            </li>
-          </ul>
-        </div>
       </div>
-      
-      <button 
-        onClick={() => navigate('/upgrade')}
-        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium px-8 py-3 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105"
-      >
-        Upgrade ke Pro Sekarang
-      </button>
     </div>
   );
 

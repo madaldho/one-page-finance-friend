@@ -52,24 +52,23 @@ const ProfileSection = ({ user }: ProfileSectionProps) => {
   };
   
   return (
-    <section className="mb-8">
+    <section className="mb-6">
       <div className="backdrop-blur-sm bg-white/80 rounded-xl shadow-sm border border-white/20 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100/50">
-          <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
-            <div className="w-5 h-5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <Crown className="w-3 h-3 text-white" />
+        <div className="px-4 py-3 border-b border-gray-100/50">
+          <h2 className="text-base font-medium text-gray-900 flex items-center gap-2">
+            <div className="w-4 h-4 bg-gradient-to-r from-indigo-500 to-purple-500 rounded flex items-center justify-center">
+              <Crown className="w-2.5 h-2.5 text-white" />
             </div>
             Profil
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Informasi akun dan status langganan</p>
         </div>
         
-        <div className="p-5">
-          <div className="flex items-center justify-between">
+        <div className="p-4">
+          {/* Mobile Layout */}
+          <div className="md:hidden">
             <div className="flex items-center gap-3">
-              {/* Avatar dengan border untuk Pro */}
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden ${
-                isPro ? 'border-2 border-amber-400' : 'border border-gray-200'
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden ${
+                isPro ? 'border border-amber-400' : 'border border-gray-200'
               }`}>
                 {user?.profile?.avatar_url && !imageError ? (
                   <img 
@@ -80,62 +79,125 @@ const ProfileSection = ({ user }: ProfileSectionProps) => {
                     loading="eager"
                   />
                 ) : (
-                  <div className={`w-full h-full flex items-center justify-center ${
-                    isPro ? 'bg-gradient-to-br from-purple-600 to-indigo-700' : 'bg-gray-500'
+                  <div className={`w-full h-full flex items-center justify-center text-white font-medium text-sm ${
+                    isPro ? 'bg-gradient-to-br from-purple-600 to-indigo-700' : 'bg-gradient-to-br from-gray-500 to-gray-600'
                   }`}>
-                    <span className="text-white text-sm font-medium">
-                      {getInitial()}
-                    </span>
+                    {getInitial()}
                   </div>
                 )}
               </div>
               
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
+                <p className={`font-medium text-sm truncate ${isPro ? 'text-purple-900' : 'text-gray-900'}`}>
+                  {user?.profile?.name || user?.email || 'User'}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-2 py-1 rounded-lg font-medium ${
+                    isPro 
+                      ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-white' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {subscriptionLabel.text}
+                  </span>
+                  
+                  {profile?.trial_end && subscriptionLabel.text === 'Trial Pro' && (
+                    <span className="text-xs text-indigo-700 font-medium bg-indigo-50 px-2 py-1 rounded-lg">
+                      {Math.max(0, differenceInDays(parseISO(profile.trial_end), new Date()))} hari
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                {(!isPro || (profile?.trial_end && subscriptionLabel.text === 'Trial Pro')) && (
+                  <Button
+                    onClick={() => navigate('/upgrade')}
+                    size="sm"
+                    className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs px-3 py-1.5 h-auto rounded-lg"
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Pro
+                  </Button>
+                )}
+                
+                <Button
+                  onClick={handleEditProfile}
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-200 text-gray-600 hover:bg-gray-50 text-xs px-3 py-1.5 h-auto rounded-lg"
+                >
+                  Edit
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* Desktop Layout */}
+          <div className="hidden md:flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden ${
+                isPro ? 'border border-amber-400' : 'border border-gray-200'
+              }`}>
+                {user?.profile?.avatar_url && !imageError ? (
+                  <img 
+                    src={user.profile.avatar_url} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                    loading="eager"
+                  />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center text-white font-medium ${
+                    isPro ? 'bg-gradient-to-br from-purple-600 to-indigo-700' : 'bg-gradient-to-br from-gray-500 to-gray-600'
+                  }`}>
+                    {getInitial()}
+                  </div>
+                )}
+              </div>
+              
+              <div>
                 <p className={`font-medium text-sm ${isPro ? 'text-purple-900' : 'text-gray-900'}`}>
                   {user?.profile?.name || user?.email || 'User'}
                 </p>
-                
                 <div className="flex items-center gap-2 mt-1">
-                  {isPro ? (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 text-white font-medium inline-flex items-center gap-1">
-                        <Crown className="h-3 w-3" />
-                        <span>Akun {subscriptionLabel.text}</span>
-                      </span>
-                      
-                      {profile?.trial_end && subscriptionLabel.text === 'Trial Pro' && (
-                        <span className="text-xs text-indigo-700 font-medium">
-                          {Math.max(0, differenceInDays(parseISO(profile.trial_end), new Date()))} hari tersisa
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
-                        Akun {subscriptionLabel.text}
-                      </span>
-                      
-                      <Button
-                        onClick={() => window.open('https://wa.me/6285794215084?text=Halo%2C%20saya%20ingin%20upgrade%20ke%20Pro', '_blank')}
-                        size="sm"
-                        className="text-xs h-6 px-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-full"
-                      >
-                        Upgrade Pro
-                      </Button>
-                    </div>
+                  <span className={`text-xs px-2 py-1 rounded-lg font-medium ${
+                    isPro 
+                      ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-white' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {subscriptionLabel.text}
+                  </span>
+                  
+                  {profile?.trial_end && subscriptionLabel.text === 'Trial Pro' && (
+                    <span className="text-xs text-indigo-700 font-medium bg-indigo-50 px-2 py-1 rounded-lg">
+                      {Math.max(0, differenceInDays(parseISO(profile.trial_end), new Date()))} hari tersisa
+                    </span>
                   )}
                 </div>
               </div>
             </div>
             
-            <Button
-              onClick={handleEditProfile}
-              variant="ghost"
-              size="sm"
-              className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg px-3 py-2"
-            >
-              Edit Profil
-            </Button>
+            <div className="flex gap-2">
+              {(!isPro || (profile?.trial_end && subscriptionLabel.text === 'Trial Pro')) && (
+                <Button
+                  onClick={() => navigate('/upgrade')}
+                  size="sm"
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs px-4 py-2 rounded-lg"
+                >
+                  <Sparkles className="w-3 h-3 mr-1.5" />
+                  {isPro ? 'Upgrade Pro' : 'Upgrade Pro'}
+                </Button>
+              )}
+              
+              <Button
+                onClick={handleEditProfile}
+                variant="outline"
+                size="sm"
+                className="border-gray-200 text-gray-600 hover:bg-gray-50 text-xs px-4 py-2 rounded-lg"
+              >
+                Edit Profil
+              </Button>
+            </div>
           </div>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { differenceInDays, parseISO } from 'date-fns';
 /**
  * Tipe-tipe langganan yang tersedia
  */
-export type SubscriptionType = "free" | "pro_6m" | "pro_12m" | "trial" | null;
+export type SubscriptionType = "free" | "pro_1m" | "pro_6m" | "pro_12m" | "pro_lifetime" | "trial" | null;
 
 /**
  * Interface untuk profil pengguna yang terkait dengan langganan
@@ -76,7 +76,10 @@ export const addLocalDays = (date: Date | string, days: number): Date => {
  */
 export const isProUser = (profile: UserSubscriptionProfile | null): boolean => {
   if (!profile) return false;
-  return profile.subscription_type === 'pro_6m' || profile.subscription_type === 'pro_12m';
+  return profile.subscription_type === 'pro_1m' || 
+         profile.subscription_type === 'pro_6m' || 
+         profile.subscription_type === 'pro_12m' ||
+         profile.subscription_type === 'pro_lifetime';
 };
 
 /**
@@ -88,7 +91,18 @@ export const hasProAccess = (profile: UserSubscriptionProfile | null): boolean =
   if (!profile) return false;
   
   // Jika pengguna adalah pro, mereka pasti memiliki akses pro
-  if (isProUser(profile)) return true;
+  if (isProUser(profile)) {
+    // Untuk lifetime users, mereka selalu memiliki akses
+    if (profile.subscription_type === 'pro_lifetime') return true;
+    
+    // Untuk subscription lain, cek apakah masih aktif
+    if (profile.trial_end) {
+      const daysRemaining = calculateDaysRemaining(profile.trial_end);
+      return daysRemaining !== null && daysRemaining > 0;
+    }
+    
+    return true; // Fallback untuk pro users
+  }
   
   // Jika pengguna adalah trial, mereka memiliki akses pro
   if (profile.subscription_type === 'trial') {
