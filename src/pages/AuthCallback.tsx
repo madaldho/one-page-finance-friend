@@ -30,10 +30,13 @@ const AuthCallback = () => {
         // Check if this is a password reset callback
         const queryParams = new URLSearchParams(location.search);
         const isPasswordReset = queryParams.get('type') === 'recovery';
+        const hasResetCode = queryParams.get('code') !== null;
+        const hasToken = queryParams.get('token') !== null;
         
-        if (isPasswordReset) {
+        if (isPasswordReset || hasResetCode || hasToken) {
           // If it's a password reset, redirect to reset password page with the token
-          navigate('/reset-password', { replace: true });
+          console.log('Password reset detected, redirecting to reset-password page');
+          navigate('/reset-password' + location.search + location.hash, { replace: true });
           return;
         }
 

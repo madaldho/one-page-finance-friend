@@ -3,19 +3,37 @@ import Layout from "@/components/Layout";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ChevronRight, Blocks, House, Smartphone, Settings as SettingsIcon, ArrowLeft, LogOut } from "lucide-react";
+import { Loader2, ChevronRight, Blocks, House, Smartphone, Settings as SettingsIcon, ArrowLeft, LogOut, Clock, Globe } from "lucide-react";
 import ProfileSection from "@/components/settings/ProfileSection";
 import FeaturesSection from "@/components/settings/FeaturesSection";
 import ActionSection from "@/components/settings/ActionSection";
 import Footer from "@/components/settings/Footer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface UserWithProfile {
   id?: string;
   email?: string;
   profile?: Record<string, unknown>;
 }
+
+const timezoneOptions = [
+  { value: 'Asia/Jakarta', label: 'WIB (Jakarta) - GMT+7' },
+  { value: 'Asia/Makassar', label: 'WITA (Makassar) - GMT+8' },
+  { value: 'Asia/Jayapura', label: 'WIT (Jayapura) - GMT+9' },
+  { value: 'Asia/Singapore', label: 'Singapore - GMT+8' },
+  { value: 'Asia/Kuala_Lumpur', label: 'Malaysia - GMT+8' },
+  { value: 'Asia/Bangkok', label: 'Thailand - GMT+7' },
+  { value: 'Asia/Manila', label: 'Philippines - GMT+8' },
+  { value: 'UTC', label: 'UTC - GMT+0' },
+  { value: 'America/New_York', label: 'New York - GMT-5' },
+  { value: 'America/Los_Angeles', label: 'Los Angeles - GMT-8' },
+  { value: 'Europe/London', label: 'London - GMT+0' },
+  { value: 'Europe/Paris', label: 'Paris - GMT+1' },
+  { value: 'Asia/Tokyo', label: 'Tokyo - GMT+9' },
+  { value: 'Australia/Sydney', label: 'Sydney - GMT+10' }
+];
 
 interface UserSettingsForm {
   show_budgeting: boolean;
@@ -34,6 +52,8 @@ const Settings = () => {
     show_loans: false,
   });
   const [toggleLoading, setToggleLoading] = useState<Record<string, boolean>>({});
+  const [timezone, setTimezone] = useState<string>('Asia/Jakarta');
+  const [timezoneLoading, setTimezoneLoading] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -64,6 +84,7 @@ const Settings = () => {
             ...prev,
             profile: profileData
           }));
+          setTimezone((profileData as any).timezone || 'Asia/Jakarta');
         }
         
         const { data, error } = await supabase
@@ -168,6 +189,51 @@ const Settings = () => {
       });
     } finally {
       setToggleLoading({...toggleLoading, [setting]: false});
+    }
+  };
+
+  const handleTimezoneChange = async (newTimezone: string) => {
+    try {
+      setTimezoneLoading(true);
+      setTimezone(newTimezone);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Tidak Terautentikasi",
+          description: "Silakan login untuk mengubah pengaturan",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ timezone: newTimezone } as any)
+        .eq('id', session.user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Timezone berhasil diubah",
+      });
+    } catch (error) {
+      console.error('Error updating timezone:', error);
+      
+      // Revert timezone state on error
+      setTimezone((user?.profile as any)?.timezone || 'Asia/Jakarta');
+      
+      toast({
+        title: "Gagal Mengubah Timezone",
+        description: "Terjadi kesalahan saat mengubah timezone",
+        variant: "destructive"
+      });
+    } finally {
+      setTimezoneLoading(false);
     }
   };
   
@@ -440,6 +506,54 @@ const Settings = () => {
                     <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 group-hover:translate-x-1 transition-all duration-200" />
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Timezone Section */}
+        <section className="mb-8">
+          <div className="backdrop-blur-sm bg-white/80 rounded-xl shadow-sm border border-white/20 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100/50">
+              <h2 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                  <Globe className="w-3 h-3 text-white" />
+                </div>
+                Zona Waktu
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">Atur zona waktu untuk analisis dan laporan yang akurat</p>
+            </div>
+            
+            <div className="p-5">
+              <div className="flex flex-col gap-3">
+                <label className="text-sm font-medium text-gray-700">
+                  Pilih Zona Waktu
+                </label>
+                <Select 
+                  value={timezone} 
+                  onValueChange={handleTimezoneChange}
+                  disabled={timezoneLoading}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih zona waktu" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timezoneOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {timezoneLoading && (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Menyimpan perubahan...
+                  </div>
+                )}
+                <p className="text-xs text-gray-500">
+                  Zona waktu akan digunakan untuk menampilkan dan menyimpan waktu transaksi dengan benar.
+                </p>
               </div>
             </div>
           </div>

@@ -992,14 +992,14 @@ const Transactions = () => {
                             }}
                           >
                             <RotateCcw className="h-4 w-4 mr-2" />
-                            Reset Semua
+                            Reset
                           </Button>
                           <Button 
                             className="flex-1 h-12 rounded-2xl bg-gradient-to-r from-primary via-blue-500 to-blue-600 hover:from-primary/90 hover:via-blue-500/90 hover:to-blue-600/90 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold"
                             onClick={() => setShowFilters(false)}
                           >
                             <Filter className="h-4 w-4 mr-2" />
-                            Terapkan Filter
+                            Terapkan
                           </Button>
                         </div>
                       </div>

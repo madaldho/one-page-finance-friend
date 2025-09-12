@@ -13,6 +13,7 @@ export interface UserProfile {
   subscription_type?: 'free' | 'pro_6m' | 'pro_12m';
   trial_start?: string;
   trial_end?: string;
+  timezone?: string;
   created_at?: string;
   updated_at?: string;
 }

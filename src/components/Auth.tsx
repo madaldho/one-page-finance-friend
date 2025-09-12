@@ -21,6 +21,7 @@ const Auth = () => {
   const [checkingDevice, setCheckingDevice] = useState(true);
   const [forgotPassword, setForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [resetMethod, setResetMethod] = useState<'email' | 'whatsapp'>('email');
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -92,17 +93,58 @@ const Auth = () => {
     try {
       if (forgotPassword) {
         // Handle password reset request
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
-        });
+        if (resetMethod === 'whatsapp') {
+          // Reset via WhatsApp - create a reset link and send via WA
+          const baseUrl = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.includes('192.168') || window.location.hostname.includes('172.16')
+            ? `${window.location.protocol}//${window.location.host}`
+            : 'https://app.keuanganpribadi.web.id';
+            
+          const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${baseUrl}/auth-callback`,
+          });
 
-        if (error) throw error;
-        
-        setResetEmailSent(true);
-        toast({
-          title: "✉️ Email Reset Password Terkirim",
-          description: "Silakan periksa email Anda untuk instruksi reset password.",
-        });
+          if (error) throw error;
+          
+          // Create WhatsApp message with reset link
+          const resetLink = `${baseUrl}/reset-password`;
+          const phoneNumber = "6285794215084"; // Nomor WA admin - ganti sesuai kebutuhan
+          const message = `Halo Admin! Saya ingin reset password untuk akun ${email}. Mohon bantuan untuk reset password saya. Terima kasih!`;
+          const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+          
+          // Open WhatsApp
+          window.open(whatsappUrl, '_blank');
+          
+          setResetEmailSent(true);
+          toast({
+            title: "📱 Kontak Admin via WhatsApp",
+            description: "Anda akan diarahkan ke WhatsApp admin untuk bantuan reset password.",
+          });
+        } else {
+          // Reset via email (existing method)
+          const isDevelopment = window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' || 
+                               window.location.hostname.includes('192.168') || 
+                               window.location.hostname.includes('172.16') ||
+                               window.location.port !== '';
+          
+          const baseUrl = isDevelopment
+            ? `${window.location.protocol}//${window.location.host}`
+            : 'https://app.keuanganpribadi.web.id';
+            
+          console.log('Reset password redirect URL:', `${baseUrl}/auth-callback`); // Debug log
+            
+          const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${baseUrl}/auth-callback`,
+          });
+
+          if (error) throw error;
+          
+          setResetEmailSent(true);
+          toast({
+            title: "✉️ Email Reset Password Terkirim",
+            description: "Silakan periksa email Anda untuk instruksi reset password.",
+          });
+        }
       } else if (isSignUp) {
         // Check if user exists before sign up
         const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
@@ -271,6 +313,7 @@ const Auth = () => {
   const toggleForgotPassword = () => {
     setForgotPassword(!forgotPassword);
     setResetEmailSent(false);
+    setResetMethod('email'); // Reset ke default saat toggle
   };
 
   // Tampilkan loading spinner saat mengecek perangkat
@@ -396,8 +439,10 @@ const Auth = () => {
           <p className="text-gray-600">
             {forgotPassword 
               ? resetEmailSent 
-                ? "Silakan cek email Anda untuk instruksi reset password"
-                : "Masukkan email Anda untuk menerima link reset password"
+                ? resetMethod === 'whatsapp' 
+                  ? "Anda akan diarahkan ke WhatsApp admin untuk bantuan reset password"
+                  : "Silakan cek email Anda untuk instruksi reset password"
+                : "Pilih metode reset password yang Anda inginkan"
               : isSignUp 
               ? "Daftar untuk mulai mengelola keuangan Anda"
               : "Masuk ke akun Anda untuk melanjutkan"
@@ -466,6 +511,60 @@ const Auth = () => {
           </div>
           )}
 
+          {/* Reset method selection - only show in forgot password mode and before email sent */}
+          {forgotPassword && !resetEmailSent && (
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">
+                Pilih Metode Reset Password
+              </label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="reset-email"
+                    name="resetMethod"
+                    value="email"
+                    checked={resetMethod === 'email'}
+                    onChange={(e) => setResetMethod(e.target.value as 'email' | 'whatsapp')}
+                    className="text-amber-500 focus:ring-amber-500"
+                  />
+                  <label htmlFor="reset-email" className="text-sm text-gray-700">
+                    📧 Reset via Email (Metode Default)
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    id="reset-whatsapp"
+                    name="resetMethod"
+                    value="whatsapp"
+                    checked={resetMethod === 'whatsapp'}
+                    onChange={(e) => setResetMethod(e.target.value as 'email' | 'whatsapp')}
+                    className="text-green-500 focus:ring-green-500"
+                  />
+                  <label htmlFor="reset-whatsapp" className="text-sm text-gray-700">
+                    📱 Kontak Admin via WhatsApp (Bantuan Langsung)
+                  </label>
+                </div>
+              </div>
+              {resetMethod === 'whatsapp' && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-700">
+                    💡 Anda akan diarahkan ke WhatsApp admin untuk bantuan reset password secara langsung. 
+                    Admin akan membantu mereset password Anda dengan cepat.
+                  </p>
+                </div>
+              )}
+              {resetMethod === 'email' && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-700">
+                    📧 Link reset password akan dikirim ke email Anda. Periksa inbox dan folder spam.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Remember device checkbox only on login */}
           {!isSignUp && !forgotPassword && !resetEmailSent && (
             <div className="flex items-center justify-between">
@@ -503,7 +602,7 @@ const Auth = () => {
                 <span>Memproses...</span>
               </>
             ) : forgotPassword ? (
-              resetEmailSent ? "Kirim Ulang" : "Kirim Link Reset"
+              resetEmailSent ? "Kirim Ulang" : resetMethod === 'whatsapp' ? "Kontak Admin via WhatsApp" : "Kirim Link Reset Email"
             ) : isSignUp ? (
               "Daftar Sekarang"
             ) : (
@@ -556,6 +655,19 @@ const Auth = () => {
             </>
           )}
         </form>
+        
+        {/* Forgot Password Link - only show in login mode */}
+        {!isSignUp && !forgotPassword && (
+          <p className="mt-4 text-center text-sm text-gray-600">
+            <button
+              type="button"
+              onClick={toggleForgotPassword}
+              className="font-medium hover:underline text-amber-600 hover:text-amber-700"
+            >
+              Lupa Password?
+            </button>
+          </p>
+        )}
         
         {/* Toggle between signup and login */}
         {!forgotPassword && (

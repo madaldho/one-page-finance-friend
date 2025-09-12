@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { ChevronLeft, Calendar, X, ArrowDown, ArrowLeftRight, Wallet, Tag, MessageSquareText, PlusCircle, CheckCircle, CreditCard } from "lucide-react";
+import { ChevronLeft, Calendar, Clock, X, ArrowDown, ArrowLeftRight, Wallet, Tag, MessageSquareText, PlusCircle, CheckCircle, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -84,6 +84,7 @@ interface TransactionFormData {
   amount: number;
   category: string;
   date: string;
+  time: string;
   wallet_id: string;
   description: string;
   source_wallet: string;
@@ -106,6 +107,8 @@ const TransactionPage = () => {
   const [showCategoryAlert, setShowCategoryAlert] = useState(false);
   const [showWalletAlert, setShowWalletAlert] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showTimeField, setShowTimeField] = useState(false);
+  const [userTimezone, setUserTimezone] = useState<string>('Asia/Jakarta');
 
   const form = useForm<TransactionFormData>({
     defaultValues: {
@@ -113,6 +116,7 @@ const TransactionPage = () => {
       amount: 0,
       category: "",
       date: new Date().toISOString().split("T")[0],
+      time: new Date().toTimeString().slice(0, 5), // HH:MM format
       wallet_id: "",
       description: "",
       source_wallet: "",
@@ -155,6 +159,14 @@ const TransactionPage = () => {
         form.setValue('date', data.date || new Date().toISOString().split('T')[0]);
         form.setValue('description', data.description || '');
         
+        // Extract time from created_at or use current time
+        if (data.created_at) {
+          const createdDate = new Date(data.created_at);
+          const timeString = createdDate.toTimeString().slice(0, 5);
+          form.setValue('time', timeString);
+          setShowTimeField(true); // Show time field if editing existing transaction
+        }
+        
         if (data.type === 'transfer') {
           form.setValue('source_wallet', data.wallet_id || '');
           form.setValue('destination_wallet', data.destination_wallet_id || '');
@@ -187,6 +199,7 @@ const TransactionPage = () => {
     if (user) {
       fetchWallets();
       fetchCategories();
+      fetchUserTimezone();
       
       // If we have an ID, fetch the transaction data
       if (id) {
@@ -249,6 +262,31 @@ const TransactionPage = () => {
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchUserTimezone = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('timezone')
+        .eq('id', user.id)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching timezone:', error);
+        // Use default if error
+        setUserTimezone('Asia/Jakarta');
+        return;
+      }
+      
+      // Set timezone from database or default
+      setUserTimezone((data as any)?.timezone || 'Asia/Jakarta');
+    } catch (error) {
+      console.error('Error in fetchUserTimezone:', error);
+      setUserTimezone('Asia/Jakarta');
     }
   };
 
@@ -315,6 +353,65 @@ const TransactionPage = () => {
   const onSubmit = async (data: TransactionFormData) => {
     if (!user) return;
     
+    // Helper function to create timezone-aware datetime string
+    const createDateTimeString = () => {
+      // Get timezone offset for the user's selected timezone
+      const getTimezoneOffset = (timezone: string) => {
+        const now = new Date();
+        const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const targetTime = new Date(utc + (getOffsetMinutes(timezone) * 60000));
+        return getOffsetString(timezone);
+      };
+
+      const getOffsetMinutes = (timezone: string) => {
+        // Map common timezones to their offset in minutes
+        const timezoneOffsets: Record<string, number> = {
+          'Asia/Jakarta': 7 * 60,        // UTC+7
+          'Asia/Makassar': 8 * 60,       // UTC+8  
+          'Asia/Jayapura': 9 * 60,       // UTC+9
+          'Asia/Singapore': 8 * 60,      // UTC+8
+          'Asia/Kuala_Lumpur': 8 * 60,   // UTC+8
+          'Asia/Bangkok': 7 * 60,        // UTC+7
+          'Asia/Manila': 8 * 60,         // UTC+8
+          'UTC': 0,                      // UTC+0
+          'America/New_York': -5 * 60,   // UTC-5
+          'America/Los_Angeles': -8 * 60, // UTC-8
+          'Europe/London': 0,            // UTC+0
+          'Europe/Paris': 1 * 60,        // UTC+1
+          'Asia/Tokyo': 9 * 60,          // UTC+9
+          'Australia/Sydney': 10 * 60,   // UTC+10
+        };
+        return timezoneOffsets[timezone] || 7 * 60; // Default to Jakarta
+      };
+
+      const getOffsetString = (timezone: string) => {
+        const offsetMinutes = getOffsetMinutes(timezone);
+        const hours = Math.floor(Math.abs(offsetMinutes) / 60);
+        const minutes = Math.abs(offsetMinutes) % 60;
+        const sign = offsetMinutes >= 0 ? '+' : '-';
+        return `${sign}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      };
+
+      if (showTimeField && data.time) {
+        // Use user-selected date and time with user's timezone
+        const offsetString = getOffsetString(userTimezone);
+        const selectedDateTime = `${data.date}T${data.time}:00${offsetString}`;
+        return selectedDateTime;
+      } else {
+        // Use user-selected date but current time with user's timezone
+        const now = new Date();
+        const currentTime = new Intl.DateTimeFormat('sv-SE', {
+          timeZone: userTimezone,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        }).format(now);
+        
+        const offsetString = getOffsetString(userTimezone);
+        return `${data.date}T${currentTime}${offsetString}`;
+      }
+    };
+    
     // Tambahkan validasi untuk field wajib
     if (type !== "transfer" && !data.category) {
       toast({
@@ -369,6 +466,9 @@ const TransactionPage = () => {
         try {
           console.log("Memproses transfer antar wallet...");
           
+          // Prepare datetime for transfer transactions
+          const dateTimeString = createDateTimeString();
+          
           // 1. Create expense transaction from source wallet for the transfer amount
           const { data: expenseData, error: expenseError } = await supabase
           .from("transactions")
@@ -380,7 +480,8 @@ const TransactionPage = () => {
               category: "Transfer",
               description: data.description,
               user_id: user.id,
-              wallet_id: sourceWallet.id
+              wallet_id: sourceWallet.id,
+              created_at: dateTimeString
           })
             .select()
             .single();
@@ -403,7 +504,8 @@ const TransactionPage = () => {
               category: "Transfer",
               description: data.description,
               user_id: user.id,
-              wallet_id: destWallet.id
+              wallet_id: destWallet.id,
+              created_at: dateTimeString
             })
             .select()
             .single();
@@ -428,7 +530,8 @@ const TransactionPage = () => {
                 category: "Fee",
                 description: `Biaya admin pengiriman dari ${sourceWallet.name} ke ${destWallet.name}`,
                 user_id: user.id,
-                wallet_id: sourceWallet.id
+                wallet_id: sourceWallet.id,
+                created_at: dateTimeString
               })
               .select()
               .single();
@@ -453,7 +556,8 @@ const TransactionPage = () => {
                 category: "Fee",
                 description: `Biaya admin penerimaan di ${destWallet.name} dari ${sourceWallet.name}`,
                 user_id: user.id,
-                wallet_id: destWallet.id
+                wallet_id: destWallet.id,
+                created_at: dateTimeString
               })
               .select()
               .single();
@@ -520,7 +624,8 @@ const TransactionPage = () => {
           return;
         }
         
-        // Persiapkan data transaksi
+        // Persiapkan data transaksi dengan waktu
+        const dateTimeString = createDateTimeString();
         const transactionPayload = {
           title: data.title || (type === "income" ? "Pemasukan" : "Pengeluaran"),
           amount: data.amount,
@@ -529,7 +634,8 @@ const TransactionPage = () => {
           category: data.category,
           description: data.description,
           user_id: user.id,
-          wallet_id: data.wallet_id
+          wallet_id: data.wallet_id,
+          created_at: dateTimeString
         };
         
         if (isEditMode && id) {
@@ -821,35 +927,98 @@ const TransactionPage = () => {
         </div>
       </div>
 
-      {/* Alert Dialog untuk Kategori */}
+      {/* Alert Dialog untuk Kategori - Redesigned */}
       <AlertDialog open={showCategoryAlert} onOpenChange={setShowCategoryAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Belum Ada Kategori</AlertDialogTitle>
-            <AlertDialogDescription>
-              Anda belum memiliki kategori {type === "income" ? "pemasukan" : "pengeluaran"}. Buat kategori baru terlebih dahulu.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => navigate("/home")}>Kembali</AlertDialogCancel>
-            <AlertDialogAction onClick={createCategory}>Buat Kategori</AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent className="mx-auto max-w-[340px] sm:max-w-md rounded-2xl border-0 bg-white shadow-2xl">
+          <div className="relative overflow-hidden">
+            {/* Background Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-indigo-50"></div>
+            
+            <div className="relative p-6 sm:p-8 text-center">
+              {/* Icon Container */}
+              <div className="mx-auto mb-6 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center shadow-lg transform">
+                <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+              
+              {/* Title */}
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">
+                Oops! Belum Ada Kategori
+              </h3>
+              
+              {/* Description */}
+              <p className="text-sm sm:text-base text-gray-600 mb-8 leading-relaxed">
+                Anda belum memiliki kategori <span className="font-semibold text-purple-600">
+                {type === "income" ? "pemasukan" : "pengeluaran"}</span>. 
+                <br className="hidden sm:block" />
+                Mari buat kategori pertama Anda!
+              </p>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button
+                  onClick={() => navigate("/home")}
+                  className="flex-1 px-4 py-3 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-all duration-200 text-sm sm:text-base"
+                >
+                  Kembali ke Home
+                </button>
+                <button
+                  onClick={createCategory}
+                  className="flex-1 px-4 py-3 text-white bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg text-sm sm:text-base"
+                >
+                  Buat Kategori Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Alert Dialog untuk Wallet */}
+      {/* Alert Dialog untuk Wallet - Redesigned */}
       <AlertDialog open={showWalletAlert} onOpenChange={setShowWalletAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Belum Ada Wallet</AlertDialogTitle>
-            <AlertDialogDescription>
-              Anda belum memiliki wallet. Buat wallet baru terlebih dahulu.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => navigate("/home")}>Kembali</AlertDialogCancel>
-            <AlertDialogAction onClick={createWallet}>Buat Wallet</AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent className="mx-auto max-w-[340px] sm:max-w-md rounded-2xl border-0 bg-white shadow-2xl">
+          <div className="relative overflow-hidden">
+            {/* Background Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50"></div>
+            
+            <div className="relative p-6 sm:p-8 text-center">
+              {/* Icon Container */}
+              <div className="mx-auto mb-6 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg transform">
+                <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              
+              {/* Title */}
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3">
+                Oops! Belum Ada Wallet
+              </h3>
+              
+              {/* Description */}
+              <p className="text-sm sm:text-base text-gray-600 mb-8 leading-relaxed">
+                Anda belum memiliki <span className="font-semibold text-emerald-600">dompet</span> untuk menyimpan transaksi.
+                <br className="hidden sm:block" />
+                Mari buat dompet pertama Anda!
+              </p>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button
+                  onClick={() => navigate("/home")}
+                  className="flex-1 px-4 py-3 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-all duration-200 text-sm sm:text-base"
+                >
+                  Kembali ke Home
+                </button>
+                <button
+                  onClick={createWallet}
+                  className="flex-1 px-4 py-3 text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-lg text-sm sm:text-base"
+                >
+                  Buat Wallet Sekarang
+                </button>
+              </div>
+            </div>
+          </div>
         </AlertDialogContent>
       </AlertDialog>
 
@@ -920,7 +1089,18 @@ const TransactionPage = () => {
                               <Calendar className="h-5 w-5 text-blue-600" />
                             </div>
                             <div className="flex-1">
-                              <FormLabel className="text-sm font-semibold text-gray-700 mb-1 block">Tanggal</FormLabel>
+                              <div className="flex items-center justify-between mb-1">
+                                <FormLabel className="text-sm font-semibold text-gray-700">Tanggal</FormLabel>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowTimeField(!showTimeField)}
+                                  className="h-6 px-2 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                >
+                                  {showTimeField ? 'Sembunyikan Waktu' : 'Atur Waktu'}
+                                </Button>
+                              </div>
                               <FormControl>
                                 <Input
                                   type="date" 
@@ -936,6 +1116,38 @@ const TransactionPage = () => {
                     </FormItem>
                   )}
                 />
+
+                {/* Time Card - Show/Hide based on state */}
+                {showTimeField && (
+                  <FormField
+                    control={form.control}
+                    name="time"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-md hover:shadow-lg transition-all">
+                          <div className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <Clock className="h-5 w-5 text-purple-600" />
+                              </div>
+                              <div className="flex-1">
+                                <FormLabel className="text-sm font-semibold text-gray-700 mb-1 block">Waktu</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="time" 
+                                    {...field}
+                                    className="border-0 p-0 h-auto focus-visible:ring-0 bg-transparent text-gray-900 font-medium"
+                                  />
+                                </FormControl>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Category Card untuk income/expense */}
                 {type !== "transfer" && (
