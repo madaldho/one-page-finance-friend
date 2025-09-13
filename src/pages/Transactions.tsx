@@ -1371,18 +1371,6 @@ const Transactions = () => {
                 </div>
             <p className="text-gray-500 font-medium">Tidak ada transaksi</p>
             <p className="text-gray-400 text-sm">Tambahkan transaksi baru untuk melihat rekap keuangan Anda</p>
-            <Button
-              variant="default"
-              size="sm"
-              className="mt-4"
-              onClick={() => {
-                setTransactionType('expense');
-                setShowAddTransaction(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Transaksi
-            </Button>
           </div>
         ) : (
           <TransactionList
