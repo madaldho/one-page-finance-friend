@@ -168,23 +168,15 @@ const FeaturesSection = ({
       return;
     }
 
-    // Dapatkan nilai pengaturan saat ini (dari props atau local sebagai fallback)
-    const currentValue = effectiveSettings[setting];
-    
-    // Jika user free, tampilkan pesan upgrade (tidak peduli nilai setting)
+    // Jika user free, langsung redirect ke halaman upgrade
     if (!isProUser) {
-      const message = `Halo, saya ingin upgrade ke paket Pro untuk menggunakan fitur ${
-        setting === 'show_budgeting' ? 'Anggaran' : 
-        setting === 'show_savings' ? 'Tabungan' : 'Hutang & Piutang'
-      } di aplikasi Keuangan Pribadi.`;
-      const whatsappUrl = `https://wa.me/6285794215084?text=${encodeURIComponent(message)}`;
-      
-      // Debounced WhatsApp opening untuk iOS Safari compatibility
-      setTimeout(() => {
-        window.open(whatsappUrl, '_blank');
-      }, 200);
+      console.log(`Free user trying to access ${setting}, redirecting to upgrade page`);
+      navigate('/upgrade');
       return;
     }
+
+    // Dapatkan nilai pengaturan saat ini (dari props atau local sebagai fallback)
+    const currentValue = effectiveSettings[setting];
 
     // Untuk Pro user, lakukan toggle normal dengan debouncing
     try {
@@ -305,7 +297,7 @@ const FeaturesSection = ({
               description="Atur dan pantau anggaran keuangan kamu"
               checked={effectiveSettings.show_budgeting}
               onToggle={() => handleToggleClick('show_budgeting')}
-              managementLink="/budgets"
+              managementLink={isProUser ? "/budgets" : undefined}
               directNavigation={false}
               loading={toggleLoading.show_budgeting}
               disabled={!isProUser && !effectiveSettings.show_budgeting}
@@ -320,7 +312,7 @@ const FeaturesSection = ({
               description="Atur target dan pantau tabungan kamu"
               checked={effectiveSettings.show_savings}
               onToggle={() => handleToggleClick('show_savings')}
-              managementLink="/savings"
+              managementLink={isProUser ? "/savings" : undefined}
               directNavigation={false}
               loading={toggleLoading.show_savings}
               disabled={!isProUser && !effectiveSettings.show_savings}
@@ -335,7 +327,7 @@ const FeaturesSection = ({
               description="Kelola data hutang dan piutang"
               checked={effectiveSettings.show_loans}
               onToggle={() => handleToggleClick('show_loans')}
-              managementLink="/loans"
+              managementLink={isProUser ? "/loans" : undefined}
               directNavigation={false}
               loading={toggleLoading.show_loans}
               disabled={!isProUser && !effectiveSettings.show_loans}

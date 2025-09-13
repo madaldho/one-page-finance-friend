@@ -27,6 +27,7 @@ interface WalletCardProps {
   onEdit?: (wallet: Wallet) => void;
   onDelete?: (id: string) => void;
   onSuccess?: () => void;
+  isBalanceVisible?: boolean; // Tambah prop untuk visibility saldo
 }
 
 // Function to get the appropriate wallet icon based on type
@@ -42,11 +43,22 @@ export function getWalletIcon(type: string) {
   }
 }
 
-export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardProps) {
+export function WalletCard({ wallet, onEdit, onDelete, onSuccess, isBalanceVisible = true }: WalletCardProps) {
   const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const { toast } = useToast();
+
+  // Fungsi untuk format saldo dengan visibility
+  const formatBalanceWithVisibility = (amount: number) => {
+    if (isBalanceVisible) {
+      return formatCurrency(amount);
+    } else {
+      // Ganti dengan bintang berdasarkan panjang nominalnya
+      const formatted = formatCurrency(amount);
+      return formatted.replace(/\d/g, '*');
+    }
+  };
 
   const cardStyle = (wallet as unknown as { gradient?: string }).gradient 
     ? { background: `linear-gradient(135deg, ${(wallet as unknown as { gradient?: string }).gradient})` }
@@ -180,7 +192,7 @@ export function WalletCard({ wallet, onEdit, onDelete, onSuccess }: WalletCardPr
 
             <div className="space-y-1 flex-1 flex flex-col justify-end">
               <p className="text-sm sm:text-lg lg:text-xl font-bold leading-tight break-words text-white drop-shadow-lg">
-                {formatCurrency(wallet.balance)}
+                {formatBalanceWithVisibility(wallet.balance)}
               </p>
               <div className="flex items-center gap-1">
                 <p className="text-[10px] sm:text-xs opacity-90 text-white font-medium">

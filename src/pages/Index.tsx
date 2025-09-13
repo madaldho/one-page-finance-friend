@@ -34,7 +34,9 @@ import {
   Umbrella,
   Percent,
   X,
-  PlayCircle
+  PlayCircle,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { Transaction, Wallet, Budget, Loan, Saving, Category } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -192,6 +194,9 @@ const Index = () => {
 
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
 
+  // State untuk hide/show saldo
+  const [isBalanceVisible, setIsBalanceVisible] = useState<boolean>(true);
+
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [currentStats, setCurrentStats] = useState<Array<{
     id?: string;
@@ -215,6 +220,14 @@ const Index = () => {
     if (!user) return;
     fetchData();
   }, [user]);
+
+  // Load preferensi visibility saldo dari localStorage
+  useEffect(() => {
+    const savedVisibility = localStorage.getItem('balanceVisibility');
+    if (savedVisibility !== null) {
+      setIsBalanceVisible(savedVisibility === 'true');
+    }
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -620,16 +633,30 @@ const Index = () => {
     navigate('/wallet-detail');
   };
 
+  // Fungsi untuk toggle visibility saldo
+  const toggleBalanceVisibility = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Mencegah navigate ke detail wallet
+    const newVisibility = !isBalanceVisible;
+    setIsBalanceVisible(newVisibility);
+    localStorage.setItem('balanceVisibility', newVisibility.toString());
+  };
+
+  // Fungsi untuk format saldo dengan masking
+  const formatBalanceWithVisibility = (amount: number) => {
+    if (isBalanceVisible) {
+      return formatCurrency(amount);
+    } else {
+      // Ganti dengan bintang berdasarkan panjang nominalnya
+      const formatted = formatCurrency(amount);
+      return formatted.replace(/\d/g, '*');
+    }
+  };
+
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-        {/* Animated Background Gradients */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 via-purple-400/20 to-pink-400/20 animate-gradient-x"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/40 to-transparent"></div>
-
-        <main className="container mx-auto px-4 pb-32 pt-2 relative z-10">
-          <Header />
-          <TutorialNotification />
+      <main className="container mx-auto px-4 md:px-6 lg:px-8 pb-32 pt-2 relative z-10 max-w-7xl">
+        <Header />
+        <TutorialNotification />
 
           {/* Modern Floating Action Buttons - tetap floating di bawah, z-index tinggi */}
           {/* ...existing code... */}
@@ -656,12 +683,26 @@ const Index = () => {
                         <p className="text-white/70 text-xs">{wallets.length} Dompet Aktif</p>
                       </div>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-white/60 group-hover:text-white/90 transition-colors" />
+                    <div className="flex items-center gap-3">
+                      {/* Icon Eye/Mata untuk toggle visibility */}
+                      <button
+                        onClick={toggleBalanceVisibility}
+                        className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm hover:bg-white/30 transition-colors group/eye"
+                        aria-label={isBalanceVisible ? "Sembunyikan saldo" : "Tampilkan saldo"}
+                      >
+                        {isBalanceVisible ? (
+                          <Eye className="h-5 w-5 text-white group-hover/eye:scale-110 transition-transform" />
+                        ) : (
+                          <EyeOff className="h-5 w-5 text-white group-hover/eye:scale-110 transition-transform" />
+                        )}
+                      </button>
+                      <ChevronRight className="h-5 w-5 text-white/60 group-hover:text-white/90 transition-colors" />
+                    </div>
                   </div>
                   
                   <div className="text-white">
                     <p className="text-3xl font-bold tracking-tight">
-                      {formatCurrency(
+                      {formatBalanceWithVisibility(
                         wallets.reduce((total, wallet) => total + wallet.balance, 0)
                       )}
                     </p>
@@ -713,6 +754,7 @@ const Index = () => {
                     <WalletCard
                       key={wallet.id}
                       wallet={wallet}
+                      isBalanceVisible={isBalanceVisible}
                       onEdit={handleEditWallet}
                       onDelete={async (id) => {
                         try {
@@ -1006,33 +1048,32 @@ const Index = () => {
           </section>
         </main>
 
-          {/* Modern Floating Action Buttons - floating fixed di bawah, z-index lebih tinggi dari nav */}
-          <div className="fixed bottom-24 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none">
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-3 flex gap-3 border border-white/20 pointer-events-auto">
-              <Button
-                className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
-                onClick={() => navigate("/transaction/income")}
-                aria-label="Tambah Pemasukan">
-                <Plus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Pemasukan</span>
-              </Button>
-              <Button
-                className="bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
-                onClick={() => navigate("/transaction/expense")}
-                aria-label="Tambah Pengeluaran">
-                <Minus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Pengeluaran</span>
-              </Button>
-              <Button
-                className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
-                onClick={() => navigate("/transaction/transfer")}
-                aria-label="Tambah Transfer">
-                <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Transfer</span>
-              </Button>
-            </div>
+        {/* Modern Floating Action Buttons - floating fixed di bawah, z-index lebih tinggi dari nav */}
+        <div className="fixed bottom-24 left-0 right-0 flex justify-center z-50 px-4 pointer-events-none">
+          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-3 flex gap-3 border border-white/20 pointer-events-auto">
+            <Button
+              className="bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
+              onClick={() => navigate("/transaction/income")}
+              aria-label="Tambah Pemasukan">
+              <Plus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Pemasukan</span>
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
+              onClick={() => navigate("/transaction/expense")}
+              aria-label="Tambah Pengeluaran">
+              <Minus className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Pengeluaran</span>
+            </Button>
+            <Button
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white w-12 h-12 sm:w-auto sm:px-6 sm:py-3 rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 border-0"
+              onClick={() => navigate("/transaction/transfer")}
+              aria-label="Tambah Transfer">
+              <ArrowRight className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Transfer</span>
+            </Button>
           </div>
-      </div>
+        </div>
     </Layout>
   );
 };
