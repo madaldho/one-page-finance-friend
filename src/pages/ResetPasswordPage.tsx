@@ -90,10 +90,17 @@ const ResetPasswordPage = () => {
             setError('Link reset tidak valid atau sudah kadaluarsa');
           } else if (data.session) {
             console.log('Session exchanged successfully');
-            toast({
-              title: 'Link reset password berhasil',
-              description: 'Silakan masukkan password baru Anda',
-            });
+            // Only show toast if this is actually from a password reset flow
+            // Check if there's also a type=recovery parameter
+            const queryParams = new URLSearchParams(location.search);
+            const isRecoveryType = queryParams.get('type') === 'recovery';
+            
+            if (isRecoveryType) {
+              toast({
+                title: 'Link reset password berhasil',
+                description: 'Silakan masukkan password baru Anda',
+              });
+            }
           }
         } catch (error) {
           console.error('Error exchanging code:', error);
@@ -120,10 +127,17 @@ const ResetPasswordPage = () => {
             setError('Link reset tidak valid atau sudah kadaluarsa');
           } else {
             console.log('Token verified successfully');
-            toast({
-              title: 'Link reset password berhasil',
-              description: 'Silakan masukkan password baru Anda',
-            });
+            // Only show toast if this is actually from a password reset flow
+            // Check if there's also a type=recovery parameter  
+            const queryParams = new URLSearchParams(location.search);
+            const isRecoveryType = queryParams.get('type') === 'recovery';
+            
+            if (isRecoveryType) {
+              toast({
+                title: 'Link reset password berhasil',
+                description: 'Silakan masukkan password baru Anda',
+              });
+            }
           }
         } catch (error) {
           console.error('Error verifying token:', error);

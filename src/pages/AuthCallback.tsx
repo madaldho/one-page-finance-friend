@@ -29,11 +29,18 @@ const AuthCallback = () => {
       try {
         // Check if this is a password reset callback
         const queryParams = new URLSearchParams(location.search);
+        const hashParams = new URLSearchParams(location.hash.substring(1));
         const isPasswordReset = queryParams.get('type') === 'recovery';
         const hasResetCode = queryParams.get('code') !== null;
         const hasToken = queryParams.get('token') !== null;
         
-        if (isPasswordReset || hasResetCode || hasToken) {
+        // Check for access_token in hash (OAuth callback indicator)
+        const hasAccessToken = hashParams.get('access_token') !== null;
+        const oauthProvider = hashParams.get('provider');
+        
+        // If there's an access token from OAuth (like Google), prioritize OAuth flow
+        // Only redirect to reset-password if it's explicitly a recovery type without OAuth token
+        if ((isPasswordReset || hasResetCode || hasToken) && !hasAccessToken) {
           // If it's a password reset, redirect to reset password page with the token
           console.log('Password reset detected, redirecting to reset-password page');
           navigate('/reset-password' + location.search + location.hash, { replace: true });
@@ -93,7 +100,7 @@ const AuthCallback = () => {
     };
     
     handleAuthCallback();
-  }, [navigate, toast, location.search]);
+  }, [navigate, toast, location.search, location.hash]);
 
   const ensureUserProfile = async (userId: string, email: string) => {
     try {
@@ -143,7 +150,7 @@ const AuthCallback = () => {
         // Try insert first
         const { data: insertedProfile, error: insertError } = await supabase
           .from('profiles')
-          .insert(newProfile)
+          .insert(newProfile as any)
           .select()
           .single();
           
@@ -153,7 +160,7 @@ const AuthCallback = () => {
           // Try upsert if insert fails
           const { data: upsertedProfile, error: upsertError } = await supabase
             .from('profiles')
-            .upsert(newProfile)
+            .upsert(newProfile as any)
             .select()
             .single();
             
