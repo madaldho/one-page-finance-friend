@@ -161,6 +161,9 @@ export interface Asset {
   current_value: number;
   purchase_date: string | null;
   purchase_year: number | null;
+  quantity?: number; // Optional for backward compatibility
+  unit_type?: string; // Optional for backward compatibility
+  is_divisible?: boolean; // Optional for backward compatibility
   created_at: string;
   updated_at: string;
 }
@@ -171,6 +174,23 @@ export interface AssetValueHistory {
   value: number;
   date: string;
   user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssetTransaction {
+  id: string;
+  user_id: string;
+  asset_id: string;
+  transaction_id: string | null;
+  amount: number;
+  admin_fee: number;
+  net_amount: number;
+  type: string;
+  date: string;
+  notes: string | null;
+  quantity_sold: number;
+  remaining_quantity: number | null;
   created_at: string;
   updated_at: string;
 }

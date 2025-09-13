@@ -78,8 +78,12 @@ export default function EditAssetPage() {
     name: asset.name,
     category: asset.category,
     initial_value: asset.initial_value,
+    current_value: asset.current_value,
     purchase_date: asset.purchase_date,
     purchase_year: asset.purchase_year,
+    quantity: asset.quantity || 1,
+    unit_type: asset.unit_type || 'unit',
+    is_divisible: asset.is_divisible || false,
   };
 
   return (

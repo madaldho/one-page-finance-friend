@@ -74,7 +74,7 @@ export default function AssetsPage() {
     try {
       setLoading(true)
       
-      // Fetch assets
+      // Fetch assets - only get active assets (not sold)
       const { data: assetData, error: assetError } = await supabase
         .from("assets")
         .select("*")

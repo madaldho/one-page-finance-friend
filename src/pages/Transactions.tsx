@@ -230,11 +230,75 @@ const Transactions = () => {
 
   const handleDeleteTransaction = async (ids: string[]) => {
     try {
-      await Promise.all(
-        ids.map(id => supabase.from('transactions').delete().eq('id', id))
-      );
+      // Process each transaction deletion separately
+      for (const id of ids) {
+        // Check if this is an asset sale transaction
+        const { data: transactionData, error: fetchError } = await supabase
+          .from('transactions')
+          .select('category, type')
+          .eq('id', id)
+          .single();
+        
+        if (fetchError) {
+          console.error('Error fetching transaction:', fetchError);
+          continue;
+        }
+        
+        if (transactionData?.category === 'asset_sale') {
+          // For asset sale transactions, we need to handle cleanup properly
+          
+          // First, try to find and delete associated asset transaction record
+          try {
+            const { error: assetTxDeleteError } = await supabase
+              .from('asset_transactions')
+              .delete()
+              .eq('transaction_id', id);
+            
+            if (assetTxDeleteError) {
+              console.error('Error deleting asset transaction:', assetTxDeleteError);
+            }
+          } catch (error) {
+            console.error('Error during asset transaction cleanup:', error);
+          }
+          
+          // Then delete the main transaction
+          const { error: deleteError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', id);
+          
+          if (deleteError) {
+            console.error('Error deleting asset sale transaction:', deleteError);
+            toast({
+              title: 'Error',
+              description: 'Gagal menghapus transaksi aset',
+              variant: 'destructive',
+            });
+            continue;
+          }
+          
+          toast({
+            title: 'Perhatian',
+            description: 'Transaksi aset telah dihapus. Aset terkait tidak akan dikembalikan.',
+            variant: 'default',
+          });
+        } else {
+          // Regular transaction deletion
+          const { error: deleteError } = await supabase
+            .from('transactions')
+            .delete()
+            .eq('id', id);
+          
+          if (deleteError) {
+            console.error('Error deleting transaction:', deleteError);
+            continue;
+          }
+        }
+      }
       
+      // Refresh the transactions list
       setTransactions(prev => prev.filter(t => !ids.includes(t.id)));
+      
       toast({
         title: 'Berhasil',
         description: `${ids.length > 1 ? `${ids.length} transaksi` : 'Transaksi'} berhasil dihapus`,

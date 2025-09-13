@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, CircleDollarSign, CreditCard, Wallet, Calculator } from "lucide-react";
+import { ArrowLeft, CircleDollarSign, CreditCard, Wallet } from "lucide-react";
 import { Asset } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/utils";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { 
@@ -48,9 +49,17 @@ export default function SellAssetPage() {
   
   // Form fields
   const [sellAmount, setSellAmount] = useState<number>(0);
+  const [sellQuantity, setSellQuantity] = useState<number>(1);
+  const [unitPrice, setUnitPrice] = useState<number>(0);
   const [adminFee, setAdminFee] = useState<number>(0);
   const [selectedWalletId, setSelectedWalletId] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  
+  // Slider states
+  const [sellPercentage, setSellPercentage] = useState<number>(100); // Default 100% (sell all)
+  const [sellMode, setSellMode] = useState<'percentage' | 'quantity'>('percentage');
+  const [isEditingPercentage, setIsEditingPercentage] = useState<boolean>(false);
+  const [isEditingQuantity, setIsEditingQuantity] = useState<boolean>(false);
   
   useEffect(() => {
     if (user && id) {
@@ -82,8 +91,24 @@ export default function SellAssetPage() {
         return;
       }
       
-      setAsset(assetData);
-      setSellAmount(assetData.current_value);
+      // Set as Asset type with fallback values for backward compatibility
+      const safeAsset = {
+        ...assetData,
+        quantity: (assetData as any).quantity || 1,
+        unit_type: (assetData as any).unit_type || (assetData.category === 'gold' ? 'grams' : assetData.category === 'stock' ? 'shares' : 'unit'),
+        is_divisible: (assetData as any).is_divisible !== undefined ? (assetData as any).is_divisible : (assetData.category === 'stock' || assetData.category === 'gold')
+      } as Asset;
+      
+      setAsset(safeAsset);
+      
+      // Set initial values based on asset quantity and value
+      const totalQuantity = safeAsset.quantity || 1;
+      const pricePerUnit = safeAsset.current_value / totalQuantity;
+      
+      setSellQuantity(totalQuantity); // Default sell all
+      setSellPercentage(100); // Default 100%
+      setUnitPrice(pricePerUnit);
+      setSellAmount(safeAsset.current_value);
       
       // Fetch wallets
       const { data: walletData, error: walletError } = await supabase
@@ -123,14 +148,133 @@ export default function SellAssetPage() {
     return labels[category as keyof typeof labels] || category;
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
+  const getUnitLabel = (unitType: string) => {
+    const labels = {
+      shares: "lembar",
+      grams: "gram",
+      unit: "unit",
+      lot: "lot",
+      kg: "kg",
+      meter: "meter",
+      m2: "m²",
+      buah: "buah",
+      pcs: "pcs",
+      botol: "botol",
+      kotak: "kotak",
+      koin: "koin",
+      token: "token"
+    };
+    return labels[unitType as keyof typeof labels] || unitType;
+  };
+  
+  // Handler for manual percentage input
+  const handleManualPercentageChange = (value: string) => {
+    const percentage = parseFloat(value) || 0;
+    const validPercentage = Math.min(Math.max(percentage, 0), 100);
+    setSellPercentage(validPercentage);
+    
+    if (!asset) return;
+    const totalQuantity = asset.quantity || 1;
+    const newQuantity = (totalQuantity * validPercentage) / 100;
+    setSellQuantity(newQuantity);
+    
+    const pricePerUnit = asset.current_value / totalQuantity;
+    const newSellAmount = newQuantity * pricePerUnit;
+    setSellAmount(newSellAmount);
+    setUnitPrice(pricePerUnit);
+  };
+
+  // Handler for manual quantity input
+  const handleManualQuantityChange = (value: string) => {
+    const quantity = parseFloat(value) || 0;
+    const maxQuantity = asset?.quantity || 1;
+    const validQuantity = Math.min(Math.max(quantity, 0), maxQuantity);
+    setSellQuantity(validQuantity);
+    
+    if (!asset) return;
+    const totalQuantity = asset.quantity || 1;
+    const percentage = (validQuantity / totalQuantity) * 100;
+    setSellPercentage(percentage);
+    
+    const pricePerUnit = asset.current_value / totalQuantity;
+    const newSellAmount = validQuantity * pricePerUnit;
+    setSellAmount(newSellAmount);
+    setUnitPrice(pricePerUnit);
+  };
+
+  // Handler for percentage slider
+  const handlePercentageChange = (value: number[]) => {
+    if (!asset) return;
+    const percentage = value[0];
+    setSellPercentage(percentage);
+    
+    const totalQuantity = asset.quantity || 1;
+    const newQuantity = (totalQuantity * percentage) / 100;
+    setSellQuantity(newQuantity);
+    
+    const pricePerUnit = asset.current_value / totalQuantity;
+    const newSellAmount = newQuantity * pricePerUnit;
+    setSellAmount(newSellAmount);
+    setUnitPrice(pricePerUnit);
+  };
+  
+  // Handler for quantity slider
+  const handleQuantitySliderChange = (value: number[]) => {
+    if (!asset) return;
+    const quantity = value[0];
+    setSellQuantity(quantity);
+    
+    const totalQuantity = asset.quantity || 1;
+    const percentage = (quantity / totalQuantity) * 100;
+    setSellPercentage(percentage);
+    
+    const pricePerUnit = asset.current_value / totalQuantity;
+    const newSellAmount = quantity * pricePerUnit;
+    setSellAmount(newSellAmount);
+    setUnitPrice(pricePerUnit);
+  };
+
+  const handleQuantityChange = (newQuantity: number) => {
+    if (!asset) return;
+    
+    // Validate quantity
+    const maxQuantity = asset.quantity || 1;
+    const validQuantity = Math.min(Math.max(newQuantity, 0), maxQuantity);
+    
+    setSellQuantity(validQuantity);
+    
+    // Update percentage
+    const percentage = (validQuantity / maxQuantity) * 100;
+    setSellPercentage(percentage);
+    
+    // Update amount
+    const pricePerUnit = asset.current_value / maxQuantity;
+    setSellAmount(validQuantity * pricePerUnit);
+    setUnitPrice(pricePerUnit);
+  };
+  
+  const handleUnitPriceChange = (newUnitPrice: number) => {
+    setUnitPrice(newUnitPrice);
+    setSellAmount(sellQuantity * newUnitPrice);
+  };  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!asset || !user || !selectedWalletId) return;
     
+    // Validation (simplified for now)
+    if (sellAmount <= 0) {
+      toast({
+        title: "Jumlah tidak valid",
+        description: "Jumlah yang dijual harus lebih dari 0",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     try {
       setSubmitting(true);
       
+      // For now, use traditional approach until migration is applied
       const netAmount = sellAmount - adminFee;
       const date = new Date().toISOString();
       
@@ -147,17 +291,22 @@ export default function SellAssetPage() {
       const newBalance = walletData ? parseFloat(walletData.balance.toString()) + netAmount : netAmount;
       
       // 3. Create transaction for asset sale
+      const isPartialSale = asset.is_divisible && sellQuantity < (asset.quantity || 1);
+      const saleDescription = isPartialSale 
+        ? `${sellQuantity.toFixed(asset.unit_type === 'shares' ? 0 : 2)} ${getUnitLabel(asset.unit_type || 'unit')} (${sellPercentage.toFixed(1)}%)`
+        : '';
+      
       const { data: transactionData, error: transactionError } = await supabase
         .from("transactions")
         .insert({
           user_id: user.id,
-          title: `Penjualan ${asset.name}`,
+          title: `Penjualan ${asset.name}${isPartialSale ? ` - ${saleDescription}` : ''}`,
           amount: netAmount,
           type: "income",
           date: date,
           category: "asset_sale",
           wallet_id: selectedWalletId,
-          description: notes || `Penjualan aset: ${asset.name} (${getCategoryLabel(asset.category)})`,
+          description: notes || `Penjualan aset: ${asset.name} (${getCategoryLabel(asset.category)})${isPartialSale ? ` - ${saleDescription}` : ''}`,
           fee: adminFee > 0 ? adminFee : null
         })
         .select("id")
@@ -165,7 +314,7 @@ export default function SellAssetPage() {
         
       if (transactionError) throw transactionError;
       
-      // 4. Update wallet balance manually instead of using RPC increment
+      // 4. Update wallet balance
       const { error: walletUpdateError } = await supabase
         .from("wallets")
         .update({ balance: newBalance })
@@ -173,71 +322,89 @@ export default function SellAssetPage() {
         
       if (walletUpdateError) throw walletUpdateError;
       
-      // 5. Create asset_transactions table if it doesn't exist yet (optional)
+      // 5. Create asset transaction record
       try {
-        // Check if the table exists first by attempting a select
-        const { count, error: checkTableError } = await supabase
-          .from('asset_transactions')
-          .select('*', { count: 'exact', head: true });
-        
-        // If table doesn't exist, create it
-        if (checkTableError && checkTableError.code === '42P01') { // PostgreSQL error code for undefined_table
-          // Create table via SQL (need admin rights for this)
-          // In practice, this should be done via migrations or backend setup
-          console.log("The asset_transactions table doesn't exist yet");
-        } else {
-          // Table exists, insert the record
-          await supabase
-            .from("asset_transactions")
-            .insert({
-              user_id: user.id,
-              asset_id: asset.id,
-              transaction_id: transactionData.id,
-              amount: sellAmount,
-              admin_fee: adminFee,
-              net_amount: netAmount,
-              type: "sale",
-              date: date,
-              notes: notes
-            });
-        }
+        await supabase
+          .from("asset_transactions")
+          .insert({
+            user_id: user.id,
+            asset_id: asset.id,
+            transaction_id: transactionData.id,
+            amount: sellAmount,
+            admin_fee: adminFee,
+            net_amount: netAmount,
+            type: "sale",
+            date: date,
+            notes: notes,
+            quantity_sold: sellQuantity,
+            remaining_quantity: (asset.quantity || 1) - sellQuantity
+          });
       } catch (error) {
         console.log("Error with asset_transactions table:", error);
-        // Continue anyway as this is not critical
+        // Continue anyway as this is not critical for now
       }
       
-      // 6. Delete asset
-      const { error: assetDeleteError } = await supabase
-        .from("assets")
-        .delete()
-        .eq("id", asset.id)
-        .eq("user_id", user.id);
-        
-      if (assetDeleteError) throw assetDeleteError;
+      // 6. Handle asset update/deletion based on sale type
+      const isFullSale = !asset.is_divisible || sellQuantity >= (asset.quantity || 1);
       
-      // 7. Delete asset history
-      const { error: historyDeleteError } = await supabase
-        .from("asset_value_history")
-        .delete()
-        .eq("asset_id", asset.id);
+      if (isFullSale) {
+        // Full sale: Delete asset completely
+        const { error: assetDeleteError } = await supabase
+          .from("assets")
+          .delete()
+          .eq("id", asset.id)
+          .eq("user_id", user.id);
+          
+        if (assetDeleteError) throw assetDeleteError;
         
-      if (historyDeleteError) {
-        console.error("Error deleting asset history:", historyDeleteError);
-        // Continue anyway as this is not critical
+        // Delete asset history
+        const { error: historyDeleteError } = await supabase
+          .from("asset_value_history")
+          .delete()
+          .eq("asset_id", asset.id);
+          
+        if (historyDeleteError) {
+          console.error("Error deleting asset history:", historyDeleteError);
+          // Continue anyway as this is not critical
+        }
+      } else {
+        // Partial sale: Update asset quantity and value
+        const remainingQuantity = (asset.quantity || 1) - sellQuantity;
+        const pricePerUnit = asset.current_value / (asset.quantity || 1);
+        const newCurrentValue = remainingQuantity * pricePerUnit;
+        
+        const { error: assetUpdateError } = await supabase
+          .from("assets")
+          .update({ 
+            quantity: remainingQuantity,
+            current_value: newCurrentValue,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", asset.id)
+          .eq("user_id", user.id);
+          
+        if (assetUpdateError) throw assetUpdateError;
       }
       
       toast({
         title: "Aset berhasil dijual",
-        description: `${asset.name} telah dijual dengan nilai ${formatCurrency(sellAmount)}`,
+        description: isFullSale 
+          ? `${asset.name} telah dijual sepenuhnya dengan nilai ${formatCurrency(sellAmount)}`
+          : `${sellQuantity.toFixed(asset.unit_type === 'shares' ? 0 : 2)} ${getUnitLabel(asset.unit_type || 'unit')} ${asset.name} berhasil dijual (${sellPercentage.toFixed(1)}%) dengan nilai ${formatCurrency(sellAmount)}`,
       });
       
-      navigate("/assets");
+      // Navigate appropriately based on sale type
+      if (isFullSale) {
+        navigate("/assets"); // Asset is gone, go to assets list
+      } else {
+        navigate(`/assets/${asset.id}`); // Partial sale, go back to asset detail
+      }
       
     } catch (error) {
       console.error("Error selling asset:", error);
       toast({
         title: "Gagal menjual aset",
-        description: "Terjadi kesalahan saat memproses penjualan aset",
+        description: error instanceof Error ? error.message : "Terjadi kesalahan saat memproses penjualan aset",
         variant: "destructive"
       });
     } finally {
@@ -337,69 +504,215 @@ export default function SellAssetPage() {
               </div>
               
               <div className="space-y-6">
-                {/* Nilai Jual */}
-                <div className="space-y-3">
-                  <Label htmlFor="sell-amount" className="text-sm font-semibold text-gray-700">Nilai Jual</Label>
-                  <div className="relative">
-                    <CircleDollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
-                    <CurrencyInput
-                      id="sell-amount"
-                      className="pl-12 h-12 bg-white/80 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 font-medium"
-                      placeholder="0"
-                      value={sellAmount}
-                      onChange={setSellAmount}
-                      showPrefix={false}
-                      required
-                    />
-                  </div>
-                  <div className="flex items-center gap-2 text-xs">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span className="text-gray-500">
-                      Nilai aset saat ini: <span className="font-medium text-gray-700">{formatCurrency(asset.current_value)}</span>
-                    </span>
+                {/* Informasi Aset - Simple Design */}
+                <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                  <h3 className="font-medium text-gray-700 mb-3">Informasi Aset</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-500">Jumlah Dimiliki</p>
+                      <p className="font-semibold text-gray-800">
+                        {asset.quantity} {getUnitLabel(asset.unit_type || 'unit')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Nilai Total</p>
+                      <p className="font-semibold text-gray-800">
+                        {formatCurrency(asset.current_value)}
+                      </p>
+                    </div>
                   </div>
                 </div>
+
+                {/* Slider Controls for Partial Sale - Simple Design */}
+                {asset.is_divisible && (
+                  <div className="space-y-4 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-gray-700">Jumlah Penjualan</h3>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSellMode('percentage')}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            sellMode === 'percentage' 
+                              ? 'bg-blue-500 text-white' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          %
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSellMode('quantity')}
+                          className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                            sellMode === 'quantity' 
+                              ? 'bg-blue-500 text-white' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {getUnitLabel(asset.unit_type || 'unit')}
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-gray-500 -mt-2">
+                      💡 Geser slider atau klik angka untuk edit manual
+                    </p>
+
+                    {/* Percentage Mode */}
+                    {sellMode === 'percentage' && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Persentase</span>
+                          {isEditingPercentage ? (
+                            <Input
+                              type="number"
+                              value={sellPercentage.toFixed(1)}
+                              onChange={(e) => handleManualPercentageChange(e.target.value)}
+                              onBlur={() => setIsEditingPercentage(false)}
+                              onKeyPress={(e) => e.key === 'Enter' && setIsEditingPercentage(false)}
+                              className="w-20 h-8 text-right text-sm"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              autoFocus
+                            />
+                          ) : (
+                            <span 
+                              className="font-semibold text-gray-800 cursor-pointer hover:bg-blue-50 hover:text-blue-600 px-2 py-1 rounded transition-colors border border-transparent hover:border-blue-200"
+                              onClick={() => setIsEditingPercentage(true)}
+                              title="Klik untuk edit manual"
+                            >
+                              {sellPercentage.toFixed(1)}% ✏️
+                            </span>
+                          )}
+                        </div>
+                        <Slider
+                          value={[sellPercentage]}
+                          onValueChange={handlePercentageChange}
+                          max={100}
+                          min={1}
+                          step={0.1}
+                          className="w-full"
+                        />
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                          <div>
+                            <p className="text-xs text-gray-500">Dijual</p>
+                            <p className="font-medium text-gray-800">
+                              {sellQuantity.toFixed(asset.unit_type === 'shares' ? 0 : 2)} {getUnitLabel(asset.unit_type || 'unit')}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Nilai</p>
+                            <p className="font-medium text-gray-800">
+                              {formatCurrency(sellAmount)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quantity Mode */}
+                    {sellMode === 'quantity' && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Jumlah</span>
+                          {isEditingQuantity ? (
+                            <Input
+                              type="number"
+                              value={sellQuantity.toFixed(asset.unit_type === 'shares' ? 0 : 2)}
+                              onChange={(e) => handleManualQuantityChange(e.target.value)}
+                              onBlur={() => setIsEditingQuantity(false)}
+                              onKeyPress={(e) => e.key === 'Enter' && setIsEditingQuantity(false)}
+                              className="w-24 h-8 text-right text-sm"
+                              min="0"
+                              max={asset.quantity || 1}
+                              step={asset.unit_type === 'shares' ? 1 : 0.01}
+                              autoFocus
+                            />
+                          ) : (
+                            <span 
+                              className="font-semibold text-gray-800 cursor-pointer hover:bg-blue-50 hover:text-blue-600 px-2 py-1 rounded transition-colors border border-transparent hover:border-blue-200"
+                              onClick={() => setIsEditingQuantity(true)}
+                              title="Klik untuk edit manual"
+                            >
+                              {sellQuantity.toFixed(asset.unit_type === 'shares' ? 0 : 2)} {getUnitLabel(asset.unit_type || 'unit')} ✏️
+                            </span>
+                          )}
+                        </div>
+                        <Slider
+                          value={[sellQuantity]}
+                          onValueChange={handleQuantitySliderChange}
+                          max={asset.quantity || 1}
+                          min={asset.unit_type === 'shares' ? 1 : 0.01}
+                          step={asset.unit_type === 'shares' ? 1 : 0.01}
+                          className="w-full"
+                        />
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                          <div>
+                            <p className="text-xs text-gray-500">Persentase</p>
+                            <p className="font-medium text-gray-800">
+                              {sellPercentage.toFixed(1)}%
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Nilai</p>
+                            <p className="font-medium text-gray-800">
+                              {formatCurrency(sellAmount)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Simple info for non-divisible assets */}
+                {!asset.is_divisible && (
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-600">
+                      Penjualan penuh: <span className="font-medium text-gray-800">{formatCurrency(asset.current_value)}</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Remove old complex fields and use clean design */}
                 
                 {/* Biaya Admin */}
-                <div className="space-y-3">
-                  <Label htmlFor="admin-fee" className="text-sm font-semibold text-gray-700">Biaya Admin/Pajak</Label>
-                  <div className="relative">
-                    <CircleDollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5 z-10" />
-                    <CurrencyInput
-                      id="admin-fee"
-                      className="pl-12 h-12 bg-white/80 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 font-medium"
-                      placeholder="0"
-                      value={adminFee}
-                      onChange={setAdminFee}
-                      showPrefix={false}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500">Masukkan biaya administrasi atau pajak yang dikenakan</p>
+                <div className="space-y-2">
+                  <Label htmlFor="admin-fee" className="text-sm font-medium text-gray-700">Biaya Admin/Pajak</Label>
+                  <CurrencyInput
+                    id="admin-fee"
+                    className="h-11 bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0"
+                    value={adminFee}
+                    onChange={setAdminFee}
+                    showPrefix={true}
+                  />
+                  <p className="text-xs text-gray-500">Biaya administrasi atau pajak yang dikenakan</p>
                 </div>
                 
                 {/* Pilih Wallet */}
-                <div className="space-y-3">
-                  <Label htmlFor="wallet" className="text-sm font-semibold text-gray-700">Masukkan Dana ke Dompet</Label>
-                  <Select
-                    value={selectedWalletId}
-                    onValueChange={setSelectedWalletId}
-                  >
-                    <SelectTrigger id="wallet" className="h-12 bg-white/80 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200">
+                <div className="space-y-2">
+                  <Label htmlFor="wallet" className="text-sm font-medium text-gray-700">Masukkan Dana ke Dompet</Label>
+                  <Select value={selectedWalletId} onValueChange={setSelectedWalletId}>
+                    <SelectTrigger id="wallet" className="h-11 bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500">
                       <SelectValue placeholder="Pilih dompet" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white/95 backdrop-blur-sm border border-white/20 rounded-xl shadow-lg">
+                    <SelectContent>
                       {wallets.map((wallet) => (
-                        <SelectItem key={wallet.id} value={wallet.id} className="cursor-pointer hover:bg-gray-50">
-                          <div className="flex items-center gap-3">
+                        <SelectItem key={wallet.id} value={wallet.id}>
+                          <div className="flex items-center gap-2">
                             <div 
-                              className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm"
+                              className="w-6 h-6 rounded flex items-center justify-center"
                               style={{ backgroundColor: wallet.color || '#6366f1' }}
                             >
-                              <Wallet className="h-4 w-4 text-white" />
+                              <Wallet className="h-3 w-3 text-white" />
                             </div>
                             <div>
-                              <div className="font-medium text-gray-800">{wallet.name}</div>
-                              <div className="text-xs text-gray-500">Saldo: {formatCurrency(wallet.balance)}</div>
+                              <span className="font-medium">{wallet.name}</span>
+                              <span className="text-xs text-gray-500 ml-2">
+                                {formatCurrency(wallet.balance)}
+                              </span>
                             </div>
                           </div>
                         </SelectItem>
@@ -409,79 +722,53 @@ export default function SellAssetPage() {
                 </div>
                 
                 {/* Catatan */}
-                <div className="space-y-3">
-                  <Label htmlFor="notes" className="text-sm font-semibold text-gray-700">Catatan (Opsional)</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="notes" className="text-sm font-medium text-gray-700">Catatan (Opsional)</Label>
                   <Input
                     id="notes"
                     placeholder="Catatan tentang penjualan"
-                    className="h-12 bg-white/80 border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                    className="h-11 bg-white border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
                 </div>
+
+                {/* Summary Box - Minimalis */}
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Nilai Jual</span>
+                      <span className="font-medium">{formatCurrency(sellAmount)}</span>
+                    </div>
+                    {adminFee > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Biaya Admin</span>
+                        <span className="font-medium text-red-600">-{formatCurrency(adminFee)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                      <span className="font-medium text-gray-700">Total Diterima</span>
+                      <span className="font-semibold text-green-600">{formatCurrency(sellAmount - adminFee)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           
-          {/* Ringkasan Penjualan - Card terpisah */}
-          <div className="backdrop-blur-sm bg-white/90 rounded-2xl shadow-lg border border-white/20 mb-6">
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="bg-purple-100 p-2 rounded-xl">
-                  <Calculator className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">Ringkasan Penjualan</h3>
-                  <p className="text-sm text-gray-500">Rincian total yang akan diterima</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span className="text-sm font-medium text-gray-700">Total Penjualan</span>
-                  </div>
-                  <span className="font-semibold text-lg text-gray-900">{formatCurrency(sellAmount)}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-3 border-b border-gray-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                    <span className="text-sm font-medium text-gray-700">Biaya Admin/Pajak</span>
-                  </div>
-                  <span className="font-semibold text-lg text-red-600">-{formatCurrency(adminFee)}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl px-4 border border-green-200">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-base font-semibold text-gray-800">Jumlah Diterima</span>
-                  </div>
-                  <span className="font-bold text-2xl text-green-600">{formatCurrency(netAmount)}</span>
-                </div>
-              </div>
-            </div>
-            
-         
-          
-          </div>
-          
+          {/* Submit Button - Clean Design */}
           <Button 
             type="submit" 
-            className="w-full h-14 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+            className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
             disabled={!selectedWalletId || sellAmount <= 0 || submitting}
           >
             {submitting ? (
-              <div className="flex items-center gap-3">
-                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
-                Memproses penjualan...
+              <div className="flex items-center gap-2">
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                Memproses...
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <CircleDollarSign className="h-5 w-5" />
-                Jual Aset
-              </div>
+              `Jual Aset - ${formatCurrency(sellAmount - adminFee)}`
             )}
           </Button>
         </form>

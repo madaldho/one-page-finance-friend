@@ -31,6 +31,9 @@ interface AssetData {
   current_value?: number;
   purchase_date?: string;
   purchase_year?: number;
+  quantity?: number;
+  unit_type?: string;
+  is_divisible?: boolean;
 }
 
 export const AssetForm = ({ isEditing, assetId, defaultValues }: {
@@ -42,6 +45,10 @@ export const AssetForm = ({ isEditing, assetId, defaultValues }: {
   const [category, setCategory] = useState(defaultValues?.category || '');
   const [initialValue, setInitialValue] = useState(defaultValues?.initial_value || 0);
   const [currentValue, setCurrentValue] = useState(defaultValues?.current_value || 0);
+  // Enable new fields for proper asset management
+  const [quantity, setQuantity] = useState(defaultValues?.quantity || 1);
+  const [unitType, setUnitType] = useState(defaultValues?.unit_type || 'unit');
+  const [isDivisible, setIsDivisible] = useState(defaultValues?.is_divisible || false);
   const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(
     defaultValues?.purchase_date ? new Date(defaultValues.purchase_date) : undefined
   );
@@ -50,14 +57,72 @@ export const AssetForm = ({ isEditing, assetId, defaultValues }: {
   const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
 
+  // Handle category change to auto-set divisibility and unit type
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory);
+    
+    // Auto-set divisibility and unit type based on category
+    switch (newCategory) {
+      case 'stock':
+        setIsDivisible(true);
+        setUnitType('shares');
+        setQuantity(1);
+        break;
+      case 'gold':
+        setIsDivisible(true);
+        setUnitType('grams');
+        setQuantity(1);
+        break;
+      case 'property':
+      case 'vehicle':
+        setIsDivisible(false);
+        setUnitType('unit');
+        setQuantity(1);
+        break;
+      case 'other':
+        setIsDivisible(true); // Allow divisible for flexibility
+        setUnitType('unit'); // Default to unit, but can be changed
+        setQuantity(1);
+        break;
+      default:
+        setIsDivisible(false);
+        setUnitType('unit');
+        setQuantity(1);
+        break;
+    }
+  };
+
+  const getUnitLabel = (unitType: string) => {
+    const labels = {
+      shares: "lembar",
+      grams: "gram",
+      units: "unit",
+      unit: "unit"
+    };
+    return labels[unitType as keyof typeof labels] || "unit";
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      // Validasi data
+      // Validasi data dasar
       if (!name || !category || initialValue <= 0 || currentValue <= 0) {
         toast.error("Mohon lengkapi semua field yang diperlukan");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Validasi untuk field quantity dan unit type
+      if (quantity <= 0) {
+        toast.error("Jumlah asset harus lebih dari 0");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (category === 'other' && !unitType) {
+        toast.error("Mohon pilih satuan untuk kategori lainnya");
         setIsLoading(false);
         return;
       }
@@ -74,6 +139,9 @@ export const AssetForm = ({ isEditing, assetId, defaultValues }: {
             category,
             initial_value: initialValue,
             current_value: currentValue,
+            quantity,
+            unit_type: unitType,
+            is_divisible: isDivisible,
             purchase_date: purchaseDate ? purchaseDate.toISOString().split('T')[0] : null,
             purchase_year: purchaseYear ? parseInt(purchaseYear) : null,
             updated_at: new Date().toISOString()
@@ -89,6 +157,9 @@ export const AssetForm = ({ isEditing, assetId, defaultValues }: {
             category,
             initial_value: initialValue,
             current_value: currentValue,
+            quantity,
+            unit_type: unitType,
+            is_divisible: isDivisible,
             purchase_date: purchaseDate ? purchaseDate.toISOString().split('T')[0] : null,
             purchase_year: purchaseYear ? parseInt(purchaseYear) : null,
             user_id: user!.id
@@ -179,7 +250,7 @@ export const AssetForm = ({ isEditing, assetId, defaultValues }: {
                 <Label htmlFor="category">Kategori</Label>
                 <Select
                   value={category}
-                  onValueChange={setCategory}
+                  onValueChange={handleCategoryChange}
                   required
                 >
                   <SelectTrigger id="category" aria-label="Pilih kategori aset">
@@ -194,6 +265,94 @@ export const AssetForm = ({ isEditing, assetId, defaultValues }: {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Quantity and Unit Type Fields */}
+              {(category === 'stock' || category === 'gold' || category === 'other') && (
+                <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm font-semibold text-blue-800">
+                      {category === 'stock' ? 'Informasi Saham' : 
+                       category === 'gold' ? 'Informasi Emas' : 
+                       'Informasi Asset'}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="quantity">
+                        Jumlah {category === 'stock' ? 'Lot/Lembar' : 
+                                category === 'gold' ? 'Gram' :
+                                category === 'other' ? (
+                                  unitType === 'lot' ? 'Lot' :
+                                  unitType === 'lembar' ? 'Lembar' :
+                                  unitType === 'gram' ? 'Gram' :
+                                  unitType === 'kg' ? 'Kilogram' :
+                                  unitType === 'meter' ? 'Meter' :
+                                  unitType === 'm2' ? 'Meter Persegi' :
+                                  unitType === 'buah' ? 'Buah' :
+                                  unitType === 'pcs' ? 'Pieces' :
+                                  unitType === 'botol' ? 'Botol' :
+                                  unitType === 'kotak' ? 'Kotak' :
+                                  unitType === 'koin' ? 'Koin' :
+                                  unitType === 'token' ? 'Token' :
+                                  'Unit'
+                                ) : 'Unit'}
+                      </Label>
+                      <Input
+                        id="quantity"
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(parseFloat(e.target.value) || 1)}
+                        min="0.01"
+                        step={category === 'stock' ? '1' : '0.01'}
+                        placeholder="0"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="unitType">Satuan</Label>
+                      {category === 'other' ? (
+                        <Select value={unitType} onValueChange={setUnitType}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih satuan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unit">Unit</SelectItem>
+                            <SelectItem value="lot">Lot</SelectItem>
+                            <SelectItem value="lembar">Lembar</SelectItem>
+                            <SelectItem value="gram">Gram</SelectItem>
+                            <SelectItem value="kg">Kilogram</SelectItem>
+                            <SelectItem value="meter">Meter</SelectItem>
+                            <SelectItem value="m2">Meter Persegi</SelectItem>
+                            <SelectItem value="buah">Buah</SelectItem>
+                            <SelectItem value="pcs">Pieces</SelectItem>
+                            <SelectItem value="botol">Botol</SelectItem>
+                            <SelectItem value="kotak">Kotak</SelectItem>
+                            <SelectItem value="koin">Koin (Crypto)</SelectItem>
+                            <SelectItem value="token">Token (Crypto)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          id="unitType"
+                          value={category === 'stock' ? 'lembar' : 
+                                 category === 'gold' ? 'gram' : unitType}
+                          disabled
+                          className="bg-gray-100"
+                        />
+                      )}
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-blue-600">
+                    {category === 'stock' ? 'Masukkan jumlah lot atau lembar saham yang Anda miliki' :
+                     category === 'gold' ? 'Masukkan berat emas dalam gram' :
+                     'Masukkan jumlah dan pilih satuan yang sesuai (unit, lot, gram, koin crypto, dll)'}
+                  </p>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="initialValue">Nilai Awal</Label>
