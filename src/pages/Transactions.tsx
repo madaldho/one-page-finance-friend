@@ -1225,90 +1225,138 @@ const Transactions = () => {
           </div>
         )}
 
-        {/* Enhanced Summary Cards */}
-        <div className="grid grid-cols-3 gap-3 mb-8 mt-8">
-          {/* Pengeluaran Card */}
-          <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-xl transition-all duration-200">
-            <CardContent className="p-4">
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-1.5 h-6 bg-gradient-to-b from-red-400 to-red-600 rounded-full"></div>
-                  <div className="h-8 w-8 rounded-xl bg-red-100 flex items-center justify-center">
-                    <ArrowDownRight className="h-4 w-4 text-red-600" />
-                  </div>
-                </div>
-                <p className="text-xs font-semibold text-red-700 mb-1">Pengeluaran</p>
-                <p className="text-sm font-bold text-red-800 mb-1">
-                  {formatCurrency(
-                    filteredTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0),
-                  )}
-                </p>
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-red-600">
-                    {filteredTransactions.filter((t) => t.type === "expense").length} transaksi
-                  </p>
-                  <div className="h-1.5 w-6 bg-red-200 rounded-full">
-                    <div className="h-full bg-red-500 rounded-full" style={{ width: '75%' }}></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Enhanced Summary Cards - Mobile Optimized */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-8 mt-8">
+          {(() => {
+            const expenseAmount = filteredTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+            const incomeAmount = filteredTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
+            const netAmount = incomeAmount - expenseAmount;
+            const expenseCount = filteredTransactions.filter((t) => t.type === "expense").length;
+            const incomeCount = filteredTransactions.filter((t) => t.type === "income").length;
+            
+            // Fungsi untuk format nominal singkat di mobile
+            const formatCompactCurrency = (amount: number): string => {
+              const formatted = formatCurrency(amount);
+              // Untuk mobile, potong jika lebih dari 12 karakter
+              if (formatted.length > 12) {
+                if (amount >= 1000000000) { // Milyar
+                  return `Rp ${(amount / 1000000000).toFixed(1)}M`;
+                } else if (amount >= 1000000) { // Juta
+                  return `Rp ${(amount / 1000000).toFixed(1)}jt`;
+                } else if (amount >= 1000) { // Ribu
+                  return `Rp ${(amount / 1000).toFixed(0)}rb`;
+                }
+              }
+              return formatted;
+            };
 
-          {/* Pemasukan Card */}
-          <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-xl transition-all duration-200">
-            <CardContent className="p-4">
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-1.5 h-6 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
-                  <div className="h-8 w-8 rounded-xl bg-green-100 flex items-center justify-center">
-                    <ArrowUpRight className="h-4 w-4 text-green-600" />
-                  </div>
-                </div>
-                <p className="text-xs font-semibold text-green-700 mb-1">Pemasukan</p>
-                <p className="text-sm font-bold text-green-800 mb-1">
-                  {formatCurrency(
-                    filteredTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0),
-                  )}
-                </p>
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-green-600">
-                    {filteredTransactions.filter((t) => t.type === "income").length} transaksi
-                  </p>
-                  <div className="h-1.5 w-6 bg-green-200 rounded-full">
-                    <div className="h-full bg-green-500 rounded-full" style={{ width: '60%' }}></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            return (
+              <>
+                {/* Pengeluaran Card */}
+                <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-red-50 to-red-100/50 hover:shadow-xl transition-all duration-200">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <div className="w-1.5 h-5 sm:h-6 bg-gradient-to-b from-red-400 to-red-600 rounded-full"></div>
+                        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-xl bg-red-100 flex items-center justify-center">
+                          <ArrowDownRight className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                        </div>
+                      </div>
+                      <p className="text-[10px] sm:text-xs font-semibold text-red-700 mb-1">Pengeluaran</p>
+                      <div className="min-h-[2.5rem] sm:min-h-[3rem] flex items-center">
+                        <div className="w-full">
+                          {/* Desktop version */}
+                          <p className="hidden sm:block text-sm font-bold text-red-800 leading-tight">
+                            {formatCurrency(expenseAmount)}
+                          </p>
+                          {/* Mobile version */}
+                          <p className="block sm:hidden text-xs font-bold text-red-800 leading-tight" title={formatCurrency(expenseAmount)}>
+                            {formatCompactCurrency(expenseAmount)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[9px] sm:text-[10px] text-red-600">
+                          {expenseCount} transaksi
+                        </p>
+                        <div className="h-1 sm:h-1.5 w-4 sm:w-6 bg-red-200 rounded-full">
+                          <div className="h-full bg-red-500 rounded-full" style={{ width: '75%' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-          {/* Net Balance Card */}
-          <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100/50 hover:shadow-xl transition-all duration-200">
-            <CardContent className="p-4">
-              <div className="flex flex-col">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-1.5 h-6 bg-gradient-to-b from-slate-400 to-slate-600 rounded-full"></div>
-                  <div className="h-8 w-8 rounded-xl bg-slate-100 flex items-center justify-center">
-                    <Wallet className="h-4 w-4 text-slate-600" />
-                  </div>
-                </div>
-                <p className="text-xs font-semibold text-slate-700 mb-1">Saldo Bersih</p>
-                <p className="text-sm font-bold text-slate-800 mb-1">
-                  {formatCurrency(
-                    filteredTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0) -
-                      filteredTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0),
-                  )}
-                </p>
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-slate-600">{filteredTransactions.length} total</p>
-                  <div className="h-1.5 w-6 bg-slate-200 rounded-full">
-                    <div className="h-full bg-slate-500 rounded-full" style={{ width: '85%' }}></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                {/* Pemasukan Card */}
+                <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-xl transition-all duration-200">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <div className="w-1.5 h-5 sm:h-6 bg-gradient-to-b from-green-400 to-green-600 rounded-full"></div>
+                        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-xl bg-green-100 flex items-center justify-center">
+                          <ArrowUpRight className="h-3 w-3 sm:h-4 sm:w-4 text-green-600" />
+                        </div>
+                      </div>
+                      <p className="text-[10px] sm:text-xs font-semibold text-green-700 mb-1">Pemasukan</p>
+                      <div className="min-h-[2.5rem] sm:min-h-[3rem] flex items-center">
+                        <div className="w-full">
+                          {/* Desktop version */}
+                          <p className="hidden sm:block text-sm font-bold text-green-800 leading-tight">
+                            {formatCurrency(incomeAmount)}
+                          </p>
+                          {/* Mobile version */}
+                          <p className="block sm:hidden text-xs font-bold text-green-800 leading-tight" title={formatCurrency(incomeAmount)}>
+                            {formatCompactCurrency(incomeAmount)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[9px] sm:text-[10px] text-green-600">
+                          {incomeCount} transaksi
+                        </p>
+                        <div className="h-1 sm:h-1.5 w-4 sm:w-6 bg-green-200 rounded-full">
+                          <div className="h-full bg-green-500 rounded-full" style={{ width: '60%' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Net Balance Card */}
+                <Card className="border-0 shadow-lg overflow-hidden bg-gradient-to-br from-slate-50 to-gray-100/50 hover:shadow-xl transition-all duration-200">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex flex-col">
+                      <div className="flex items-center justify-between mb-2 sm:mb-3">
+                        <div className="w-1.5 h-5 sm:h-6 bg-gradient-to-b from-slate-400 to-slate-600 rounded-full"></div>
+                        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-xl bg-slate-100 flex items-center justify-center">
+                          <Wallet className="h-3 w-3 sm:h-4 sm:w-4 text-slate-600" />
+                        </div>
+                      </div>
+                      <p className="text-[10px] sm:text-xs font-semibold text-slate-700 mb-1">Saldo Bersih</p>
+                      <div className="min-h-[2.5rem] sm:min-h-[3rem] flex items-center">
+                        <div className="w-full">
+                          {/* Desktop version */}
+                          <p className="hidden sm:block text-sm font-bold text-slate-800 leading-tight">
+                            {formatCurrency(netAmount)}
+                          </p>
+                          {/* Mobile version */}
+                          <p className="block sm:hidden text-xs font-bold text-slate-800 leading-tight" title={formatCurrency(netAmount)}>
+                            {formatCompactCurrency(netAmount)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[9px] sm:text-[10px] text-slate-600">{filteredTransactions.length} total</p>
+                        <div className="h-1 sm:h-1.5 w-4 sm:w-6 bg-slate-200 rounded-full">
+                          <div className="h-full bg-slate-500 rounded-full" style={{ width: '85%' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
         </div>
         {/* Main Content with TransactionList */}
               {loading ? (
