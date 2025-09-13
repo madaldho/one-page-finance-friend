@@ -87,6 +87,8 @@ interface ExtendedTransaction extends BaseTransaction {
   wallet_name?: string;
   destination_wallet_name?: string;
   selected?: boolean;
+  // Pastikan category dari BaseTransaction bisa diakses
+  category: string;
 }
 
 interface Wallet {
@@ -207,6 +209,13 @@ const Transactions = () => {
       
       // Cast hasil dari enrichment ke type ExtendedTransaction[]
       setTransactions(enrichedTransactions as unknown as ExtendedTransaction[]);
+      
+      // Debug: Log sample transaction date to see format
+      if (enrichedTransactions.length > 0) {
+        console.log('Sample transaction date format:', enrichedTransactions[0].date);
+        console.log('Type of date:', typeof enrichedTransactions[0].date);
+        console.log('Date object conversion:', new Date(enrichedTransactions[0].date));
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -306,20 +315,28 @@ const Transactions = () => {
       }
       
       // Filter berdasarkan kategori IDs (jika ada yang dipilih)
-      if (selectedCategoryIds.length > 0 && !selectedCategoryIds.includes(transaction.category as string)) {
+      if (selectedCategoryIds.length > 0 && !selectedCategoryIds.includes(transaction.category)) {
         return false;
       }
       
       // Rentang tanggal
-      if (dateRangeFilter?.from && new Date(transaction.date) < dateRangeFilter.from) {
-        return false;
-      }
-      
-      if (dateRangeFilter?.to) {
-        const toDateWithEndOfDay = new Date(dateRangeFilter.to);
-        toDateWithEndOfDay.setHours(23, 59, 59, 999);
-        if (new Date(transaction.date) > toDateWithEndOfDay) {
-          return false;
+      if (dateRangeFilter?.from || dateRangeFilter?.to) {
+        // Normalisasi tanggal transaksi ke format YYYY-MM-DD untuk perbandingan
+        const transactionDate = new Date(transaction.date);
+        const transactionDateOnly = new Date(transactionDate.getFullYear(), transactionDate.getMonth(), transactionDate.getDate());
+        
+        if (dateRangeFilter?.from) {
+          const fromDateOnly = new Date(dateRangeFilter.from.getFullYear(), dateRangeFilter.from.getMonth(), dateRangeFilter.from.getDate());
+          if (transactionDateOnly < fromDateOnly) {
+            return false;
+          }
+        }
+        
+        if (dateRangeFilter?.to) {
+          const toDateOnly = new Date(dateRangeFilter.to.getFullYear(), dateRangeFilter.to.getMonth(), dateRangeFilter.to.getDate());
+          if (transactionDateOnly > toDateOnly) {
+            return false;
+          }
         }
       }
       
@@ -876,7 +893,10 @@ const Transactions = () => {
                                 size="sm"
                                 onClick={() => {
                                   const today = new Date();
-                                  setDateRangeFilter({ from: today, to: today });
+                                  // Reset waktu ke 00:00:00 untuk perbandingan yang tepat
+                                  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                  console.log('Setting "Hari Ini" filter to:', todayOnly);
+                                  setDateRangeFilter({ from: todayOnly, to: todayOnly });
                                 }}
                                 className="h-10 rounded-2xl text-xs font-semibold bg-white border border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-md"
                               >
@@ -887,9 +907,10 @@ const Transactions = () => {
                                 size="sm"
                                 onClick={() => {
                                   const today = new Date();
-                                  const sevenDaysAgo = new Date(today);
-                                  sevenDaysAgo.setDate(today.getDate() - 7);
-                                  setDateRangeFilter({ from: sevenDaysAgo, to: today });
+                                  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                  const sevenDaysAgo = new Date(todayOnly);
+                                  sevenDaysAgo.setDate(todayOnly.getDate() - 7);
+                                  setDateRangeFilter({ from: sevenDaysAgo, to: todayOnly });
                                 }}
                                 className="h-10 rounded-2xl text-xs font-semibold bg-white border border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-md"
                               >
@@ -900,9 +921,10 @@ const Transactions = () => {
                                 size="sm"
                                 onClick={() => {
                                   const today = new Date();
-                                  const thirtyDaysAgo = new Date(today);
-                                  thirtyDaysAgo.setDate(today.getDate() - 30);
-                                  setDateRangeFilter({ from: thirtyDaysAgo, to: today });
+                                  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                  const thirtyDaysAgo = new Date(todayOnly);
+                                  thirtyDaysAgo.setDate(todayOnly.getDate() - 30);
+                                  setDateRangeFilter({ from: thirtyDaysAgo, to: todayOnly });
                                 }}
                                 className="h-10 rounded-2xl text-xs font-semibold bg-white border border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-md"
                               >
@@ -913,8 +935,9 @@ const Transactions = () => {
                                 size="sm"
                                 onClick={() => {
                                   const today = new Date();
+                                  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
                                   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                                  setDateRangeFilter({ from: startOfMonth, to: today });
+                                  setDateRangeFilter({ from: startOfMonth, to: todayOnly });
                                 }}
                                 className="h-10 rounded-2xl text-xs font-semibold bg-white border border-gray-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:border-blue-300 hover:scale-105 transition-all duration-300 shadow-sm hover:shadow-md"
                               >
