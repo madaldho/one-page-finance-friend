@@ -43,37 +43,25 @@ const Auth = () => {
   useEffect(() => {
     const checkTrustedDevice = async () => {
       try {
-        // Import fungsi secara dinamis untuk menghindari masalah circular dependency
-        const { verifyDevice } = await import('@/utils/deviceManager');
+        // Cek apakah ada sesi aktif terlebih dahulu
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         
-        // Periksa apakah perangkat ini terdaftar
-        const userId = await verifyDevice();
-        
-        if (userId) {
-          // Jika perangkat terdaftar, login otomatis
-          console.log('Perangkat terpercaya terdeteksi');
+        if (!sessionError && sessionData.session?.user) {
+          // Jika ada sesi aktif, import dan cek device
+          const { verifyDevice } = await import('@/utils/deviceManager');
           
-          // Dapatkan sesi pengguna
-          const { data, error } = await supabase.auth.getUser();
+          // Periksa apakah perangkat ini terdaftar
+          const isDeviceValid = await verifyDevice(sessionData.session.user.id);
           
-          if (!error && data.user) {
-            // Sudah ada sesi aktif
+          if (isDeviceValid) {
+            // Jika perangkat terdaftar, login otomatis
+            console.log('Perangkat terpercaya terdeteksi');
+            
             toast({
               title: "🎉 Login Otomatis",
               description: "Selamat datang kembali!",
             });
             navigate('/home', { replace: true });
-          } else {
-            // Perlu mendapatkan sesi baru berdasarkan device ID
-            const { error: sessionError } = await supabase.auth.refreshSession();
-            
-            if (!sessionError) {
-              toast({
-                title: "🎉 Login Otomatis",
-                description: "Selamat datang kembali!",
-              });
-              navigate('/home', { replace: true });
-            }
           }
         }
       } catch (error) {
@@ -146,31 +134,26 @@ const Auth = () => {
           });
         }
       } else if (isSignUp) {
-        // Check if user exists before sign up
-        const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
-          email,
-          password: "dummy-password-just-to-check", // Just for checking, will likely fail
-        });
-        
-        // If the sign in returns a user or specific error, the account already exists
-        if (existingUser?.user || (checkError && checkError.message.includes('Invalid login credentials'))) {
-          toast({
-            title: "❌ Email Sudah Terdaftar",
-            description: "Akun dengan email ini sudah ada. Silakan login atau reset password.",
-            variant: "destructive",
-          });
-          setIsSignUp(false);
-          setLoading(false);
-          return;
-        }
-        
-        // Proceed with signup if user doesn't exist
-        const { error } = await supabase.auth.signUp({
+        // Proceed with signup directly - let Supabase handle duplicate checking
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
 
-        if (error) throw error;
+        if (error) {
+          // Handle specific signup errors
+          if (error.message.includes('already registered') || error.message.includes('already taken')) {
+            toast({
+              title: "❌ Email Sudah Terdaftar",
+              description: "Akun dengan email ini sudah ada. Silakan login atau reset password.",
+              variant: "destructive",
+            });
+            setIsSignUp(false);
+            setLoading(false);
+            return;
+          }
+          throw error;
+        }
         
         toast({
           title: "✨ Pendaftaran Berhasil",
