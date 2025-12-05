@@ -1,0 +1,54 @@
+/* Tablet Responsive Fixes */
+
+/* Tailwind breakpoints:
+   sm: 640px (tablet portrait)
+   md: 768px (tablet landscape) 
+   lg: 1024px (desktop)
+   xl: 1280px
+*/
+
+/* Container padding untuk tablet */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* Grid responsive untuk tablet */
+.grid-responsive-2 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2;
+}
+
+.grid-responsive-3 {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3;
+}
+
+.grid-responsive-4 {
+  @apply grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4;
+}
+
+/* Card spacing untuk tablet */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .card-tablet {
+    padding: 1.25rem;
+  }
+}
+
+/* Text sizing untuk tablet */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .text-responsive-xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .text-responsive-2xl {
+    font-size: 1.75rem;
+    line-height: 2.25rem;
+  }
+  
+  .text-responsive-3xl {
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+}

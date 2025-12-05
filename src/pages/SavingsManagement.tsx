@@ -625,7 +625,7 @@ const SavingsManagement = () => {
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-br from-gray-100 to-slate-200 rounded-full mix-blend-multiply filter blur-3xl"></div>
         </div>
 
-        <div className="container mx-auto py-2 px-2 md:px-6 max-w-4xl lg:max-w-5xl relative z-10 pt-6 md:pt-4 pb-32">
+        <div className="container mx-auto py-2 px-3 sm:px-4 md:px-6 max-w-4xl lg:max-w-5xl relative z-10 pt-6 md:pt-4 pb-32">
           {/* Header dengan glassmorphism effect */}
           <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
             <div className="flex items-center gap-3">

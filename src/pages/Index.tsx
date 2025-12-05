@@ -654,7 +654,7 @@ const Index = () => {
 
   return (
     <Layout>
-      <main className="container mx-auto px-4 md:px-6 lg:px-8 pb-32 pt-2 relative z-10 max-w-7xl">
+      <main className="container mx-auto px-4 sm:px-5 md:px-6 lg:px-8 pb-32 pt-2 relative z-10 max-w-7xl">
         <Header />
         <TutorialNotification />
 
@@ -791,7 +791,7 @@ const Index = () => {
           </section>
 
           {/* Financial Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6 mb-8">
             {/* Budget Card Section */}
             {settings.show_budgeting && (
               <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-shadow duration-300">

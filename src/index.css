@@ -292,3 +292,6 @@ html {
     transform: translateY(0);
   }
 }
+
+/* Import tablet responsive fixes */
+@import './styles/tablet-responsive.css';

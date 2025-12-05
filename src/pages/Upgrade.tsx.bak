@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import { useNavigate } from "react-router-dom";
-import EmailWarning from "@/components/EmailWarning";
 import {
   ArrowLeft,
   CheckCircle,
@@ -77,25 +76,25 @@ export default function Upgrade() {
       console.error("Error tracking AddToCart event:", error);
     }
     
-    
-    // Redirect ke Lynk.id checkout
-    let checkoutUrl = "";
+    // Buat pesan WhatsApp sesuai paket yang dipilih
+    let message = "";
     switch(plan) {
       case "monthly":
-        checkoutUrl = "http://lynk.id/madaldho/gxo2m9r832ly/checkout";
+        message = "Halo, saya ingin upgrade ke paket Pro Bulanan (Rp20.000/bulan) di aplikasi Keuangan Pribadi.";
         break;
       case "yearly":
-        checkoutUrl = "http://lynk.id/madaldho/xz54e6r99p49/checkout";
+        message = "Halo, saya ingin upgrade ke paket Pro Tahunan (Rp85.000/tahun) di aplikasi Keuangan Pribadi. Hemat Rp155.000!";
         break;
       case "lifetime":
-        checkoutUrl = "http://lynk.id/madaldho/j7owr273n4zl/checkout";
+        message = "Halo, saya ingin upgrade ke paket Pro Lifetime (Rp150.000) - Promo Early Adopter di aplikasi Keuangan Pribadi.";
         break;
       default:
-        checkoutUrl = "http://lynk.id/madaldho/gxo2m9r832ly/checkout";
+        message = "Halo, saya ingin upgrade ke paket Pro di aplikasi Keuangan Pribadi.";
     }
     
-    // Redirect ke Lynk.id
-    window.location.href = checkoutUrl;
+    // Redirect ke WhatsApp
+    const whatsappUrl = `https://wa.me/6285794215084?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
   };
 
   // Fungsi untuk kembali ke halaman home
@@ -205,9 +204,6 @@ export default function Upgrade() {
             <p className="text-gray-600 text-sm mb-6 leading-relaxed">
               Dari analisis harian sampai rencana tabungan—semuanya dalam satu aplikasi yang simpel buat kebutuhan orang Indonesia.
             </p>
-            
-            {/* Email Warning */}
-            <EmailWarning />
           </div>
 
           {/* Pricing Options */}
@@ -642,17 +638,12 @@ export default function Upgrade() {
               Dari analisis harian sampai rencana tabungan—semuanya dalam satu aplikasi yang simpel buat kebutuhan orang Indonesia.
             </p>
             
-            
-            {/* Email Warning */}
-            <div className="max-w-2xl mx-auto">
-              <EmailWarning />
-            </div>
         
             
           </div>
 
           {/* Pricing Cards - Enhanced Design */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7 lg:gap-8 max-w-7xl mx-auto mb-24">
+          <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto mb-24">
             {/* Bulanan */}
             <Card className="group overflow-hidden border-0 h-full bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100 relative transform transition-all duration-300 hover:scale-105 shadow-xl hover:shadow-2xl cursor-pointer" onClick={() => handleUpgrade("monthly")}>
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -798,7 +789,7 @@ export default function Upgrade() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-7 lg:gap-8">
+          <div className="grid lg:grid-cols-2 gap-8">
             {proFeatures.map((feature, index) => (
               <Card
                 key={index}
@@ -865,7 +856,7 @@ export default function Upgrade() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-12">
+          <div className="grid md:grid-cols-2 gap-12">
             {/* FREE Version */}
             <div className="text-center">
               <div className="bg-gray-100 text-gray-600 font-bold mb-8 text-xl py-4 rounded-2xl">
@@ -1014,7 +1005,7 @@ export default function Upgrade() {
           </div>
           
           {/* Grid Testimonials */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
             {testimonials.slice(1).map((testimonial, index) => (
               <Card key={index} className="group p-8 bg-gradient-to-br from-white to-gray-50 border-2 border-gray-100 hover:border-blue-200 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] rounded-3xl relative overflow-hidden">
                 {/* Background decoration */}
@@ -1062,7 +1053,7 @@ export default function Upgrade() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-10">
+          <div className="grid md:grid-cols-2 gap-10">
             <div className="space-y-8">
               <div className="bg-blue-50 rounded-2xl p-6">
                 <h4 className="font-bold text-xl text-gray-800 mb-3 flex items-center gap-3">

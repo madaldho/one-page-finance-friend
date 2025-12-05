@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Transaction } from "@/types";
-import SearchFilterRedesign from "@/components/SearchFilterRedesign";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, ChevronDown, MoreVertical, Trash2, Edit2, Calendar, CheckCircle2, Check, ArrowUpDown, ChevronRight } from "lucide-react";
@@ -953,18 +952,41 @@ const TransactionList = ({
   return (
     <div className="space-y-4">
       {!hideHeader && (
-        <SearchFilterRedesign
-          searchQuery={searchQuery}
-          onSearchChange={(query) => {
-            setSearchQuery(query);
-            onFilter(query);
-          }}
-          selectionMode={selectionMode}
-          selectedCount={selectedIds.length}
-          onCancelSelection={exitSelectionMode}
-          onBulkDelete={handleBulkDelete}
-        />
-      )}
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+        <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Cari transaksi..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="pl-10 w-full"
+          />
+        </div>
+          
+          {selectionMode && (
+        <div className="flex items-center gap-2 w-full md:w-auto animate-in slide-in-from-right duration-300">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exitSelectionMode}
+                className="h-9 rounded-full shadow-sm hover:shadow transition-all"
+              >
+                Batal
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                className="h-9 rounded-full shadow-sm hover:shadow transition-all"
+                disabled={selectedIds.length === 0}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Hapus {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}
+              </Button>
+            </div>
+          )}
+          </div>
       )}
 
       {showLoading 

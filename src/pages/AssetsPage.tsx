@@ -184,7 +184,7 @@ export default function AssetsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
           <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-purple-100 transition-all hover:shadow-md hover:border-purple-200">
             <div className="bg-purple-100 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mb-2 sm:mb-3">
               <Building className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />

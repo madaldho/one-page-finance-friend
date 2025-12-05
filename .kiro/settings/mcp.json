@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "supabase-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "sbp_8e99485ef397564852b9a423a3e77e32310d0db4"
+      ],
+      "env": {},
+      "disabled": false
+    },
+    "dart-mcp-server": {
+      "command": "/Users/madaldho/.local/bin/dart",
+      "args": [
+        "mcp-server",
+        "--force-roots-fallback"
+      ],
+      "env": {},
+      "disabled": false
+    }
+  }
+}

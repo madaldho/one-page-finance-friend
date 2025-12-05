@@ -747,7 +747,7 @@ const BudgetManagement = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto py-2 px-2 md:px-6 max-w-xl pt-6 md:pt-4">
+      <div className="container mx-auto py-2 px-3 sm:px-4 md:px-6 max-w-xl sm:max-w-2xl md:max-w-3xl lg:max-w-xl pt-6 md:pt-4">
         {/* Header dengan glassmorphism effect */}
         <div className="backdrop-blur-sm bg-white/80 rounded-2xl p-4 mb-6 shadow-sm border border-white/20 sticky top-4 z-10">
           <div className="flex items-center gap-3">
